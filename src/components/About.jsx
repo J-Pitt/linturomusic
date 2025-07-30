@@ -1,0 +1,168 @@
+import { motion } from 'framer-motion'
+import { 
+  MusicalNoteIcon, 
+  MicrophoneIcon, 
+  CalendarIcon,
+  HeartIcon 
+} from '@heroicons/react/24/outline'
+
+const About = () => {
+  const stats = [
+    { label: 'Years Experience', value: '8+' },
+    { label: 'Live Performances', value: '200+' },
+    { label: 'Original Tracks', value: '25+' },
+    { label: 'Festivals Played', value: '15+' }
+  ]
+
+  const genres = [
+    'House', 'Techno', 'Trance', 'Progressive', 
+    'Deep House', 'Electronica', 'Ambient'
+  ]
+
+  return (
+    <section id="about" className="py-20 bg-gray-900 dark:bg-gray-900">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8 }}
+          viewport={{ once: true }}
+          className="text-center mb-16"
+        >
+          <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">
+            About linturo
+          </h2>
+          <p className="text-lg text-purple-300 max-w-2xl mx-auto">
+            A passionate electronic music producer and DJ creating unforgettable sonic experiences
+          </p>
+        </motion.div>
+
+        <div className="grid lg:grid-cols-2 gap-12 items-center mb-16">
+          {/* Left Column - Image and Stats */}
+          <motion.div
+            initial={{ opacity: 0, x: -50 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.8 }}
+            viewport={{ once: true }}
+            className="space-y-8"
+          >
+            {/* Profile Image Placeholder */}
+            <div className="relative">
+              <div className="w-80 h-80 mx-auto bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
+                <MusicalNoteIcon className="w-32 h-32 text-white" />
+              </div>
+              <div className="absolute -bottom-4 -right-4 w-24 h-24 bg-green-500 rounded-full flex items-center justify-center">
+                <span className="text-white font-bold text-lg">Live</span>
+              </div>
+            </div>
+
+            {/* Stats */}
+            <div className="grid grid-cols-2 gap-6">
+              {stats.map((stat, index) => (
+                <motion.div
+                  key={stat.label}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: index * 0.1 }}
+                  viewport={{ once: true }}
+                  className="text-center p-4 bg-gray-800 rounded-lg border border-purple-500/20"
+                >
+                  <div className="text-3xl font-bold text-purple-400 mb-2">
+                    {stat.value}
+                  </div>
+                  <div className="text-sm text-gray-300">
+                    {stat.label}
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </motion.div>
+
+          {/* Right Column - Content */}
+          <motion.div
+            initial={{ opacity: 0, x: 50 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.8 }}
+            viewport={{ once: true }}
+            className="space-y-8"
+          >
+            <div>
+              <h3 className="text-2xl font-bold text-white mb-4">
+                The Journey
+              </h3>
+              <p className="text-gray-300 mb-6 leading-relaxed">
+                From bedroom producer to international DJ, my journey in electronic music has been driven by 
+                a deep passion for creating immersive sonic experiences. I blend cutting-edge production 
+                techniques with timeless musical elements to craft tracks that resonate with audiences worldwide.
+              </p>
+              <p className="text-gray-300 leading-relaxed">
+                My sound is characterized by powerful basslines, atmospheric textures, and driving rhythms 
+                that create an electrifying atmosphere on the dance floor. Whether performing at intimate 
+                clubs or massive festivals, I strive to connect with every person in the crowd through music.
+              </p>
+            </div>
+
+            {/* Experience & Education */}
+            <div className="grid md:grid-cols-2 gap-6">
+              <div className="bg-gray-800 p-6 rounded-lg border border-purple-500/20">
+                <div className="flex items-center mb-4">
+                  <MicrophoneIcon className="w-6 h-6 text-purple-400 mr-3" />
+                  <h4 className="text-lg font-semibold text-white">
+                    Notable Performances
+                  </h4>
+                </div>
+                <ul className="space-y-2 text-sm text-gray-300">
+                  <li>• Tomorrowland Festival (2023)</li>
+                  <li>• Ultra Music Festival (2022)</li>
+                  <li>• Electric Daisy Carnival (2021)</li>
+                  <li>• Ibiza Residency (2020-2023)</li>
+                </ul>
+              </div>
+
+              <div className="bg-gray-800 p-6 rounded-lg border border-purple-500/20">
+                <div className="flex items-center mb-4">
+                  <CalendarIcon className="w-6 h-6 text-purple-400 mr-3" />
+                  <h4 className="text-lg font-semibold text-white">
+                    Career Highlights
+                  </h4>
+                </div>
+                <ul className="space-y-2 text-sm text-gray-300">
+                  <li>• #1 on Beatport Charts (2023)</li>
+                  <li>• Grammy Nomination (2022)</li>
+                  <li>• DJ Mag Top 100 (2021)</li>
+                  <li>• 50M+ Streams Worldwide</li>
+                </ul>
+              </div>
+            </div>
+
+            {/* Genres */}
+            <div>
+              <div className="flex items-center mb-4">
+                <HeartIcon className="w-6 h-6 text-purple-400 mr-3" />
+                <h4 className="text-lg font-semibold text-white">
+                  Musical Style
+                </h4>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {genres.map((genre, index) => (
+                  <motion.span
+                    key={genre}
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    whileInView={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.3, delay: index * 0.1 }}
+                    viewport={{ once: true }}
+                    className="px-3 py-1 bg-purple-900/50 text-purple-300 rounded-full text-sm font-medium border border-purple-500/30"
+                  >
+                    {genre}
+                  </motion.span>
+                ))}
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+export default About 
