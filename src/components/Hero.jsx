@@ -114,26 +114,11 @@ const Hero = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8 }}
         >
-          <motion.div
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.8, delay: 0.2 }}
-            className="mb-6"
-          >
-            <div className="w-20 h-20 sm:w-32 sm:h-32 mx-auto bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center mb-6 shadow-2xl overflow-hidden">
-              <img 
-                src="https://j-pitt.github.io/images/deckPhoto.jpeg" 
-                alt="linturo" 
-                className="w-full h-full object-cover rounded-full"
-              />
-            </div>
-          </motion.div>
-
           <motion.h1
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.4 }}
-            className="text-3xl sm:text-5xl lg:text-7xl font-bold text-white mb-4 sm:mb-6"
+            transition={{ duration: 0.8, delay: 0.2 }}
+            className="text-5xl sm:text-7xl lg:text-9xl font-bold text-white mb-4 sm:mb-6"
           >
             <span className="bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent font-brand">
               linturo
@@ -155,7 +140,7 @@ const Hero = () => {
             transition={{ duration: 0.8, delay: 0.8 }}
             className="text-base sm:text-lg text-purple-300 mb-8 sm:mb-12 max-w-xl mx-auto px-4"
           >
-            Just a music lover looking to connect with like minded individuals. Will play music anywhere, shoot me a note if you like my music.
+            Just a music lover looking to connect with like minded individuals. Will play music anywhere, shoot me a note if you like my sets.
           </motion.p>
 
           <motion.div
