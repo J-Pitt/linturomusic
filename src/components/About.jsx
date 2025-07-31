@@ -1,20 +1,10 @@
 import { motion } from 'framer-motion'
-import { 
-  MusicalNoteIcon, 
-  HeartIcon 
-} from '@heroicons/react/24/outline'
+import { HeartIcon } from '@heroicons/react/24/outline'
 
 const About = () => {
-  const stats = [
-    { label: 'Years Experience', value: '8+' },
-    { label: 'Live Performances', value: '200+' },
-    { label: 'Original Tracks', value: '25+' },
-    { label: 'Festivals Played', value: '15+' }
-  ]
-
   const genres = [
     'House', 'Techno', 'Trance', 'Progressive', 
-    'Deep House', 'Electronica', 'Ambient'
+    'Deep House', 'Electronica', 'Ambient', 'Psy-Dub', 'Deep Dubstep'
   ]
 
   return (
@@ -28,61 +18,21 @@ const About = () => {
           className="text-center mb-12 sm:mb-16"
         >
           <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-4">
-            About linturo
+            Learn more about <span className="text-3xl sm:text-4xl lg:text-5xl bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent font-brand">Linturo</span>
           </h2>
           <p className="text-base sm:text-lg text-purple-300 max-w-2xl mx-auto px-4">
-            A passionate electronic music producer and DJ creating unforgettable sonic experiences
+            A passionate electronic music lover and DJ.
           </p>
         </motion.div>
 
-        <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center mb-12 sm:mb-16">
-          {/* Left Column - Image and Stats */}
+        <div className="max-w-4xl mx-auto mb-12 sm:mb-16">
+          {/* About Text and Genres */}
           <motion.div
-            initial={{ opacity: 0, x: -50 }}
-            whileInView={{ opacity: 1, x: 0 }}
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
             viewport={{ once: true }}
-            className="space-y-6 sm:space-y-8 order-2 lg:order-1"
-          >
-            {/* Profile Image Placeholder */}
-            <div className="relative">
-              <div className="w-60 h-60 sm:w-80 sm:h-80 mx-auto bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
-                <MusicalNoteIcon className="w-24 h-24 sm:w-32 sm:h-32 text-white" />
-              </div>
-              <div className="absolute -bottom-2 -right-2 sm:-bottom-4 sm:-right-4 w-16 h-16 sm:w-24 sm:h-24 bg-green-500 rounded-full flex items-center justify-center">
-                <span className="text-white font-bold text-sm sm:text-lg">Live</span>
-              </div>
-            </div>
-
-            {/* Stats */}
-            <div className="grid grid-cols-2 gap-4 sm:gap-6">
-              {stats.map((stat, index) => (
-                <motion.div
-                  key={stat.label}
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, delay: index * 0.1 }}
-                  viewport={{ once: true }}
-                  className="text-center p-3 sm:p-4 bg-gray-800 rounded-lg border border-purple-500/20"
-                >
-                  <div className="text-2xl sm:text-3xl font-bold text-purple-400 mb-1 sm:mb-2">
-                    {stat.value}
-                  </div>
-                  <div className="text-xs sm:text-sm text-gray-300">
-                    {stat.label}
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          </motion.div>
-
-          {/* Right Column - Content */}
-          <motion.div
-            initial={{ opacity: 0, x: 50 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.8 }}
-            viewport={{ once: true }}
-            className="space-y-6 sm:space-y-8 order-1 lg:order-2"
+            className="space-y-6 sm:space-y-8"
           >
             <div>
               <h3 className="text-xl sm:text-2xl font-bold text-white mb-3 sm:mb-4">

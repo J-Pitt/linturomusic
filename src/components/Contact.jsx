@@ -6,6 +6,7 @@ import {
   PaperAirplaneIcon,
   CalendarIcon
 } from '@heroicons/react/24/outline'
+import { config } from '../config'
 
 const Contact = () => {
   const [formData, setFormData] = useState({
@@ -30,15 +31,38 @@ const Contact = () => {
     e.preventDefault()
     setIsSubmitting(true)
     
-    // Simulate form submission
-    await new Promise(resolve => setTimeout(resolve, 2000))
-    
-    // Reset form
-    setFormData({ name: '', email: '', subject: '', message: '', eventType: '', eventDate: '' })
-    setIsSubmitting(false)
-    
-    // Show success message
-    alert('Thank you for your message! I\'ll get back to you soon.')
+    try {
+      // Use the API endpoint from config
+      const API_ENDPOINT = config.CONTACT_API_URL
+      
+      const response = await fetch(API_ENDPOINT, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData)
+      })
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      const result = await response.json()
+      
+      // Reset form on success
+      setFormData({ name: '', email: '', subject: '', message: '', eventType: '', eventDate: '' })
+      setIsSubmitting(false)
+      
+      // Show success message
+      alert('Thank you for your message! I\'ll get back to you soon.')
+      
+    } catch (error) {
+      console.error('Error submitting form:', error)
+      setIsSubmitting(false)
+      
+      // Show error message
+      alert('Sorry, there was an error sending your message. Please try again or email me directly at linturomusic@gmail.com')
+    }
   }
 
   const contactInfo = [
@@ -93,7 +117,7 @@ const Contact = () => {
             className="bg-gray-900 rounded-lg shadow-lg p-6 sm:p-8 border border-purple-500/20 order-2 lg:order-1"
           >
             <h3 className="text-xl sm:text-2xl font-bold text-white mb-6">
-              Book a Performance
+              Book <span className="bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent font-brand text-2xl sm:text-3xl">linturo</span>
             </h3>
             
             <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
@@ -144,12 +168,12 @@ const Contact = () => {
                     className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-gray-800 text-white transition-colors duration-200 text-sm sm:text-base"
                   >
                     <option value="">Select event type</option>
-                    <option value="wedding">Wedding</option>
-                    <option value="corporate">Corporate Event</option>
+                    <option value="club">Club</option>
+                    <option value="bar">Bar</option>
+                    <option value="house-party">House Party</option>
                     <option value="festival">Festival</option>
-                    <option value="club">Club Night</option>
-                    <option value="private">Private Party</option>
-                    <option value="collaboration">Music Collaboration</option>
+                    <option value="renegade">Renegade</option>
+                    <option value="other">Other</option>
                   </select>
                 </div>
 
@@ -293,8 +317,8 @@ const Contact = () => {
                 Let's create something amazing!
               </h4>
               <p className="text-sm sm:text-base text-purple-100 mb-3 sm:mb-4">
-                I'm available for bookings worldwide and always open to exciting collaborations. 
-                Whether it's a massive festival or an intimate gathering, let's make it unforgettable.
+                I'm available for bookings worldwide and always open to exciting music adventures. 
+                Whether it's a club or bar, or just an intimate gathering, let's boogie!
               </p>
               <div className="flex items-center">
                 <div className="w-2 h-2 sm:w-3 sm:h-3 bg-green-400 rounded-full mr-2 sm:mr-3 animate-pulse"></div>

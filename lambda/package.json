@@ -1,0 +1,15 @@
+{
+  "name": "linturo-contact-form",
+  "version": "1.0.0",
+  "description": "AWS Lambda function to handle contact form submissions",
+  "main": "contact-form-handler.js",
+  "dependencies": {
+    "aws-sdk": "^2.1691.0"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": ["aws", "lambda", "contact-form", "ses"],
+  "author": "linturo",
+  "license": "MIT"
+}

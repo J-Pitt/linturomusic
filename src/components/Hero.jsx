@@ -6,10 +6,29 @@ const Hero = () => {
   const [isPlaying, setIsPlaying] = useState(false)
   const [audioError, setAudioError] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [currentTime, setCurrentTime] = useState(0)
+  const [duration, setDuration] = useState(0)
+  const [showControls, setShowControls] = useState(false)
   const audioRef = useRef(null)
 
   const scrollToAbout = () => {
     document.getElementById('about')?.scrollIntoView({ behavior: 'smooth' })
+  }
+
+  const formatTime = (timeInSeconds) => {
+    if (isNaN(timeInSeconds)) return '0:00'
+    const minutes = Math.floor(timeInSeconds / 60)
+    const seconds = Math.floor(timeInSeconds % 60)
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`
+  }
+
+  const handleSeek = (e) => {
+    if (!audioRef.current) return
+    const rect = e.currentTarget.getBoundingClientRect()
+    const clickPosition = (e.clientX - rect.left) / rect.width
+    const newTime = clickPosition * duration
+    audioRef.current.currentTime = newTime
+    setCurrentTime(newTime)
   }
 
   const handleAudioToggle = async () => {
@@ -30,10 +49,17 @@ const Hero = () => {
         // Set up event listeners
         audioRef.current.addEventListener('loadedmetadata', () => {
           setIsLoading(false)
+          setDuration(audioRef.current.duration)
+        })
+        
+        audioRef.current.addEventListener('timeupdate', () => {
+          setCurrentTime(audioRef.current.currentTime)
         })
         
         audioRef.current.addEventListener('ended', () => {
           setIsPlaying(false)
+          setShowControls(false)
+          setCurrentTime(0)
         })
         
         audioRef.current.addEventListener('error', (e) => {
@@ -47,6 +73,7 @@ const Hero = () => {
           setIsPlaying(false)
           setIsLoading(false)
           setAudioError(true)
+          setShowControls(false)
         })
 
         // Use S3 URL with CORS configured
@@ -73,12 +100,14 @@ const Hero = () => {
         setIsLoading(true)
         await audioRef.current.play()
         setIsPlaying(true)
+        setShowControls(true)
         setIsLoading(false)
       } catch (error) {
         console.error('Error playing audio:', error)
         setIsPlaying(false)
         setIsLoading(false)
         setAudioError(true)
+        setShowControls(false)
       }
     }
   }
@@ -102,14 +131,15 @@ const Hero = () => {
         <div className="absolute top-20 left-20 w-40 h-40 sm:w-80 sm:h-80 bg-pink-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob animation-delay-4000"></div>
       </div>
 
-      {/* Audio waves animation */}
-      <div className="absolute bottom-8 sm:bottom-20 left-1/2 transform -translate-x-1/2 flex space-x-1">
-        {[...Array(6)].map((_, i) => (
+      {/* Audio waves animation - positioned closer to arrow */}
+      <div className="absolute bottom-12 sm:bottom-16 left-1/2 transform -translate-x-1/2 flex space-x-3">
+        {[...Array(8)].map((_, i) => (
           <motion.div
             key={i}
-            animate={{ height: [15, 40, 15] }}
-            transition={{ duration: 0.8, repeat: Infinity, delay: i * 0.1 }}
-            className="w-1 bg-gradient-to-t from-purple-400 to-pink-400 rounded-full"
+            animate={isPlaying ? { height: [30, 80, 30] } : { height: 30 }}
+            transition={{ duration: 0.6, repeat: isPlaying ? Infinity : 0, delay: i * 0.1 }}
+            className="w-3 bg-gradient-to-t from-purple-400 to-pink-400 rounded-full"
+            style={{ height: '30px' }}
           />
         ))}
       </div>
@@ -124,7 +154,7 @@ const Hero = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.2 }}
-            className="text-5xl sm:text-7xl lg:text-9xl font-bold text-white mb-4 sm:mb-6"
+            className="text-6xl sm:text-8xl lg:text-9xl font-bold text-white mb-4 sm:mb-6"
           >
             <span className="bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent font-brand">
               linturo
@@ -135,18 +165,18 @@ const Hero = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.6 }}
-            className="text-lg sm:text-xl lg:text-3xl text-purple-200 mb-6 sm:mb-8 max-w-2xl mx-auto"
+            className="text-xl sm:text-2xl lg:text-4xl text-purple-200 mb-6 sm:mb-8 max-w-2xl mx-auto"
           >
-            Brooklyn based house DJ
+            Brooklyn based DJ
           </motion.p>
 
           <motion.p
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.8 }}
-            className="text-base sm:text-lg text-purple-300 mb-8 sm:mb-12 max-w-xl mx-auto px-4"
+            className="text-lg sm:text-xl text-purple-300 mb-8 sm:mb-12 max-w-xl mx-auto px-4"
           >
-            Just a music lover looking to connect with like minded individuals. Will play music anywhere, shoot me a note if you like my sets.
+            Just a music lover looking to connect with like minded individuals. Will play music anywhere, drop me a line if you like my sets.
           </motion.p>
 
           <motion.div
@@ -204,33 +234,42 @@ const Hero = () => {
             </motion.p>
           )}
 
-          {/* Social stats */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 1.2 }}
-            className="flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-8 mb-8"
-          >
-            <div className="text-center">
-              <div className="text-xl sm:text-2xl font-bold text-white">50K+</div>
-              <div className="text-purple-300 text-sm">Monthly Listeners</div>
-            </div>
-            <div className="text-center">
-              <div className="text-xl sm:text-2xl font-bold text-white">200+</div>
-              <div className="text-purple-300 text-sm">Live Shows</div>
-            </div>
-            <div className="text-center">
-              <div className="text-xl sm:text-2xl font-bold text-white">25+</div>
-              <div className="text-purple-300 text-sm">Original Tracks</div>
-            </div>
-          </motion.div>
+          {/* Media Controls */}
+          {showControls && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+              className="mt-6 max-w-md mx-auto bg-black/20 backdrop-blur-sm rounded-lg p-4 border border-purple-500/30"
+            >
+              {/* Progress Bar */}
+              <div className="mb-3">
+                <div
+                  className="w-full h-2 bg-gray-700 rounded-full cursor-pointer overflow-hidden"
+                  onClick={handleSeek}
+                >
+                  <div
+                    className="h-full bg-gradient-to-r from-purple-400 to-pink-400 transition-all duration-100"
+                    style={{ width: `${duration > 0 ? (currentTime / duration) * 100 : 0}%` }}
+                  ></div>
+                </div>
+              </div>
 
-          {/* Arrow button positioned between stats and audio waves */}
+              {/* Time Display */}
+              <div className="flex justify-between items-center text-sm text-purple-200">
+                <span>{formatTime(currentTime)}</span>
+                <span className="text-xs text-purple-300">Now Playing</span>
+                <span>{formatTime(duration)}</span>
+              </div>
+            </motion.div>
+          )}
+
+          {/* Arrow button */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ duration: 1, delay: 1.4 }}
-            className="flex justify-center"
+            transition={{ duration: 1, delay: 1.2 }}
+            className="flex justify-center mt-8"
           >
             <motion.button
               onClick={scrollToAbout}
