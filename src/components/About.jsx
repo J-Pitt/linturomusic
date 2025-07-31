@@ -39,14 +39,15 @@ const About = () => {
                 The Journey
               </h3>
               <p className="text-sm sm:text-base text-gray-300 mb-4 sm:mb-6 leading-relaxed">
-                From bedroom producer to international DJ, my journey in electronic music has been driven by 
-                a deep passion for creating immersive sonic experiences. I blend cutting-edge production 
-                techniques with timeless musical elements to craft tracks that resonate with audiences worldwide.
+                I began my DJ journey in Seattle in 2017 during an intimate festival with close friends. Since then, 
+                I've worked to perfect my craft while living in cities around the world, from San Francisco to London to New York. 
+                My specialties are organic house and melodic house, though I also enjoy playing psytrance, psydub, 
+                tech house, and deep dubstep.
               </p>
               <p className="text-sm sm:text-base text-gray-300 leading-relaxed">
-                My sound is characterized by powerful basslines, atmospheric textures, and driving rhythms 
-                that create an electrifying atmosphere on the dance floor. Whether performing at intimate 
-                clubs or massive festivals, I strive to connect with every person in the crowd through music.
+                Most of my experience comes from playing for myself and friends—whether at house parties or outdoor 
+                renegades—but I'm happy to spin anywhere people connect with through music. As lifelong music lover, I aim 
+                to create not just a great vibe, but a true journey through sound.
               </p>
             </div>
 
