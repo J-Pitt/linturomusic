@@ -110,18 +110,18 @@ exports.handler = async (event) => {
         }
 
         // Create email content
-        const emailSubject = `New Booking Request: ${subject}`;
+        const emailSubject = `New Booking Request: ${sanitizedSubject}`;
         const emailBody = `
 New booking request from your website:
 
-Name: ${name}
-Email: ${email}
-Event Type: ${eventType || 'Not specified'}
-Event Date: ${eventDate || 'Not specified'}
-Subject: ${subject}
+Name: ${sanitizedName}
+Email: ${sanitizedEmail}
+Event Type: ${sanitizedEventType || 'Not specified'}
+Event Date: ${sanitizedEventDate || 'Not specified'}
+Subject: ${sanitizedSubject}
 
 Message:
-${message}
+${sanitizedMessage}
 
 ---
 This email was sent from the contact form on your linturo website.
@@ -145,7 +145,7 @@ This email was sent from the contact form on your linturo website.
                 }
             },
             Source: 'linturomusic@gmail.com', // Verify this email in SES first
-            ReplyToAddresses: [email] // User's email for easy reply
+            ReplyToAddresses: [sanitizedEmail] // User's email for easy reply
         };
 
         // Send email via SES
