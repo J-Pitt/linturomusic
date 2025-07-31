@@ -11,8 +11,7 @@ const Footer = () => {
     ],
     social: [
       { name: 'Instagram', href: 'https://www.instagram.com/_linturo_/' },
-      { name: 'YouTube', href: 'https://youtube.com' },
-      { name: 'Twitter', href: 'https://twitter.com' }
+      { name: 'YouTube', href: 'https://youtube.com' }
     ]
   }
 
@@ -49,7 +48,6 @@ const Footer = () => {
                     <span className="text-sm sm:text-lg">
                       {social.name === 'Instagram' && '📸'}
                       {social.name === 'YouTube' && '▶️'}
-                      {social.name === 'Twitter' && '🐦'}
                     </span>
                   </motion.a>
                 ))}
