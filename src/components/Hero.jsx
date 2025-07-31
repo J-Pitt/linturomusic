@@ -151,8 +151,8 @@ const Hero = () => {
         <div className="absolute top-20 left-20 w-40 h-40 sm:w-80 sm:h-80 bg-pink-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob animation-delay-4000"></div>
       </div>
 
-      {/* Audio waves animation - positioned halfway to arrow */}
-      <div className="absolute bottom-20 sm:bottom-24 left-1/2 transform -translate-x-1/2 flex space-x-3">
+      {/* Audio waves animation - positioned halfway between arrow and bottom */}
+      <div className="absolute bottom-32 sm:bottom-36 left-1/2 transform -translate-x-1/2 flex space-x-3">
         {[...Array(8)].map((_, i) => (
           <motion.div
             key={i}
