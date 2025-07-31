@@ -83,7 +83,7 @@ const Hero = () => {
             transition={{ duration: 0.8, delay: 0.4 }}
             className="text-3xl sm:text-5xl lg:text-7xl font-bold text-white mb-4 sm:mb-6"
           >
-            <span className="bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent font-sprayer">
+            <span className="bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent font-brand">
               linturo
             </span>
           </motion.h1>

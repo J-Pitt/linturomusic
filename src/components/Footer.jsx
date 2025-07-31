@@ -32,7 +32,7 @@ const Footer = () => {
               viewport={{ once: true }}
             >
               <h3 className="text-xl sm:text-2xl font-bold mb-3 sm:mb-4">
-                <span className="bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent font-sprayer">linturo</span>
+                <span className="bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent font-brand">linturo</span>
               </h3>
               <p className="text-sm sm:text-base text-gray-400 mb-4 sm:mb-6 max-w-md">
                 Creating unforgettable electronic music experiences through innovative sound design 

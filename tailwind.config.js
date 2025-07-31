@@ -9,7 +9,7 @@ export default {
     extend: {
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
-        sprayer: ['Sprayer', 'serif'],
+        brand: ['Caveat', 'cursive'],
       },
       animation: {
         'blob': 'blob 7s infinite',
