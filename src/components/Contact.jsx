@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { 
   EnvelopeIcon, 
-  PhoneIcon, 
   MapPinIcon,
   PaperAirplaneIcon,
   CalendarIcon
@@ -46,19 +45,13 @@ const Contact = () => {
     {
       icon: EnvelopeIcon,
       title: 'Email',
-      value: 'booking@linturo.com',
-      link: 'mailto:booking@linturo.com'
-    },
-    {
-      icon: PhoneIcon,
-      title: 'Phone',
-      value: '+1 (555) 123-4567',
-      link: 'tel:+15551234567'
+      value: 'linturomusic@gmail.com',
+      link: 'mailto:linturomusic@gmail.com'
     },
     {
       icon: MapPinIcon,
       title: 'Location',
-      value: 'Los Angeles, CA',
+      value: 'Brooklyn, New York',
       link: '#'
     }
   ]
@@ -72,39 +65,39 @@ const Contact = () => {
   ]
 
   return (
-    <section className="py-20 bg-gray-800 dark:bg-gray-800">
+    <section className="py-12 sm:py-20 bg-gray-800 dark:bg-gray-800">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8 }}
           viewport={{ once: true }}
-          className="text-center mb-16"
+          className="text-center mb-12 sm:mb-16"
         >
-          <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-4">
             Get In Touch
           </h2>
-          <p className="text-lg text-purple-300 max-w-2xl mx-auto">
+          <p className="text-base sm:text-lg text-purple-300 max-w-2xl mx-auto px-4">
             Book me for your next event, collaborate on music, or just connect to discuss 
             electronic music and share our passion for sound.
           </p>
         </motion.div>
 
-        <div className="grid lg:grid-cols-2 gap-12">
+        <div className="grid lg:grid-cols-2 gap-8 lg:gap-12">
           {/* Contact Form */}
           <motion.div
             initial={{ opacity: 0, x: -50 }}
             whileInView={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.8 }}
             viewport={{ once: true }}
-            className="bg-gray-900 rounded-lg shadow-lg p-8 border border-purple-500/20"
+            className="bg-gray-900 rounded-lg shadow-lg p-6 sm:p-8 border border-purple-500/20 order-2 lg:order-1"
           >
-            <h3 className="text-2xl font-bold text-white mb-6">
+            <h3 className="text-xl sm:text-2xl font-bold text-white mb-6">
               Book a Performance
             </h3>
             
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="grid md:grid-cols-2 gap-6">
+            <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
+              <div className="grid md:grid-cols-2 gap-4 sm:gap-6">
                 <div>
                   <label htmlFor="name" className="block text-sm font-medium text-gray-300 mb-2">
                     Name
@@ -116,7 +109,7 @@ const Contact = () => {
                     value={formData.name}
                     onChange={handleChange}
                     required
-                    className="w-full px-4 py-3 border border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-gray-800 text-white transition-colors duration-200"
+                    className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-gray-800 text-white transition-colors duration-200 text-sm sm:text-base"
                     placeholder="Your name"
                   />
                 </div>
@@ -132,13 +125,13 @@ const Contact = () => {
                     value={formData.email}
                     onChange={handleChange}
                     required
-                    className="w-full px-4 py-3 border border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-gray-800 text-white transition-colors duration-200"
+                    className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-gray-800 text-white transition-colors duration-200 text-sm sm:text-base"
                     placeholder="your.email@example.com"
                   />
                 </div>
               </div>
 
-              <div className="grid md:grid-cols-2 gap-6">
+              <div className="grid md:grid-cols-2 gap-4 sm:gap-6">
                 <div>
                   <label htmlFor="eventType" className="block text-sm font-medium text-gray-300 mb-2">
                     Event Type
@@ -148,7 +141,7 @@ const Contact = () => {
                     name="eventType"
                     value={formData.eventType}
                     onChange={handleChange}
-                    className="w-full px-4 py-3 border border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-gray-800 text-white transition-colors duration-200"
+                    className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-gray-800 text-white transition-colors duration-200 text-sm sm:text-base"
                   >
                     <option value="">Select event type</option>
                     <option value="wedding">Wedding</option>
@@ -170,7 +163,7 @@ const Contact = () => {
                     name="eventDate"
                     value={formData.eventDate}
                     onChange={handleChange}
-                    className="w-full px-4 py-3 border border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-gray-800 text-white transition-colors duration-200"
+                    className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-gray-800 text-white transition-colors duration-200 text-sm sm:text-base"
                   />
                 </div>
               </div>
@@ -186,7 +179,7 @@ const Contact = () => {
                   value={formData.subject}
                   onChange={handleChange}
                   required
-                  className="w-full px-4 py-3 border border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-gray-800 text-white transition-colors duration-200"
+                  className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-gray-800 text-white transition-colors duration-200 text-sm sm:text-base"
                   placeholder="What's this about?"
                 />
               </div>
@@ -201,8 +194,8 @@ const Contact = () => {
                   value={formData.message}
                   onChange={handleChange}
                   required
-                  rows={6}
-                  className="w-full px-4 py-3 border border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-gray-800 text-white transition-colors duration-200 resize-none"
+                  rows={4}
+                  className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-gray-800 text-white transition-colors duration-200 resize-none text-sm sm:text-base"
                   placeholder="Tell me about your event or collaboration idea!"
                 />
               </div>
@@ -212,16 +205,16 @@ const Contact = () => {
                 disabled={isSubmitting}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                className="w-full flex items-center justify-center px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full flex items-center justify-center px-4 sm:px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
               >
                 {isSubmitting ? (
                   <div className="flex items-center">
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-3"></div>
+                    <div className="animate-spin rounded-full h-4 w-4 sm:h-5 sm:w-5 border-b-2 border-white mr-2 sm:mr-3"></div>
                     Sending...
                   </div>
                 ) : (
                   <>
-                    <PaperAirplaneIcon className="w-5 h-5 mr-2" />
+                    <PaperAirplaneIcon className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
                     Send Booking Request
                   </>
                 )}
@@ -235,11 +228,11 @@ const Contact = () => {
             whileInView={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.8 }}
             viewport={{ once: true }}
-            className="space-y-8"
+            className="space-y-6 sm:space-y-8 order-1 lg:order-2"
           >
             {/* Contact Info Cards */}
-            <div className="space-y-6">
-              <h3 className="text-2xl font-bold text-white">
+            <div className="space-y-4 sm:space-y-6">
+              <h3 className="text-xl sm:text-2xl font-bold text-white">
                 Contact Information
               </h3>
               
@@ -252,16 +245,16 @@ const Contact = () => {
                   transition={{ duration: 0.5, delay: index * 0.1 }}
                   viewport={{ once: true }}
                   whileHover={{ scale: 1.02 }}
-                  className="flex items-center p-4 bg-gray-900 rounded-lg shadow-md hover:shadow-lg transition-all duration-300 border border-purple-500/20"
+                  className="flex items-center p-3 sm:p-4 bg-gray-900 rounded-lg shadow-md hover:shadow-lg transition-all duration-300 border border-purple-500/20"
                 >
-                  <div className="flex-shrink-0 w-12 h-12 bg-purple-900/50 rounded-lg flex items-center justify-center mr-4">
-                    <info.icon className="w-6 h-6 text-purple-400" />
+                  <div className="flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 bg-purple-900/50 rounded-lg flex items-center justify-center mr-3 sm:mr-4">
+                    <info.icon className="w-5 h-5 sm:w-6 sm:h-6 text-purple-400" />
                   </div>
                   <div>
-                    <h4 className="text-lg font-semibold text-white">
+                    <h4 className="text-base sm:text-lg font-semibold text-white">
                       {info.title}
                     </h4>
-                    <p className="text-gray-300">
+                    <p className="text-sm sm:text-base text-gray-300">
                       {info.value}
                     </p>
                   </div>
@@ -271,10 +264,10 @@ const Contact = () => {
 
             {/* Social Links */}
             <div>
-              <h3 className="text-2xl font-bold text-white mb-6">
+              <h3 className="text-xl sm:text-2xl font-bold text-white mb-4 sm:mb-6">
                 Follow the Music
               </h3>
-              <div className="flex space-x-4">
+              <div className="flex space-x-3 sm:space-x-4">
                 {socialLinks.map((social, index) => (
                   <motion.a
                     key={social.name}
@@ -286,7 +279,7 @@ const Contact = () => {
                     transition={{ duration: 0.3, delay: index * 0.1 }}
                     viewport={{ once: true }}
                     whileHover={{ scale: 1.1, y: -5 }}
-                    className="w-12 h-12 bg-gray-900 rounded-lg shadow-md hover:shadow-lg flex items-center justify-center text-2xl transition-all duration-300 border border-purple-500/30"
+                    className="w-10 h-10 sm:w-12 sm:h-12 bg-gray-900 rounded-lg shadow-md hover:shadow-lg flex items-center justify-center text-lg sm:text-2xl transition-all duration-300 border border-purple-500/30"
                   >
                     {social.icon}
                   </motion.a>
@@ -295,17 +288,17 @@ const Contact = () => {
             </div>
 
             {/* Additional Info */}
-            <div className="bg-gradient-to-r from-purple-600 to-pink-600 rounded-lg p-6 text-white">
-              <h4 className="text-xl font-bold mb-3">
+            <div className="bg-gradient-to-r from-purple-600 to-pink-600 rounded-lg p-4 sm:p-6 text-white">
+              <h4 className="text-lg sm:text-xl font-bold mb-2 sm:mb-3">
                 Let's create something amazing!
               </h4>
-              <p className="text-purple-100 mb-4">
+              <p className="text-sm sm:text-base text-purple-100 mb-3 sm:mb-4">
                 I'm available for bookings worldwide and always open to exciting collaborations. 
                 Whether it's a massive festival or an intimate gathering, let's make it unforgettable.
               </p>
               <div className="flex items-center">
-                <div className="w-3 h-3 bg-green-400 rounded-full mr-3 animate-pulse"></div>
-                <span className="text-sm">Available for bookings</span>
+                <div className="w-2 h-2 sm:w-3 sm:h-3 bg-green-400 rounded-full mr-2 sm:mr-3 animate-pulse"></div>
+                <span className="text-xs sm:text-sm">Available for bookings</span>
               </div>
             </div>
           </motion.div>

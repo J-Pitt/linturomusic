@@ -1,7 +1,7 @@
 /* App-specific styles */
 .App {
   min-height: 100vh;
-  transition: background-color 0.3s ease;
+  transition: all 0.3s ease;
 }
 
 /* Dark mode transitions */
@@ -11,20 +11,17 @@
 
 /* Ensure proper spacing for fixed navbar */
 main {
-  padding-top: 4rem; /* 64px to account for fixed navbar */
+  /* Removed padding-top since navbar is removed */
 }
 
 /* Smooth transitions for theme switching */
 * {
-  transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
 }
 
 /* Custom focus styles for better accessibility */
-button:focus,
-a:focus,
-input:focus,
-textarea:focus {
-  outline: 2px solid #3b82f6;
+.focus-ring:focus {
+  outline: 2px solid #a855f7;
   outline-offset: 2px;
 }
 
