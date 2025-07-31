@@ -1,13 +1,42 @@
 import { motion } from 'framer-motion'
-import { ArrowDownIcon, PlayIcon } from '@heroicons/react/24/outline'
+import { ArrowDownIcon, PlayIcon, PauseIcon } from '@heroicons/react/24/outline'
+import { useState, useRef } from 'react'
 
 const Hero = () => {
+  const [isPlaying, setIsPlaying] = useState(false)
+  const audioRef = useRef(null)
+
   const scrollToAbout = () => {
     document.getElementById('about')?.scrollIntoView({ behavior: 'smooth' })
   }
 
+  const handleAudioToggle = async () => {
+    if (!audioRef.current) {
+      // Create audio element if it doesn't exist
+      audioRef.current = new Audio('https://linturomusic.s3.us-west-2.amazonaws.com/72825.WAV')
+      audioRef.current.addEventListener('ended', () => setIsPlaying(false))
+      audioRef.current.addEventListener('error', (e) => {
+        console.error('Audio playback error:', e)
+        setIsPlaying(false)
+      })
+    }
+
+    if (isPlaying) {
+      audioRef.current.pause()
+      setIsPlaying(false)
+    } else {
+      try {
+        await audioRef.current.play()
+        setIsPlaying(true)
+      } catch (error) {
+        console.error('Error playing audio:', error)
+        setIsPlaying(false)
+      }
+    }
+  }
+
   return (
-    <section className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-900 via-black to-blue-900 relative overflow-hidden px-4 sm:px-6 lg:px-8">
+    <section className="min-h-screen bg-gradient-to-br from-purple-900 via-black to-blue-900 relative overflow-hidden px-4 sm:px-6 lg:px-8">
       {/* Background decoration */}
       <div className="absolute inset-0 overflow-hidden">
         <div className="absolute -top-20 -right-20 w-40 h-40 sm:w-80 sm:h-80 bg-purple-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob"></div>
@@ -27,7 +56,7 @@ const Hero = () => {
         ))}
       </div>
 
-      <div className="relative z-10 max-w-4xl mx-auto text-center">
+      <div className="relative z-10 max-w-4xl mx-auto text-center pt-8 sm:pt-12 lg:pt-16">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -39,8 +68,12 @@ const Hero = () => {
             transition={{ duration: 0.8, delay: 0.2 }}
             className="mb-6"
           >
-            <div className="w-20 h-20 sm:w-32 sm:h-32 mx-auto bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center mb-6 shadow-2xl">
-              <span className="text-2xl sm:text-4xl">🎧</span>
+            <div className="w-20 h-20 sm:w-32 sm:h-32 mx-auto bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center mb-6 shadow-2xl overflow-hidden">
+              <img 
+                src="https://j-pitt.github.io/images/deckPhoto.jpeg" 
+                alt="linturo" 
+                className="w-full h-full object-cover rounded-full"
+              />
             </div>
           </motion.div>
 
@@ -70,8 +103,7 @@ const Hero = () => {
             transition={{ duration: 0.8, delay: 0.8 }}
             className="text-base sm:text-lg text-purple-300 mb-8 sm:mb-12 max-w-xl mx-auto px-4"
           >
-            Creating unforgettable experiences through innovative sound design and 
-            electrifying performances that move the crowd.
+            Just a music lover looking to connect with like minded individuals. Will play music anywhere, shoot me a note if you like my music.
           </motion.p>
 
           <motion.div
@@ -83,10 +115,20 @@ const Hero = () => {
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
+              onClick={handleAudioToggle}
               className="w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 flex items-center justify-center"
             >
-              <PlayIcon className="w-5 h-5 sm:w-6 sm:h-6 mr-2" />
-              Listen Now
+              {isPlaying ? (
+                <>
+                  <PauseIcon className="w-5 h-5 sm:w-6 sm:h-6 mr-2" />
+                  Pause
+                </>
+              ) : (
+                <>
+                  <PlayIcon className="w-5 h-5 sm:w-6 sm:h-6 mr-2" />
+                  Listen Now
+                </>
+              )}
             </motion.button>
             
             <motion.button
@@ -104,7 +146,7 @@ const Hero = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 1.2 }}
-            className="flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-8"
+            className="flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-8 mb-8"
           >
             <div className="text-center">
               <div className="text-xl sm:text-2xl font-bold text-white">50K+</div>
@@ -119,22 +161,23 @@ const Hero = () => {
               <div className="text-purple-300 text-sm">Original Tracks</div>
             </div>
           </motion.div>
-        </motion.div>
 
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 1, delay: 1.4 }}
-          className="absolute bottom-4 sm:bottom-8 left-1/2 transform -translate-x-1/2"
-        >
-          <motion.button
-            onClick={scrollToAbout}
-            animate={{ y: [0, 10, 0] }}
-            transition={{ duration: 2, repeat: Infinity }}
-            className="p-2 rounded-full bg-white/10 backdrop-blur-sm border border-purple-400"
+          {/* Arrow button positioned between stats and audio waves */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 1, delay: 1.4 }}
+            className="flex justify-center"
           >
-            <ArrowDownIcon className="h-5 w-5 sm:h-6 sm:w-6 text-purple-200" />
-          </motion.button>
+            <motion.button
+              onClick={scrollToAbout}
+              animate={{ y: [0, 10, 0] }}
+              transition={{ duration: 2, repeat: Infinity }}
+              className="p-2 rounded-full bg-white/10 backdrop-blur-sm border border-purple-400"
+            >
+              <ArrowDownIcon className="h-5 w-5 sm:h-6 sm:w-6 text-purple-200" />
+            </motion.button>
+          </motion.div>
         </motion.div>
       </div>
     </section>

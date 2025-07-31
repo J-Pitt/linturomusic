@@ -1,8 +1,6 @@
 import { motion } from 'framer-motion'
 import { 
   MusicalNoteIcon, 
-  MicrophoneIcon, 
-  CalendarIcon,
   HeartIcon 
 } from '@heroicons/react/24/outline'
 
@@ -100,39 +98,6 @@ const About = () => {
                 that create an electrifying atmosphere on the dance floor. Whether performing at intimate 
                 clubs or massive festivals, I strive to connect with every person in the crowd through music.
               </p>
-            </div>
-
-            {/* Experience & Education */}
-            <div className="grid md:grid-cols-2 gap-4 sm:gap-6">
-              <div className="bg-gray-800 p-4 sm:p-6 rounded-lg border border-purple-500/20">
-                <div className="flex items-center mb-3 sm:mb-4">
-                  <MicrophoneIcon className="w-5 h-5 sm:w-6 sm:h-6 text-purple-400 mr-2 sm:mr-3" />
-                  <h4 className="text-base sm:text-lg font-semibold text-white">
-                    Notable Performances
-                  </h4>
-                </div>
-                <ul className="space-y-1 sm:space-y-2 text-xs sm:text-sm text-gray-300">
-                  <li>• Tomorrowland Festival (2023)</li>
-                  <li>• Ultra Music Festival (2022)</li>
-                  <li>• Electric Daisy Carnival (2021)</li>
-                  <li>• Ibiza Residency (2020-2023)</li>
-                </ul>
-              </div>
-
-              <div className="bg-gray-800 p-4 sm:p-6 rounded-lg border border-purple-500/20">
-                <div className="flex items-center mb-3 sm:mb-4">
-                  <CalendarIcon className="w-5 h-5 sm:w-6 sm:h-6 text-purple-400 mr-2 sm:mr-3" />
-                  <h4 className="text-base sm:text-lg font-semibold text-white">
-                    Career Highlights
-                  </h4>
-                </div>
-                <ul className="space-y-1 sm:space-y-2 text-xs sm:text-sm text-gray-300">
-                  <li>• #1 on Beatport Charts (2023)</li>
-                  <li>• Grammy Nomination (2022)</li>
-                  <li>• DJ Mag Top 100 (2021)</li>
-                  <li>• 50M+ Streams Worldwide</li>
-                </ul>
-              </div>
             </div>
 
             {/* Genres */}

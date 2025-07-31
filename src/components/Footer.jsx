@@ -6,18 +6,6 @@ const Footer = () => {
 
   const footerLinks = {
     music: [
-      { name: 'Original Tracks', href: '#' },
-      { name: 'DJ Mixes', href: '#' },
-      { name: 'Remixes', href: '#' },
-      { name: 'Live Sets', href: '#' }
-    ],
-    services: [
-      { name: 'Event Booking', href: '#' },
-      { name: 'Music Production', href: '#' },
-      { name: 'DJ Services', href: '#' },
-      { name: 'Collaborations', href: '#' }
-    ],
-    music: [
       { name: 'Spotify', href: 'https://spotify.com' },
       { name: 'SoundCloud', href: 'https://soundcloud.com' },
       { name: 'Beatport', href: 'https://beatport.com' },
@@ -34,7 +22,7 @@ const Footer = () => {
   return (
     <footer className="bg-gray-900 dark:bg-gray-900 border-t border-purple-500/20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 sm:gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
           {/* Brand Section */}
           <div className="lg:col-span-2">
             <motion.div
@@ -108,55 +96,6 @@ const Footer = () => {
                   </a>
                 </li>
               ))}
-            </ul>
-          </motion.div>
-
-          {/* Services Links */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.2 }}
-            viewport={{ once: true }}
-          >
-            <h4 className="text-white font-semibold mb-3 sm:mb-4 text-sm sm:text-base">Services</h4>
-            <ul className="space-y-1 sm:space-y-2">
-              {footerLinks.services.map((link) => (
-                <li key={link.name}>
-                  <a
-                    href={link.href}
-                    className="text-gray-400 hover:text-purple-400 transition-colors duration-200 text-sm sm:text-base"
-                  >
-                    {link.name}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </motion.div>
-
-          {/* Quick Links */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.3 }}
-            viewport={{ once: true }}
-          >
-            <h4 className="text-white font-semibold mb-3 sm:mb-4 text-sm sm:text-base">Quick Links</h4>
-            <ul className="space-y-1 sm:space-y-2">
-              <li>
-                <Link to="/" className="text-gray-400 hover:text-purple-400 transition-colors duration-200 text-sm sm:text-base">
-                  Home
-                </Link>
-              </li>
-              <li>
-                <Link to="/about" className="text-gray-400 hover:text-purple-400 transition-colors duration-200 text-sm sm:text-base">
-                  About
-                </Link>
-              </li>
-              <li>
-                <Link to="/contact" className="text-gray-400 hover:text-purple-400 transition-colors duration-200 text-sm sm:text-base">
-                  Contact
-                </Link>
-              </li>
             </ul>
           </motion.div>
         </div>
