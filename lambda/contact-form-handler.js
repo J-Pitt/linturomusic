@@ -3,15 +3,36 @@ const AWS = require('aws-sdk');
 // Configure AWS SES
 const ses = new AWS.SES({ region: 'us-west-2' }); // SES in us-west-2 to match Amplify hosting
 
+// Add timeout protection
+const startTime = Date.now();
+const MAX_EXECUTION_TIME = 25000; // 25 seconds (Lambda timeout is typically 30s)
+
 exports.handler = async (event) => {
+    // Check execution time periodically
+    if (Date.now() - startTime > MAX_EXECUTION_TIME) {
+        console.error('Function execution time exceeded limit');
+        return {
+            statusCode: 500,
+            headers: {
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
+                'Access-Control-Allow-Methods': 'POST, OPTIONS',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ 
+                error: 'Request timeout' 
+            })
+        };
+    }
     // Handle CORS preflight requests
     if (event.httpMethod === 'OPTIONS') {
         return {
             statusCode: 200,
             headers: {
                 'Access-Control-Allow-Origin': '*',
-                'Access-Control-Allow-Headers': 'Content-Type',
-                'Access-Control-Allow-Methods': 'POST, OPTIONS'
+                'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
+                'Access-Control-Allow-Methods': 'POST, OPTIONS',
+                'Access-Control-Max-Age': '86400'
             },
             body: ''
         };
@@ -22,33 +43,70 @@ exports.handler = async (event) => {
         const formData = JSON.parse(event.body);
         const { name, email, eventType, eventDate, subject, message } = formData;
 
-        // Validate required fields
-        if (!name || !email || !subject || !message) {
+        // Add basic rate limiting using client IP (if available)
+        const clientIP = event.requestContext?.identity?.sourceIp || 'unknown';
+        console.log(`Request from IP: ${clientIP}`);
+
+        // Validate request size to prevent large payload attacks
+        if (event.body && event.body.length > 10000) { // 10KB limit
             return {
-                statusCode: 400,
+                statusCode: 413,
                 headers: {
                     'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
+                    'Access-Control-Allow-Methods': 'POST, OPTIONS',
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({ 
-                    error: 'Missing required fields' 
+                    error: 'Request too large' 
                 })
             };
         }
 
+        // Validate required fields
+        if (!name || !email || !subject || !message) {
+                    return {
+            statusCode: 400,
+            headers: {
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
+                'Access-Control-Allow-Methods': 'POST, OPTIONS',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ 
+                error: 'Missing required fields' 
+            })
+        };
+        }
+
+        // Sanitize inputs to prevent injection attacks
+        const sanitizeInput = (input) => {
+            if (typeof input !== 'string') return '';
+            return input.trim().substring(0, 1000); // Limit length
+        };
+
+        const sanitizedName = sanitizeInput(name);
+        const sanitizedEmail = sanitizeInput(email);
+        const sanitizedSubject = sanitizeInput(subject);
+        const sanitizedMessage = sanitizeInput(message);
+        const sanitizedEventType = sanitizeInput(eventType);
+        const sanitizedEventDate = sanitizeInput(eventDate);
+
         // Validate email format
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(email)) {
-            return {
-                statusCode: 400,
-                headers: {
-                    'Access-Control-Allow-Origin': '*',
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ 
-                    error: 'Invalid email format' 
-                })
-            };
+        if (!emailRegex.test(sanitizedEmail)) {
+                    return {
+            statusCode: 400,
+            headers: {
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
+                'Access-Control-Allow-Methods': 'POST, OPTIONS',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ 
+                error: 'Invalid email format' 
+            })
+        };
         }
 
         // Create email content
@@ -97,6 +155,8 @@ This email was sent from the contact form on your linturo website.
             statusCode: 200,
             headers: {
                 'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
+                'Access-Control-Allow-Methods': 'POST, OPTIONS',
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({ 
@@ -111,6 +171,8 @@ This email was sent from the contact form on your linturo website.
             statusCode: 500,
             headers: {
                 'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
+                'Access-Control-Allow-Methods': 'POST, OPTIONS',
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({ 

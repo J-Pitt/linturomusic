@@ -3,6 +3,7 @@ import { ArrowDownIcon, PlayIcon, PauseIcon } from '@heroicons/react/24/outline'
 import { useState, useRef, useEffect } from 'react'
 
 const Hero = () => {
+  const [currentSet, setCurrentSet] = useState(null) // 'set1' or 'set2'
   const [isPlaying, setIsPlaying] = useState(false)
   const [audioError, setAudioError] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
@@ -10,6 +11,11 @@ const Hero = () => {
   const [duration, setDuration] = useState(0)
   const [showControls, setShowControls] = useState(false)
   const audioRef = useRef(null)
+
+  const audioUrls = {
+    set1: 'https://linturomusic.s3.us-west-2.amazonaws.com/72825.WAV',
+    set2: 'https://linturomusic.s3.us-west-2.amazonaws.com/summerSessions.WAV'
+  }
 
   const scrollToAbout = () => {
     document.getElementById('about')?.scrollIntoView({ behavior: 'smooth' })
@@ -31,7 +37,21 @@ const Hero = () => {
     setCurrentTime(newTime)
   }
 
-  const handleAudioToggle = async () => {
+  const handleAudioToggle = async (setType) => {
+    // If switching to a different set, stop current audio and reset
+    if (currentSet !== setType) {
+      if (audioRef.current) {
+        audioRef.current.pause()
+        audioRef.current = null
+      }
+      setIsPlaying(false)
+      setCurrentTime(0)
+      setDuration(0)
+      setShowControls(false)
+      setAudioError(false)
+      setCurrentSet(setType)
+    }
+
     if (audioError) {
       // If there was an error, try to reload the audio
       setAudioError(false)
@@ -76,8 +96,8 @@ const Hero = () => {
           setShowControls(false)
         })
 
-        // Use S3 URL with CORS configured
-        const audioUrl = 'https://linturomusic.s3.us-west-2.amazonaws.com/72825.WAV'
+        // Use the appropriate audio URL
+        const audioUrl = audioUrls[setType]
         
         // Set the source after setting up listeners
         audioRef.current.src = audioUrl
@@ -131,8 +151,8 @@ const Hero = () => {
         <div className="absolute top-20 left-20 w-40 h-40 sm:w-80 sm:h-80 bg-pink-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob animation-delay-4000"></div>
       </div>
 
-      {/* Audio waves animation - positioned closer to arrow */}
-      <div className="absolute bottom-12 sm:bottom-16 left-1/2 transform -translate-x-1/2 flex space-x-3">
+      {/* Audio waves animation - positioned halfway to arrow */}
+      <div className="absolute bottom-20 sm:bottom-24 left-1/2 transform -translate-x-1/2 flex space-x-3">
         {[...Array(8)].map((_, i) => (
           <motion.div
             key={i}
@@ -144,7 +164,7 @@ const Hero = () => {
         ))}
       </div>
 
-      <div className="relative z-10 max-w-4xl mx-auto text-center pt-8 sm:pt-12 lg:pt-16">
+      <div className="relative z-10 max-w-4xl mx-auto text-center pt-16 sm:pt-20 lg:pt-24">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -188,29 +208,67 @@ const Hero = () => {
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              onClick={handleAudioToggle}
-              disabled={isLoading}
-              className="w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+              onClick={() => handleAudioToggle('set1')}
+              disabled={isLoading && currentSet === 'set1'}
+              className={`w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 font-semibold rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed ${
+                currentSet === 'set1' && isPlaying 
+                  ? 'bg-gradient-to-r from-red-600 to-orange-600 text-white' 
+                  : 'bg-gradient-to-r from-purple-600 to-pink-600 text-white'
+              }`}
             >
-              {isLoading ? (
+              {isLoading && currentSet === 'set1' ? (
                 <>
                   <div className="animate-spin rounded-full h-5 w-5 sm:h-6 sm:w-6 border-b-2 border-white mr-2"></div>
                   Loading...
                 </>
-              ) : audioError ? (
+              ) : audioError && currentSet === 'set1' ? (
                 <>
                   <PlayIcon className="w-5 h-5 sm:w-6 sm:h-6 mr-2" />
                   Try Again
                 </>
-              ) : isPlaying ? (
+              ) : currentSet === 'set1' && isPlaying ? (
                 <>
                   <PauseIcon className="w-5 h-5 sm:w-6 sm:h-6 mr-2" />
-                  Pause
+                  Pause Set 1
                 </>
               ) : (
                 <>
                   <PlayIcon className="w-5 h-5 sm:w-6 sm:h-6 mr-2" />
-                  Listen Now
+                  Set 1
+                </>
+              )}
+            </motion.button>
+            
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => handleAudioToggle('set2')}
+              disabled={isLoading && currentSet === 'set2'}
+              className={`w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 font-semibold rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed ${
+                currentSet === 'set2' && isPlaying 
+                  ? 'bg-gradient-to-r from-red-600 to-orange-600 text-white' 
+                  : 'bg-gradient-to-r from-purple-600 to-pink-600 text-white'
+              }`}
+            >
+              {isLoading && currentSet === 'set2' ? (
+                <>
+                  <div className="animate-spin rounded-full h-5 w-5 sm:h-6 sm:w-6 border-b-2 border-white mr-2"></div>
+                  Loading...
+                </>
+              ) : audioError && currentSet === 'set2' ? (
+                <>
+                  <PlayIcon className="w-5 h-5 sm:w-6 sm:h-6 mr-2" />
+                  Try Again
+                </>
+              ) : currentSet === 'set2' && isPlaying ? (
+                <>
+                  <PauseIcon className="w-5 h-5 sm:w-6 sm:h-6 mr-2" />
+                  Pause Set 2
+                </>
+              ) : (
+                <>
+                  <PlayIcon className="w-5 h-5 sm:w-6 sm:h-6 mr-2" />
+                  Set 2
                 </>
               )}
             </motion.button>

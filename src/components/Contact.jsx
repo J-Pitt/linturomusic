@@ -60,8 +60,13 @@ const Contact = () => {
       console.error('Error submitting form:', error)
       setIsSubmitting(false)
       
-      // Show error message
-      alert('Sorry, there was an error sending your message. Please try again or email me directly at linturomusic@gmail.com')
+      // Check if it's a CORS error and provide specific guidance
+      if (error.message.includes('Failed to fetch') || error.message.includes('CORS')) {
+        alert('CORS error detected. This is likely a configuration issue with the API Gateway. Please email me directly at linturomusic@gmail.com for now.')
+      } else {
+        // Show general error message
+        alert('Sorry, there was an error sending your message. Please try again or email me directly at linturomusic@gmail.com')
+      }
     }
   }
 
