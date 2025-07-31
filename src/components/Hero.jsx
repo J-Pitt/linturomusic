@@ -1,9 +1,11 @@
 import { motion } from 'framer-motion'
 import { ArrowDownIcon, PlayIcon, PauseIcon } from '@heroicons/react/24/outline'
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 
 const Hero = () => {
   const [isPlaying, setIsPlaying] = useState(false)
+  const [audioError, setAudioError] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
   const audioRef = useRef(null)
 
   const scrollToAbout = () => {
@@ -11,14 +13,50 @@ const Hero = () => {
   }
 
   const handleAudioToggle = async () => {
+    if (audioError) {
+      // If there was an error, try to reload the audio
+      setAudioError(false)
+      audioRef.current = null
+    }
+
     if (!audioRef.current) {
-      // Create audio element if it doesn't exist
-      audioRef.current = new Audio('https://linturomusic.s3.us-west-2.amazonaws.com/72825.WAV')
-      audioRef.current.addEventListener('ended', () => setIsPlaying(false))
-      audioRef.current.addEventListener('error', (e) => {
-        console.error('Audio playback error:', e)
-        setIsPlaying(false)
-      })
+      setIsLoading(true)
+      try {
+        // Create audio element with CORS settings
+        audioRef.current = new Audio()
+        audioRef.current.crossOrigin = 'anonymous'
+        audioRef.current.preload = 'metadata'
+        
+        // Set up event listeners
+        audioRef.current.addEventListener('loadedmetadata', () => {
+          setIsLoading(false)
+        })
+        
+        audioRef.current.addEventListener('ended', () => {
+          setIsPlaying(false)
+        })
+        
+        audioRef.current.addEventListener('error', (e) => {
+          console.error('Audio playback error:', e)
+          setIsPlaying(false)
+          setIsLoading(false)
+          setAudioError(true)
+        })
+
+        // Try primary URL first, fallback to alternative if needed
+        const audioUrl = 'https://linturomusic.s3.us-west-2.amazonaws.com/72825.WAV'
+        
+        // Set the source after setting up listeners
+        audioRef.current.src = audioUrl
+        
+        // Try to load the audio
+        await audioRef.current.load()
+      } catch (error) {
+        console.error('Error loading audio:', error)
+        setIsLoading(false)
+        setAudioError(true)
+        return
+      }
     }
 
     if (isPlaying) {
@@ -26,14 +64,28 @@ const Hero = () => {
       setIsPlaying(false)
     } else {
       try {
+        setIsLoading(true)
         await audioRef.current.play()
         setIsPlaying(true)
+        setIsLoading(false)
       } catch (error) {
         console.error('Error playing audio:', error)
         setIsPlaying(false)
+        setIsLoading(false)
+        setAudioError(true)
       }
     }
   }
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause()
+        audioRef.current = null
+      }
+    }
+  }, [])
 
   return (
     <section className="min-h-screen bg-gradient-to-br from-purple-900 via-black to-blue-900 relative overflow-hidden px-4 sm:px-6 lg:px-8">
@@ -110,15 +162,26 @@ const Hero = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 1.0 }}
-            className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-8 sm:mb-12"
+            className="flex flex-col sm:flex-row gap-4 justify-center items-center"
           >
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={handleAudioToggle}
-              className="w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 flex items-center justify-center"
+              disabled={isLoading}
+              className="w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isPlaying ? (
+              {isLoading ? (
+                <>
+                  <div className="animate-spin rounded-full h-5 w-5 sm:h-6 sm:w-6 border-b-2 border-white mr-2"></div>
+                  Loading...
+                </>
+              ) : audioError ? (
+                <>
+                  <PlayIcon className="w-5 h-5 sm:w-6 sm:h-6 mr-2" />
+                  Try Again
+                </>
+              ) : isPlaying ? (
                 <>
                   <PauseIcon className="w-5 h-5 sm:w-6 sm:h-6 mr-2" />
                   Pause
@@ -130,7 +193,6 @@ const Hero = () => {
                 </>
               )}
             </motion.button>
-            
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
@@ -140,6 +202,16 @@ const Hero = () => {
               Learn More
             </motion.button>
           </motion.div>
+
+          {audioError && (
+            <motion.p
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-red-400 text-sm mt-4"
+            >
+              Audio temporarily unavailable. Please try again later.
+            </motion.p>
+          )}
 
           {/* Social stats */}
           <motion.div
