@@ -38,12 +38,18 @@ const Hero = () => {
         
         audioRef.current.addEventListener('error', (e) => {
           console.error('Audio playback error:', e)
+          console.error('Audio error details:', {
+            error: e.target.error,
+            networkState: e.target.networkState,
+            readyState: e.target.readyState,
+            src: e.target.src
+          })
           setIsPlaying(false)
           setIsLoading(false)
           setAudioError(true)
         })
 
-        // Try primary URL first, fallback to alternative if needed
+        // Use S3 URL with CORS configured
         const audioUrl = 'https://linturomusic.s3.us-west-2.amazonaws.com/72825.WAV'
         
         // Set the source after setting up listeners
