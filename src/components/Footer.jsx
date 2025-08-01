@@ -11,7 +11,7 @@ const Footer = () => {
     ],
     social: [
       { name: 'Instagram', href: 'https://www.instagram.com/_linturo_/' },
-      { name: 'YouTube', href: 'https://youtube.com' }
+      { name: 'YouTube', href: 'https://www.youtube.com/@linturo' }
     ]
   }
 

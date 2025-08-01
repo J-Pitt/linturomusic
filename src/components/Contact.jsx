@@ -99,7 +99,7 @@ const Contact = () => {
   const socialLinks = [
             { name: 'SoundCloud', url: 'https://soundcloud.com/linturo/tracks', icon: '☁️' },
     { name: 'Instagram', url: 'https://www.instagram.com/_linturo_/', icon: '📸' },
-    { name: 'YouTube', url: 'https://youtube.com', icon: '▶️' }
+    { name: 'YouTube', url: 'https://www.youtube.com/@linturo', icon: '▶️' }
   ]
 
   return (
