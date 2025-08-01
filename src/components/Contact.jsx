@@ -337,7 +337,8 @@ const Contact = () => {
               </h4>
               <p className="text-sm sm:text-base text-purple-100 mb-3 sm:mb-4">
                 I'm open to play music at bars, clubs, or parties - first booking is always free. 
-                If we vibe, hopefully we can get something regular set up!
+                I have a pioneer deck I can bring if needed, but a soundsystem is required to be provided. 
+                If we vibe, hopefully we can set something regular up!
               </p>
               <div className="flex items-center">
                 <div className="w-2 h-2 sm:w-3 sm:h-3 bg-green-400 rounded-full mr-2 sm:mr-3 animate-pulse"></div>

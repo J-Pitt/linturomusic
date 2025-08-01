@@ -45,7 +45,7 @@ const About = () => {
                 tech house, and deep dubstep.
               </p>
               <p className="text-sm sm:text-base text-gray-300 leading-relaxed">
-                I'm happy to play music anywhere people will enjoy it. For me, music, and the connection it encourages, is therapeutic. As lifelong music lover, I aim 
+                I'm happy to play music anywhere people will enjoy it. For me, music and the connection it encourages is therapeutic. As lifelong music lover, I aim 
                 to curate not only a great vibe, but a unique journey through sound. I'm Brooklyn based, so if you're in the area and want to jam, or you need a DJ for an event, please drop me a line, I'm always more than happy to connect.
               </p>
             </div>
