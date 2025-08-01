@@ -39,10 +39,19 @@ exports.handler = async (event) => {
     }
 
     try {
-        // Add logging to debug the issue
+        // Add comprehensive logging to debug the issue
+        console.log('=== LAMBDA FUNCTION DEBUG LOG ===');
         console.log('Full event object:', JSON.stringify(event, null, 2));
         console.log('Event body:', event.body);
         console.log('Event body type:', typeof event.body);
+        console.log('Event headers:', event.headers);
+        console.log('Event httpMethod:', event.httpMethod);
+        console.log('Event path:', event.path);
+        console.log('Event queryStringParameters:', event.queryStringParameters);
+        console.log('Event pathParameters:', event.pathParameters);
+        console.log('Event stageVariables:', event.stageVariables);
+        console.log('Event requestContext:', event.requestContext);
+        console.log('=== END DEBUG LOG ===');
         
         // Check if event.body exists and is a string
         if (!event.body) {
