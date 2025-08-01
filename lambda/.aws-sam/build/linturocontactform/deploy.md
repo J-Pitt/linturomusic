@@ -14,11 +14,11 @@
 2. Go to "Verified identities"
 3. Click "Create identity"
 4. Choose "Email address"
-5. Enter: `linturomusic@gmail.com`
+5. Enter: `music-app@gmail.com`
 6. Click "Create identity"
 7. Check your Gmail and click the verification link
 
-**Note**: The Lambda code is already configured to use `linturomusic@gmail.com` as the sender address.
+**Note**: The Lambda code is already configured to use `music-app@gmail.com` as the sender address.
 
 ### 2. Create IAM Role for Lambda
 
@@ -41,12 +41,12 @@ EOF
 
 # Create role
 aws iam create-role \
-    --role-name linturo-contact-form-role \
+    --role-name artist-contact-form-role \
     --assume-role-policy-document file://lambda-trust-policy.json
 
 # Attach basic Lambda execution policy
 aws iam attach-role-policy \
-    --role-name linturo-contact-form-role \
+    --role-name artist-contact-form-role \
     --policy-arn arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
 
 # Create and attach SES policy
@@ -67,7 +67,7 @@ cat > ses-policy.json << EOF
 EOF
 
 aws iam put-role-policy \
-    --role-name linturo-contact-form-role \
+    --role-name artist-contact-form-role \
     --policy-name SESPolicy \
     --policy-document file://ses-policy.json
 ```
@@ -86,15 +86,15 @@ zip -r contact-form-handler.zip .
 
 # Create Lambda function
 aws lambda create-function \
-    --function-name linturo-contact-form \
+    --function-name artist-contact-form \
     --runtime nodejs18.x \
-    --role arn:aws:iam::YOUR_ACCOUNT_ID:role/linturo-contact-form-role \
+    --role arn:aws:iam::YOUR_ACCOUNT_ID:role/artist-contact-form-role \
     --handler contact-form-handler.handler \
     --zip-file fileb://contact-form-handler.zip
 
 # Update function if it already exists
 aws lambda update-function-code \
-    --function-name linturo-contact-form \
+    --function-name artist-contact-form \
     --zip-file fileb://contact-form-handler.zip
 ```
 
@@ -103,8 +103,8 @@ aws lambda update-function-code \
 ```bash
 # Create REST API
 aws apigateway create-rest-api \
-    --name linturo-contact-api \
-    --description "API for linturo contact form"
+    --name artist-contact-api \
+    --description "API for artist contact form"
 
 # Note the API ID from the response, then get the root resource ID
 aws apigateway get-resources --rest-api-id YOUR_API_ID
@@ -136,7 +136,7 @@ aws apigateway put-integration \
     --http-method POST \
     --type AWS_PROXY \
     --integration-http-method POST \
-    --uri arn:aws:apigateway:us-west-2:lambda:path/2015-03-31/functions/arn:aws:lambda:us-west-2:YOUR_ACCOUNT_ID:function:linturo-contact-form/invocations
+    --uri arn:aws:apigateway:us-west-2:lambda:path/2015-03-31/functions/arn:aws:lambda:us-west-2:YOUR_ACCOUNT_ID:function:artist-contact-form/invocations
 
 # Deploy API
 aws apigateway create-deployment \

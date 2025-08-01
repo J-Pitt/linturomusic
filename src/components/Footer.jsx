@@ -6,7 +6,7 @@ const Footer = () => {
 
   const footerLinks = {
     music: [
-      { name: 'SoundCloud', href: 'https://soundcloud.com/linturo/tracks' },
+      // { name: 'SoundCloud', href: 'https://soundcloud.com/linturo/tracks' }, // Commented out for future use
       { name: 'Mixcloud', href: 'https://www.mixcloud.com/linturo/' }
     ],
     social: [
@@ -34,8 +34,8 @@ const Footer = () => {
                 Playing music and making friends along the way.
               </p>
               
-              {/* Social Links */}
-              <div className="flex space-x-3 sm:space-x-4">
+              {/* Social Links - Commented out for future use */}
+              {/* <div className="flex space-x-3 sm:space-x-4">
                 {footerLinks.social.map((social) => (
                   <motion.a
                     key={social.name}
@@ -51,7 +51,7 @@ const Footer = () => {
                     </span>
                   </motion.a>
                 ))}
-              </div>
+              </div> */}
             </motion.div>
           </div>
 

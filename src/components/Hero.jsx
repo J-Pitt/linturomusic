@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion'
 import { ArrowDownIcon, PlayIcon, PauseIcon } from '@heroicons/react/24/outline'
 import { useState, useRef, useEffect } from 'react'
+import { config } from '../config'
 
 const Hero = () => {
   const [currentSet, setCurrentSet] = useState(null) // 'set1' or 'set2'
@@ -13,9 +14,9 @@ const Hero = () => {
   const audioRef = useRef(null)
 
   const audioUrls = {
-    set1: 'https://linturomusic.s3.us-west-2.amazonaws.com/72825.WAV',
-    set2: 'https://linturomusic.s3.us-west-2.amazonaws.com/summerSessions.WAV',
-    set3: 'https://linturomusic.s3.us-west-2.amazonaws.com/521_house.wav'
+    set1: config.AUDIO_FILES.SET1,
+    set2: config.AUDIO_FILES.SET2,
+    set3: config.AUDIO_FILES.SET3
   }
 
   const scrollToAbout = () => {

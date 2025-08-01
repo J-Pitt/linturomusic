@@ -1,5 +1,5 @@
 {
-  "name": "linturo-contact-form",
+  "name": "artist-contact-form",
   "version": "1.0.0",
   "description": "AWS Lambda function to handle contact form submissions",
   "main": "index.js",
@@ -10,6 +10,6 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": ["aws", "lambda", "contact-form", "ses"],
-  "author": "linturo",
+  "author": "artist",
   "license": "MIT"
 }

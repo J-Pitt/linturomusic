@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Favicon Options - Linturo</title>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #1F2937 0%, #374151 100%);
+            color: white;
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1 {
+            text-align: center;
+            background: linear-gradient(135deg, #8B5CF6, #EC4899);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 40px;
+        }
+        .favicon-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+        .favicon-option {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(139, 92, 246, 0.3);
+            border-radius: 12px;
+            padding: 30px;
+            text-align: center;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .favicon-option:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(139, 92, 246, 0.3);
+        }
+        .favicon-display {
+            margin-bottom: 20px;
+        }
+        .favicon-display img {
+            width: 64px;
+            height: 64px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        }
+        .favicon-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #E5E7EB;
+        }
+        .favicon-description {
+            font-size: 14px;
+            color: #9CA3AF;
+            line-height: 1.5;
+        }
+        .current-favicon {
+            background: linear-gradient(135deg, #8B5CF6, #EC4899);
+            border: 2px solid #EC4899;
+        }
+        .instructions {
+            background: rgba(139, 92, 246, 0.1);
+            border: 1px solid rgba(139, 92, 246, 0.3);
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 30px;
+        }
+        .instructions h3 {
+            color: #8B5CF6;
+            margin-top: 0;
+        }
+        .code-block {
+            background: #1F2937;
+            border: 1px solid #374151;
+            border-radius: 6px;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            color: #E5E7EB;
+            margin: 10px 0;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎵 Linturo Favicon Options</h1>
+        
+        <div class="favicon-grid">
+            <div class="favicon-option current-favicon">
+                <div class="favicon-display">
+                    <img src="/favicon.svg" alt="Current Favicon">
+                </div>
+                <div class="favicon-title">Current: Musical Note "L"</div>
+                <div class="favicon-description">
+                    Purple to pink gradient background with musical note and prominent "L" letter. 
+                    Clean and modern design with music elements.
+                </div>
+            </div>
+
+            <div class="favicon-option">
+                <div class="favicon-display">
+                    <img src="/favicon-option1.svg" alt="Vinyl Record L">
+                </div>
+                <div class="favicon-title">Option 1: Vinyl Record "L"</div>
+                <div class="favicon-description">
+                    Dark vinyl record background with colored grooves. 
+                    Clean white "L" overlay with classic DJ aesthetic.
+                </div>
+            </div>
+
+            <div class="favicon-option">
+                <div class="favicon-display">
+                    <img src="/favicon-option2.svg" alt="DJ Turntable L">
+                </div>
+                <div class="favicon-title">Option 2: DJ Turntable "L"</div>
+                <div class="favicon-description">
+                    Turntable with gradient platter and "L" designed as a tone arm. 
+                    Professional DJ equipment look.
+                </div>
+            </div>
+
+            <div class="favicon-option">
+                <div class="favicon-display">
+                    <img src="/favicon-option3.svg" alt="Waveform L">
+                </div>
+                <div class="favicon-title">Option 3: Waveform "L"</div>
+                <div class="favicon-description">
+                    Audio waveform bars in gradient colors with "L" overlaid on top. 
+                    Modern, tech-focused design.
+                </div>
+            </div>
+
+            <div class="favicon-option">
+                <div class="favicon-display">
+                    <img src="/favicon-option4.svg" alt="Headphones L">
+                </div>
+                <div class="favicon-title">Option 4: Headphones "L"</div>
+                <div class="favicon-description">
+                    Gradient background with white headphones and prominent "L". 
+                    Music listening theme.
+                </div>
+            </div>
+
+            <div class="favicon-option">
+                <div class="favicon-display">
+                    <img src="/favicon-option5.svg" alt="Equalizer L">
+                </div>
+                <div class="favicon-title">Option 5: Equalizer "L"</div>
+                <div class="favicon-description">
+                    Dark background with equalizer bars and geometric "L" with gradient fill. 
+                    Studio/audio engineering feel.
+                </div>
+            </div>
+
+            <div class="favicon-option">
+                <div class="favicon-display">
+                    <img src="/favicon-djdeck.svg" alt="DJ Deck">
+                </div>
+                <div class="favicon-title">Option 6: DJ Deck</div>
+                <div class="favicon-description">
+                    Professional DJ setup with two turntables, mixer, and "L" as tone arm. 
+                    Authentic DJ equipment look.
+                </div>
+            </div>
+        </div>
+
+        <div class="instructions">
+            <h3>How to Change Your Favicon</h3>
+            <p>To preview any of these options, update the favicon link in your <code>index.html</code> file:</p>
+            
+            <div class="code-block">
+&lt;link rel="icon" type="image/svg+xml" href="/favicon.svg" /&gt; &lt;!-- Current --&gt;
+&lt;link rel="icon" type="image/svg+xml" href="/favicon-option1.svg" /&gt; &lt;!-- Vinyl Record --&gt;
+&lt;link rel="icon" type="image/svg+xml" href="/favicon-option2.svg" /&gt; &lt;!-- DJ Turntable --&gt;
+&lt;link rel="icon" type="image/svg+xml" href="/favicon-option3.svg" /&gt; &lt;!-- Waveform --&gt;
+&lt;link rel="icon" type="image/svg+xml" href="/favicon-option4.svg" /&gt; &lt;!-- Headphones --&gt;
+&lt;link rel="icon" type="image/svg+xml" href="/favicon-option5.svg" /&gt; &lt;!-- Equalizer --&gt;
+&lt;link rel="icon" type="image/svg+xml" href="/favicon-djdeck.svg" /&gt; &lt;!-- DJ Deck --&gt;
+            </div>
+            
+            <p><strong>Note:</strong> You may need to refresh your browser or clear the cache to see the new favicon, as browsers often cache favicons aggressively.</p>
+        </div>
+    </div>
+</body>
+</html> 

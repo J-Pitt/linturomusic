@@ -1,9 +1,9 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: Contact form Lambda function for linturo website
+Description: Contact form Lambda function for artist website
 
 Resources:
-  linturocontactform:
+  artistcontactform:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: .

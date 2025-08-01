@@ -1,11 +1,11 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: Contact form Lambda function for linturo website
+Description: Contact form Lambda function for artist website
 Resources:
-  linturocontactform:
+  artistcontactform:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: linturocontactform
+      CodeUri: artistcontactform
       Description: Lambda function to handle contact form submissions
       MemorySize: 256
       Timeout: 30
@@ -46,7 +46,7 @@ Resources:
       RuntimeManagementConfig:
         UpdateRuntimeOn: Auto
     Metadata:
-      SamResourceId: linturocontactform
+      SamResourceId: artistcontactform
   ApiGatewayApi:
     Type: AWS::Serverless::Api
     Properties:

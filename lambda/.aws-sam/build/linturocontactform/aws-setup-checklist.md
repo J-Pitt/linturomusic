@@ -5,11 +5,11 @@
 ### Verify Sender Email:
 1. Go to AWS SES Console (us-west-2 region)
 2. Click "Verified identities"
-3. Check if `linturomusic@gmail.com` is verified
+3. Check if `music-app@gmail.com` is verified
 4. If not verified:
    - Click "Create identity"
    - Choose "Email address"
-   - Enter: `linturomusic@gmail.com`
+   - Enter: `music-app@gmail.com`
    - Click "Create identity"
    - Check your Gmail and click the verification link
 
@@ -23,7 +23,7 @@
 
 ### Check Lambda Function:
 1. Go to AWS Lambda Console
-2. Find function: `linturo-contact-form`
+2. Find function: `artist-contact-form`
 3. Check:
    - **Runtime**: Node.js 18.x
    - **Handler**: `contact-form-handler.handler`
@@ -41,7 +41,7 @@
 
 ### Check API Gateway:
 1. Go to API Gateway Console
-2. Find your API: `linturo-contact-api`
+2. Find your API: `artist-contact-api`
 3. Check:
    - **Resource**: `/contact`
    - **Method**: POST
@@ -65,7 +65,7 @@ curl -X POST https://3ceog0x8e2.execute-api.us-west-2.amazonaws.com/prod/contact
 ### Check Lambda Logs:
 1. Go to CloudWatch Console
 2. Click "Log groups"
-3. Find: `/aws/lambda/linturo-contact-form`
+3. Find: `/aws/lambda/artist-contact-form`
 4. Click on the latest log stream
 5. Look for:
    - Error messages
@@ -116,7 +116,7 @@ curl -X POST https://3ceog0x8e2.execute-api.us-west-2.amazonaws.com/prod/contact
 ## Step 7: Common Issues & Solutions ✅
 
 ### Issue: "Email address not verified"
-**Solution**: Verify `linturomusic@gmail.com` in SES
+**Solution**: Verify `music-app@gmail.com` in SES
 
 ### Issue: "MessageRejected"
 **Solution**: Check email content for spam triggers
@@ -147,7 +147,7 @@ curl -X POST https://3ceog0x8e2.execute-api.us-west-2.amazonaws.com/prod/contact
 ```bash
 cd lambda
 zip -r contact-form-handler.zip .
-aws lambda update-function-code --function-name linturo-contact-form --zip-file fileb://contact-form-handler.zip
+aws lambda update-function-code --function-name artist-contact-form --zip-file fileb://contact-form-handler.zip
 ```
 
 ### Check SES Status:
@@ -158,7 +158,7 @@ aws ses list-verified-email-addresses --region us-west-2
 
 ### Test Lambda:
 ```bash
-aws lambda invoke --function-name linturo-contact-form --payload '{"body":"{\"name\":\"Test\",\"email\":\"test@example.com\",\"subject\":\"Test\",\"message\":\"Test\"}"}' response.json
+aws lambda invoke --function-name artist-contact-form --payload '{"body":"{\"name\":\"Test\",\"email\":\"test@example.com\",\"subject\":\"Test\",\"message\":\"Test\"}"}' response.json
 ```
 
 ## Next Steps:

@@ -3,8 +3,8 @@ import { HeartIcon } from '@heroicons/react/24/outline'
 
 const About = () => {
   const genres = [
-    'House', 'Techno', 'Trance', 'Progressive', 
-    'Deep House', 'Electronica', 'Ambient', 'Psy-Dub', 'Deep Dubstep'
+    'House', 'Progressive', 
+    'Deep House', 'Melodic House', 'Organic House', 'Electronica', 'Ambient', 'Psy-Dub', 'Deep Dubstep'
   ]
 
   return (
@@ -39,14 +39,14 @@ const About = () => {
                 My Journey
               </h3>
               <p className="text-sm sm:text-base text-gray-300 mb-4 sm:mb-6 leading-relaxed">
-                I began my DJ journey at an intimate festival inside Mt. Rainier National Park with some close friends. Since then, 
-                I've worked to perfect my craft while living in cities around the world, from San Francisco to London to New York. 
+                I began my DJ journey at an intimate festival inside Mt. Rainier National Park with some close friends where I learned the basics. Since then, 
+                I've worked to perfect my craft while living and playing in cities around the world - from San Francisco to London to New York. 
                 My specialties are organic house and melodic house, though I also enjoy playing psytrance, psydub, 
                 tech house, and deep dubstep.
               </p>
               <p className="text-sm sm:text-base text-gray-300 leading-relaxed">
-                I'm happy to play music anywhere, for anyone who also considers music therapeutic. As lifelong music lover, I aim 
-                to curate not only a great vibe, but a unique journey through sound. I'm Brooklyn based, so if you're in the area and want to jam, or you need a DJ for an event, please drop me a line as I'm always more than happy to connect.
+                I'm happy to play music anywhere people will enjoy it. For me, music, and the connection it encourages, is therapeutic. As lifelong music lover, I aim 
+                to curate not only a great vibe, but a unique journey through sound. I'm Brooklyn based, so if you're in the area and want to jam, or you need a DJ for an event, please drop me a line, I'm always more than happy to connect.
               </p>
             </div>
 

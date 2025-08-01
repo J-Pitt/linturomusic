@@ -71,11 +71,11 @@ const Contact = () => {
       // Check if it's a CORS error and provide specific guidance
       if (error.message.includes('Failed to fetch') || error.message.includes('CORS')) {
         setModalType('error')
-        setModalMessage('CORS error detected. This is likely a configuration issue with the API Gateway. Please email me directly at linturomusic@gmail.com for now.')
+        setModalMessage('CORS error detected. This is likely a configuration issue with the API Gateway. Please email me directly at ' + config.CONTACT_EMAIL + ' for now.')
       } else {
         // Show general error message
         setModalType('error')
-        setModalMessage('Sorry, there was an error sending your message. Please try again or email me directly at linturomusic@gmail.com')
+        setModalMessage('Sorry, there was an error sending your message. Please try again or email me directly at ' + config.CONTACT_EMAIL)
       }
       setShowModal(true)
     }
@@ -85,8 +85,8 @@ const Contact = () => {
     {
       icon: EnvelopeIcon,
       title: 'Email',
-      value: 'linturomusic@gmail.com',
-      link: 'mailto:linturomusic@gmail.com'
+      value: config.CONTACT_EMAIL,
+      link: 'mailto:' + config.CONTACT_EMAIL
     },
     {
       icon: MapPinIcon,
@@ -116,7 +116,7 @@ const Contact = () => {
             Get In Touch
           </h2>
           <p className="text-base sm:text-lg text-purple-300 max-w-2xl mx-auto px-4">
-            If you are also an avid lover of music, need a DJ for an event, or want to collaborate on an event, let's connect!
+            If you are also an avid lover of music, need a DJ for an party, or want to collaborate on an event, let's connect!
           </p>
         </motion.div>
 
@@ -192,7 +192,6 @@ const Contact = () => {
                     <option value="bar" className="bg-gray-800 text-white">Bar</option>
                     <option value="house-party" className="bg-gray-800 text-white">House Party</option>
                     <option value="festival" className="bg-gray-800 text-white">Festival</option>
-                    <option value="renegade" className="bg-gray-800 text-white">Renegade</option>
                     <option value="other" className="bg-gray-800 text-white">Other</option>
                   </select>
                 </div>
@@ -306,8 +305,8 @@ const Contact = () => {
               ))}
             </div>
 
-            {/* Social Links */}
-            <div>
+            {/* Social Links - Commented out for future use */}
+            {/* <div>
               <h3 className="text-xl sm:text-2xl font-bold text-white mb-4 sm:mb-6">
                 Follow the Music
               </h3>
@@ -329,7 +328,7 @@ const Contact = () => {
                   </motion.a>
                 ))}
               </div>
-            </div>
+            </div> */}
 
             {/* Additional Info */}
             <div className="bg-gradient-to-r from-purple-600 to-pink-600 rounded-lg p-4 sm:p-6 text-white">
@@ -337,8 +336,8 @@ const Contact = () => {
                 Let's have some fun!
               </h4>
               <p className="text-sm sm:text-base text-purple-100 mb-3 sm:mb-4">
-                I'm available for bookings worldwide and always open to exciting music adventures. 
-                Whether it's a club, bar, or just an intimate gathering, let's boogie!
+                I'm open to play music at bars, clubs, or parties - first booking is always free. 
+                If we vibe, hopefully we can get something regular set up!
               </p>
               <div className="flex items-center">
                 <div className="w-2 h-2 sm:w-3 sm:h-3 bg-green-400 rounded-full mr-2 sm:mr-3 animate-pulse"></div>

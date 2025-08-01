@@ -6,14 +6,14 @@
             "Effect": "Allow",
             "Principal": "*",
             "Action": "s3:GetObject",
-            "Resource": "arn:aws:s3:::linturomusic/72825.WAV"
+            "Resource": "arn:aws:s3:::music-app/72825.WAV"
         },
         {
             "Sid": "PublicReadAudioFile2",
             "Effect": "Allow",
             "Principal": "*",
             "Action": "s3:GetObject",
-            "Resource": "arn:aws:s3:::linturomusic/summerSessions.WAV"
+            "Resource": "arn:aws:s3:::music-app/summerSessions.WAV"
         }
     ]
 } 

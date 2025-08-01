@@ -166,13 +166,13 @@ Message:
 ${sanitizedMessage}
 
 ---
-This email was sent from the contact form on your linturo website.
+This email was sent from the contact form on your artist website.
         `.trim();
 
         // Email parameters
         const params = {
             Destination: {
-                ToAddresses: ['linturomusic@gmail.com'] // Your email
+                ToAddresses: ['music-app@gmail.com'] // Your email
             },
             Message: {
                 Body: {
@@ -186,7 +186,7 @@ This email was sent from the contact form on your linturo website.
                     Charset: 'UTF-8'
                 }
             },
-            Source: 'linturomusic@gmail.com', // Verify this email in SES first
+            Source: 'music-app@gmail.com', // Verify this email in SES first
             ReplyToAddresses: [sanitizedEmail] // User's email for easy reply
         };
 
