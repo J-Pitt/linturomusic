@@ -231,12 +231,12 @@ const Hero = () => {
               ) : currentSet === 'set1' && isPlaying ? (
                 <>
                   <PauseIcon className="w-5 h-5 sm:w-6 sm:h-6 mr-2" />
-                  Pause Set 1
+                  Pause Dark Nights
                 </>
               ) : (
                 <>
                   <PlayIcon className="w-5 h-5 sm:w-6 sm:h-6 mr-2" />
-                  Set 1
+                  Dark Nights
                 </>
               )}
             </motion.button>
@@ -265,12 +265,12 @@ const Hero = () => {
               ) : currentSet === 'set2' && isPlaying ? (
                 <>
                   <PauseIcon className="w-5 h-5 sm:w-6 sm:h-6 mr-2" />
-                  Pause Set 2
+                  Pause Underground Bunker
                 </>
               ) : (
                 <>
                   <PlayIcon className="w-5 h-5 sm:w-6 sm:h-6 mr-2" />
-                  Set 2
+                  Underground Bunker
                 </>
               )}
             </motion.button>
@@ -299,12 +299,12 @@ const Hero = () => {
               ) : currentSet === 'set3' && isPlaying ? (
                 <>
                   <PauseIcon className="w-5 h-5 sm:w-6 sm:h-6 mr-2" />
-                  Pause Set 3
+                  Pause Easy Days
                 </>
               ) : (
                 <>
                   <PlayIcon className="w-5 h-5 sm:w-6 sm:h-6 mr-2" />
-                  Set 3
+                  Easy Days
                 </>
               )}
             </motion.button>
