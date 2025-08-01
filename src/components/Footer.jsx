@@ -6,7 +6,7 @@ const Footer = () => {
 
   const footerLinks = {
     music: [
-      { name: 'SoundCloud', href: 'https://soundcloud.com/linturo' },
+      { name: 'SoundCloud', href: 'https://soundcloud.com/linturo/tracks' },
       { name: 'Mixcloud', href: 'https://www.mixcloud.com/linturo/' }
     ],
     social: [
