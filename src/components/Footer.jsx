@@ -31,7 +31,7 @@ const Footer = () => {
                 <span className="bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent font-brand">linturo</span>
               </h3>
               <p className="text-sm sm:text-base text-gray-400 mb-4 sm:mb-6 max-w-md">
-                Playing music and making lifelong friends along the way.
+                Playing music and making friends along the way.
               </p>
               
               {/* Social Links */}

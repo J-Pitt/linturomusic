@@ -334,11 +334,11 @@ const Contact = () => {
             {/* Additional Info */}
             <div className="bg-gradient-to-r from-purple-600 to-pink-600 rounded-lg p-4 sm:p-6 text-white">
               <h4 className="text-lg sm:text-xl font-bold mb-2 sm:mb-3">
-                Let's create something amazing!
+                Let's have some fun!
               </h4>
               <p className="text-sm sm:text-base text-purple-100 mb-3 sm:mb-4">
                 I'm available for bookings worldwide and always open to exciting music adventures. 
-                Whether it's a club or bar, or just an intimate gathering, let's boogie!
+                Whether it's a club, bar, or just an intimate gathering, let's boogie!
               </p>
               <div className="flex items-center">
                 <div className="w-2 h-2 sm:w-3 sm:h-3 bg-green-400 rounded-full mr-2 sm:mr-3 animate-pulse"></div>
