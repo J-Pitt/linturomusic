@@ -39,8 +39,50 @@ exports.handler = async (event) => {
     }
 
     try {
+        // Add logging to debug the issue
+        console.log('Full event object:', JSON.stringify(event, null, 2));
+        console.log('Event body:', event.body);
+        console.log('Event body type:', typeof event.body);
+        
+        // Check if event.body exists and is a string
+        if (!event.body) {
+            console.error('Event body is undefined or null');
+            return {
+                statusCode: 400,
+                headers: {
+                    'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
+                    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ 
+                    error: 'Request body is missing' 
+                })
+            };
+        }
+        
         // Parse the request body
-        const formData = JSON.parse(event.body);
+        let formData;
+        try {
+            formData = JSON.parse(event.body);
+        } catch (parseError) {
+            console.error('JSON parse error:', parseError);
+            console.error('Event body that failed to parse:', event.body);
+            return {
+                statusCode: 400,
+                headers: {
+                    'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
+                    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ 
+                    error: 'Invalid JSON in request body',
+                    details: parseError.message
+                })
+            };
+        }
+        
         const { name, email, eventType, eventDate, subject, message } = formData;
 
         // Add basic rate limiting using client IP (if available)
@@ -149,7 +191,34 @@ This email was sent from the contact form on your linturo website.
         };
 
         // Send email via SES
-        await ses.sendEmail(params).promise();
+        try {
+            console.log('Attempting to send email with params:', JSON.stringify(params, null, 2));
+            const result = await ses.sendEmail(params).promise();
+            console.log('Email sent successfully:', result);
+        } catch (sesError) {
+            console.error('SES error:', sesError);
+            console.error('SES error code:', sesError.code);
+            console.error('SES error message:', sesError.message);
+            
+            // Handle specific SES errors
+            if (sesError.code === 'MessageRejected') {
+                return {
+                    statusCode: 400,
+                    headers: {
+                        'Access-Control-Allow-Origin': '*',
+                        'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
+                        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ 
+                        error: 'Email configuration issue - please contact support',
+                        details: 'The email service is not properly configured'
+                    })
+                };
+            }
+            
+            throw sesError; // Re-throw to be caught by outer catch block
+        }
 
         return {
             statusCode: 200,
