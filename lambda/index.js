@@ -199,10 +199,42 @@ This email was sent from the contact form on your linturo website.
             ReplyToAddresses: [sanitizedEmail] // User's email for easy reply
         };
 
-        // Send email via SES
+        // Send email via SES with timeout handling
         try {
             console.log('Attempting to send email with params:', JSON.stringify(params, null, 2));
-            const result = await ses.sendEmail(params).promise();
+            
+            // Add timeout to the SES call with retry logic
+            const sendEmailWithRetry = async (attempts = 3) => {
+                for (let i = 0; i < attempts; i++) {
+                    try {
+                        console.log(`SES attempt ${i + 1}/${attempts}`);
+                        
+                        const timeoutPromise = new Promise((_, reject) => {
+                            setTimeout(() => reject(new Error(`SES timeout after 20 seconds (attempt ${i + 1})`)), 20000);
+                        });
+                        
+                        const sesPromise = ses.sendEmail(params).promise();
+                        const result = await Promise.race([sesPromise, timeoutPromise]);
+                        
+                        console.log(`SES successful on attempt ${i + 1}`);
+                        return result;
+                    } catch (error) {
+                        console.error(`SES attempt ${i + 1} failed:`, error.message);
+                        
+                        if (i === attempts - 1) {
+                            throw error; // Last attempt failed
+                        }
+                        
+                        // Wait before retry (exponential backoff)
+                        const waitTime = Math.pow(2, i) * 1000; // 1s, 2s, 4s
+                        console.log(`Waiting ${waitTime}ms before retry...`);
+                        await new Promise(resolve => setTimeout(resolve, waitTime));
+                    }
+                }
+            };
+            
+            const result = await sendEmailWithRetry();
+            
             console.log('Email sent successfully:', result);
         } catch (sesError) {
             console.error('SES error:', sesError);
@@ -222,6 +254,23 @@ This email was sent from the contact form on your linturo website.
                     body: JSON.stringify({ 
                         error: 'Email configuration issue - please contact support',
                         details: 'The email service is not properly configured'
+                    })
+                };
+            }
+            
+            // Handle timeout errors
+            if (sesError.message && sesError.message.includes('timeout')) {
+                return {
+                    statusCode: 408,
+                    headers: {
+                        'Access-Control-Allow-Origin': '*',
+                        'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
+                        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        error: 'Request timeout',
+                        details: 'The email service is taking too long to respond. Please try again.'
                     })
                 };
             }
