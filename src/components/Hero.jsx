@@ -369,24 +369,27 @@ const Hero = () => {
             </motion.p>
           )}
 
-          {/* Arrow button */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 1, delay: 1.2 }}
-            className="flex justify-center mt-8"
-          >
-            <motion.button
-              onClick={scrollToAbout}
-              animate={{ y: [0, 10, 0] }}
-              transition={{ duration: 2, repeat: Infinity }}
-              className="p-2 rounded-full bg-white/10 backdrop-blur-sm border border-purple-400"
-            >
-              <ArrowDownIcon className="h-5 w-5 sm:h-6 sm:w-6 text-purple-200" />
-            </motion.button>
-          </motion.div>
         </motion.div>
       </div>
+
+      {/* Arrow button - positioned dynamically based on music state */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 1, delay: 1.2 }}
+        className={`flex justify-center absolute left-1/2 transform -translate-x-1/2 ${
+          isPlaying ? 'bottom-16 sm:bottom-20' : 'bottom-8 sm:bottom-12'
+        } transition-all duration-500 ease-in-out`}
+      >
+        <motion.button
+          onClick={scrollToAbout}
+          animate={{ y: [0, 10, 0] }}
+          transition={{ duration: 2, repeat: Infinity }}
+          className="p-2 rounded-full bg-white/10 backdrop-blur-sm border border-purple-400"
+        >
+          <ArrowDownIcon className="h-5 w-5 sm:h-6 sm:w-6 text-purple-200" />
+        </motion.button>
+      </motion.div>
 
       {/* Image Modal */}
       {showImageModal && (
