@@ -117,6 +117,7 @@ const Hero = () => {
     if (isPlaying) {
       audioRef.current.pause()
       setIsPlaying(false)
+      setShowControls(false)
     } else {
       try {
         setIsLoading(true)
@@ -153,8 +154,8 @@ const Hero = () => {
         <div className="absolute top-20 left-20 w-40 h-40 sm:w-80 sm:h-80 bg-pink-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob animation-delay-4000"></div>
       </div>
 
-      {/* Audio waves animation - positioned halfway between arrow and bottom */}
-      <div className="absolute bottom-32 sm:bottom-36 left-1/2 transform -translate-x-1/2 flex space-x-3">
+      {/* Audio waves animation - positioned lower to accommodate media controls */}
+      <div className="absolute bottom-20 sm:bottom-24 left-1/2 transform -translate-x-1/2 flex space-x-3">
         {[...Array(8)].map((_, i) => (
           <motion.div
             key={i}
@@ -182,6 +183,20 @@ const Hero = () => {
               linturo
             </span>
           </motion.h1>
+
+          {/* DJ Image */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.8, delay: 0.4 }}
+            className="mb-6 sm:mb-8"
+          >
+            <img
+              src="https://linturomusic.s3.us-west-2.amazonaws.com/djpic.jpg"
+              alt="Linturo DJ"
+              className="w-32 h-32 sm:w-40 sm:h-40 lg:w-48 lg:h-48 mx-auto rounded-full object-cover shadow-2xl border-4 border-purple-500/30 hover:border-purple-400/50 transition-all duration-300 hover:scale-105"
+            />
+          </motion.div>
 
           <motion.p
             initial={{ opacity: 0, y: 20 }}
@@ -310,16 +325,6 @@ const Hero = () => {
             </motion.button>
           </motion.div>
 
-          {audioError && (
-            <motion.p
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="text-red-400 text-sm mt-4"
-            >
-              Audio temporarily unavailable. Please try again later.
-            </motion.p>
-          )}
-
           {/* Media Controls */}
           {showControls && (
             <motion.div
@@ -350,12 +355,22 @@ const Hero = () => {
             </motion.div>
           )}
 
+          {audioError && (
+            <motion.p
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-red-400 text-sm mt-4"
+            >
+              Audio temporarily unavailable. Please try again later.
+            </motion.p>
+          )}
+
           {/* Arrow button */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 1, delay: 1.2 }}
-            className="flex justify-center mt-4"
+            className="flex justify-center mt-8"
           >
             <motion.button
               onClick={scrollToAbout}
