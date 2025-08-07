@@ -11,6 +11,7 @@ const Hero = () => {
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
   const [showControls, setShowControls] = useState(false)
+  const [showImageModal, setShowImageModal] = useState(false)
   const audioRef = useRef(null)
 
   const audioUrls = {
@@ -155,7 +156,7 @@ const Hero = () => {
       </div>
 
       {/* Audio waves animation - positioned lower to accommodate media controls */}
-      <div className="absolute bottom-20 sm:bottom-24 left-1/2 transform -translate-x-1/2 flex space-x-3">
+      <div className="absolute bottom-28 sm:bottom-32 left-1/2 transform -translate-x-1/2 flex space-x-3">
         {[...Array(8)].map((_, i) => (
           <motion.div
             key={i}
@@ -191,10 +192,13 @@ const Hero = () => {
             transition={{ duration: 0.8, delay: 0.4 }}
             className="mb-6 sm:mb-8"
           >
-            <img
+            <motion.img
               src="https://linturomusic.s3.us-west-2.amazonaws.com/djpic.jpg"
               alt="Linturo DJ"
-              className="w-32 h-32 sm:w-40 sm:h-40 lg:w-48 lg:h-48 mx-auto rounded-full object-cover shadow-2xl border-4 border-purple-500/30 hover:border-purple-400/50 transition-all duration-300 hover:scale-105"
+              onClick={() => setShowImageModal(true)}
+              className="w-32 h-32 sm:w-40 sm:h-40 lg:w-48 lg:h-48 mx-auto rounded-full object-cover shadow-2xl border-4 border-purple-500/30 hover:border-purple-400/50 transition-all duration-300 hover:scale-105 cursor-pointer"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
             />
           </motion.div>
 
@@ -383,6 +387,43 @@ const Hero = () => {
           </motion.div>
         </motion.div>
       </div>
+
+      {/* Image Modal */}
+      {showImageModal && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          onClick={() => setShowImageModal(false)}
+        >
+          <motion.div
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.8, opacity: 0 }}
+            transition={{ type: "spring", damping: 25, stiffness: 300 }}
+            className="relative max-w-2xl w-full"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Close Button */}
+            <button
+              onClick={() => setShowImageModal(false)}
+              className="absolute -top-4 -right-4 z-10 w-10 h-10 bg-purple-600 hover:bg-purple-700 rounded-full flex items-center justify-center text-white shadow-lg transition-colors duration-200"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+
+            {/* Image */}
+            <img
+              src="https://linturomusic.s3.us-west-2.amazonaws.com/djpic.jpg"
+              alt="Linturo DJ"
+              className="w-full h-auto rounded-lg shadow-2xl border-4 border-purple-500/30"
+            />
+          </motion.div>
+        </motion.div>
+      )}
     </section>
   )
 }
