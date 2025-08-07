@@ -157,7 +157,7 @@ const Hero = () => {
 
       {/* Audio waves animation - positioned dynamically based on music state */}
       <div className={`absolute left-1/2 transform -translate-x-1/2 flex space-x-3 transition-all duration-500 ease-in-out ${
-        isPlaying ? 'bottom-12 sm:bottom-16' : 'bottom-40 sm:bottom-44'
+        isPlaying ? 'bottom-12 sm:bottom-16' : 'bottom-48 sm:bottom-52'
       }`}>
         {[...Array(8)].map((_, i) => (
           <motion.div
@@ -380,7 +380,7 @@ const Hero = () => {
         animate={{ opacity: 1 }}
         transition={{ duration: 1, delay: 1.2 }}
         className={`flex justify-center absolute left-1/2 transform -translate-x-1/2 ${
-          isPlaying ? 'bottom-4 sm:bottom-6' : 'bottom-24 sm:bottom-28'
+          isPlaying ? 'bottom-4 sm:bottom-6' : 'bottom-32 sm:bottom-36'
         } transition-all duration-500 ease-in-out`}
       >
         <motion.button
