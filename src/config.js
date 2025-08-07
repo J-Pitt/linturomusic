@@ -2,9 +2,6 @@
 // Uses environment variables for production builds to obfuscate sensitive information
 
 export const config = {
-  // API endpoints
-  CONTACT_API_URL: import.meta.env.VITE_CONTACT_API_URL || 'https://3ceog0x8e2.execute-api.us-west-2.amazonaws.com/prod/contact',
-  
   // Contact information (obfuscated in production)
   CONTACT_EMAIL: import.meta.env.VITE_CONTACT_EMAIL || 'linturomusic@gmail.com',
   

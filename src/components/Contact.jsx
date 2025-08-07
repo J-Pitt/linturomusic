@@ -38,45 +38,52 @@ const Contact = () => {
     setIsSubmitting(true)
     
     try {
-      // Use the API endpoint from config
-      const API_ENDPOINT = config.CONTACT_API_URL
+      const formId = import.meta.env.VITE_FORMSPREE_FORM_ID
       
-      const response = await fetch(API_ENDPOINT, {
+      // Debug: log the form ID to see what's being used
+      console.log('Form ID:', formId)
+      
+      if (!formId) {
+        throw new Error('Form ID not configured')
+      }
+      
+      const response = await fetch(`https://formspree.io/f/${formId}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData)
+        body: JSON.stringify({
+          name: formData.name,
+          email: formData.email,
+          subject: formData.subject,
+          message: formData.message,
+          eventType: formData.eventType,
+          eventDate: formData.eventDate,
+        })
       })
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
+      if (response.ok) {
+        // Reset form on success
+        setFormData({ name: '', email: '', subject: '', message: '', eventType: '', eventDate: '' })
+        setIsSubmitting(false)
+        
+        // Show success modal
+        setModalType('success')
+        setModalMessage('Thank you for your message! I\'ll get back to you soon.')
+        setShowModal(true)
+      } else {
+        const errorData = await response.json()
+        console.error('Formspree error:', errorData)
+        throw new Error(`Form submission failed: ${errorData.message || 'Unknown error'}`)
       }
-
-      const result = await response.json()
-      
-      // Reset form on success
-      setFormData({ name: '', email: '', subject: '', message: '', eventType: '', eventDate: '' })
-      setIsSubmitting(false)
-      
-      // Show success modal
-      setModalType('success')
-      setModalMessage('Thank you for your message! I\'ll get back to you soon.')
-      setShowModal(true)
       
     } catch (error) {
       console.error('Error submitting form:', error)
       setIsSubmitting(false)
       
-      // Check if it's a CORS error and provide specific guidance
-      if (error.message.includes('Failed to fetch') || error.message.includes('CORS')) {
-        setModalType('error')
-        setModalMessage('CORS error detected. This is likely a configuration issue with the API Gateway. Please email me directly at ' + config.CONTACT_EMAIL + ' for now.')
-      } else {
-        // Show general error message
-        setModalType('error')
-        setModalMessage('Sorry, there was an error sending your message. Please try again or email me directly at ' + config.CONTACT_EMAIL)
-      }
+      // Show error message
+      setModalType('error')
+      setModalMessage('Sorry, there was an error sending your message. Please try again or email me directly at ' + config.CONTACT_EMAIL)
       setShowModal(true)
     }
   }

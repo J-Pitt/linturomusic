@@ -265,12 +265,12 @@ const Hero = () => {
               ) : currentSet === 'set2' && isPlaying ? (
                 <>
                   <PauseIcon className="w-5 h-5 sm:w-6 sm:h-6 mr-2" />
-                  Pause Underground Bunker
+                  Pause Organic Vibes
                 </>
               ) : (
                 <>
                   <PlayIcon className="w-5 h-5 sm:w-6 sm:h-6 mr-2" />
-                  Underground Bunker
+                  Organic Vibes
                 </>
               )}
             </motion.button>
