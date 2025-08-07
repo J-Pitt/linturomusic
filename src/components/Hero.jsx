@@ -157,7 +157,7 @@ const Hero = () => {
 
       {/* Audio waves animation - positioned dynamically based on music state */}
       <div className={`absolute left-1/2 transform -translate-x-1/2 flex space-x-3 transition-all duration-500 ease-in-out ${
-        isPlaying ? 'bottom-20 sm:bottom-24' : 'bottom-40 sm:bottom-44'
+        isPlaying ? 'bottom-12 sm:bottom-16' : 'bottom-40 sm:bottom-44'
       }`}>
         {[...Array(8)].map((_, i) => (
           <motion.div
