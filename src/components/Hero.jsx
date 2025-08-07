@@ -363,7 +363,8 @@ const Hero = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className={`flex justify-center space-x-3 ${isPlaying ? 'mt-4' : 'mt-12'}`}
+            className={`flex justify-center space-x-3 items-end ${isPlaying ? 'mt-4' : 'mt-12'}`}
+            style={{ height: '80px' }}
           >
             {[...Array(8)].map((_, i) => (
               <motion.div
@@ -386,7 +387,7 @@ const Hero = () => {
             <motion.button
               onClick={scrollToAbout}
               animate={{ y: [0, 10, 0] }}
-              transition={{ duration: 2, repeat: Infinity }}
+              transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
               className="p-2 rounded-full bg-white/10 backdrop-blur-sm border border-purple-400"
             >
               <ArrowDownIcon className="h-5 w-5 sm:h-6 sm:w-6 text-purple-200" />
