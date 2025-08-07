@@ -155,8 +155,10 @@ const Hero = () => {
         <div className="absolute top-20 left-20 w-40 h-40 sm:w-80 sm:h-80 bg-pink-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob animation-delay-4000"></div>
       </div>
 
-      {/* Audio waves animation - fixed position */}
-      <div className="absolute left-1/2 transform -translate-x-1/2 flex space-x-3 bottom-48 sm:bottom-52">
+      {/* Audio waves animation - positioned dynamically based on music state */}
+      <div className={`absolute left-1/2 transform -translate-x-1/2 flex space-x-3 transition-all duration-500 ease-in-out ${
+        isPlaying ? 'bottom-16 sm:bottom-20' : 'bottom-48 sm:bottom-52'
+      }`}>
         {[...Array(8)].map((_, i) => (
           <motion.div
             key={i}
@@ -372,12 +374,14 @@ const Hero = () => {
         </motion.div>
       </div>
 
-      {/* Arrow button - fixed position */}
+      {/* Arrow button - positioned dynamically based on music state */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 1, delay: 1.2 }}
-        className="flex justify-center absolute left-1/2 transform -translate-x-1/2 bottom-32 sm:bottom-36"
+        className={`flex justify-center absolute left-1/2 transform -translate-x-1/2 transition-all duration-500 ease-in-out ${
+          isPlaying ? 'bottom-8 sm:bottom-12' : 'bottom-32 sm:bottom-36'
+        }`}
       >
         <motion.button
           onClick={scrollToAbout}
