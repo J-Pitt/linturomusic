@@ -155,20 +155,7 @@ const Hero = () => {
         <div className="absolute top-20 left-20 w-40 h-40 sm:w-80 sm:h-80 bg-pink-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob animation-delay-4000"></div>
       </div>
 
-      {/* Audio waves animation - positioned dynamically based on music state */}
-      <div className={`absolute left-1/2 transform -translate-x-1/2 flex space-x-3 transition-all duration-500 ease-in-out ${
-        isPlaying ? 'bottom-1 sm:bottom-2' : 'bottom-48 sm:bottom-52'
-      }`}>
-        {[...Array(8)].map((_, i) => (
-          <motion.div
-            key={i}
-            animate={isPlaying ? { height: [30, 80, 30] } : { height: 30 }}
-            transition={{ duration: 0.6, repeat: isPlaying ? Infinity : 0, delay: i * 0.1 }}
-            className="w-3 bg-gradient-to-t from-purple-400 to-pink-400 rounded-full"
-            style={{ height: '30px' }}
-          />
-        ))}
-      </div>
+
 
       <div className="relative z-10 max-w-4xl mx-auto text-center pt-8 sm:pt-12 lg:pt-16">
         <motion.div
@@ -371,27 +358,43 @@ const Hero = () => {
             </motion.p>
           )}
 
+          {/* Music waves - always visible, animated when playing */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className={`flex justify-center space-x-3 ${isPlaying ? 'mt-4' : 'mt-12'}`}
+          >
+            {[...Array(8)].map((_, i) => (
+              <motion.div
+                key={i}
+                animate={isPlaying ? { height: [30, 80, 30] } : { height: 30 }}
+                transition={{ duration: 0.6, repeat: isPlaying ? Infinity : 0, delay: i * 0.1 }}
+                className="w-3 bg-gradient-to-t from-purple-400 to-pink-400 rounded-full"
+                style={{ height: '30px' }}
+              />
+            ))}
+          </motion.div>
+
+          {/* Arrow button - positioned in content flow */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 1, delay: 1.2 }}
+            className={`flex justify-center ${isPlaying ? 'mt-4' : 'mt-8'}`}
+          >
+            <motion.button
+              onClick={scrollToAbout}
+              animate={{ y: [0, 10, 0] }}
+              transition={{ duration: 2, repeat: Infinity }}
+              className="p-2 rounded-full bg-white/10 backdrop-blur-sm border border-purple-400"
+            >
+              <ArrowDownIcon className="h-5 w-5 sm:h-6 sm:w-6 text-purple-200" />
+            </motion.button>
+          </motion.div>
+
         </motion.div>
       </div>
-
-      {/* Arrow button - positioned dynamically based on music state */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 1, delay: 1.2 }}
-        className={`flex justify-center absolute left-1/2 transform -translate-x-1/2 transition-all duration-500 ease-in-out ${
-          isPlaying ? 'bottom-0 sm:bottom-1' : 'bottom-32 sm:bottom-36'
-        }`}
-      >
-        <motion.button
-          onClick={scrollToAbout}
-          animate={{ y: [0, 10, 0] }}
-          transition={{ duration: 2, repeat: Infinity }}
-          className="p-2 rounded-full bg-white/10 backdrop-blur-sm border border-purple-400"
-        >
-          <ArrowDownIcon className="h-5 w-5 sm:h-6 sm:w-6 text-purple-200" />
-        </motion.button>
-      </motion.div>
 
       {/* Image Modal */}
       {showImageModal && (
