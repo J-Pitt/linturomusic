@@ -182,7 +182,7 @@ const Hero = () => {
             className="mb-6 sm:mb-8"
           >
             <motion.img
-              src="https://linturomusic.s3.us-west-2.amazonaws.com/djpic.jpg"
+              src="https://linturomusic.s3.us-west-2.amazonaws.com/profile.jpg"
               alt="Linturo DJ"
               onClick={() => setShowImageModal(true)}
               className="w-32 h-32 sm:w-40 sm:h-40 lg:w-48 lg:h-48 mx-auto rounded-full object-cover shadow-2xl border-4 border-purple-500/30 hover:border-purple-400/50 transition-all duration-300 hover:scale-105 cursor-pointer"
