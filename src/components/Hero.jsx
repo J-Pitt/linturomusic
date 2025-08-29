@@ -426,7 +426,7 @@ const Hero = () => {
 
             {/* Image */}
             <img
-              src="https://linturomusic.s3.us-west-2.amazonaws.com/djpic.jpg"
+              src="https://linturomusic.s3.us-west-2.amazonaws.com/profile.jpg"
               alt="Linturo DJ"
               className="w-full h-auto rounded-lg shadow-2xl border-4 border-purple-500/30"
             />
