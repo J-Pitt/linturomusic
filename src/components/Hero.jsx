@@ -209,6 +209,7 @@ const Hero = () => {
             Just a music lover looking to connect with like minded individuals. Will play music anywhere, drop me a line if you like my sets.
           </motion.p>
 
+
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
