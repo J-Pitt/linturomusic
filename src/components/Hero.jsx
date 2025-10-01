@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion'
-import { ArrowDownIcon, PlayIcon, PauseIcon } from '@heroicons/react/24/outline'
+import { ArrowDownIcon, PlayIcon, PauseIcon, Bars3Icon } from '@heroicons/react/24/outline'
 import { useState, useRef, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { config } from '../config'
 
 const Hero = () => {
@@ -12,7 +13,9 @@ const Hero = () => {
   const [duration, setDuration] = useState(0)
   const [showControls, setShowControls] = useState(false)
   const [showImageModal, setShowImageModal] = useState(false)
+  const [showMenu, setShowMenu] = useState(false)
   const audioRef = useRef(null)
+  const navigate = useNavigate()
 
   const audioUrls = {
     set1: config.AUDIO_FILES.SET1,
@@ -155,7 +158,37 @@ const Hero = () => {
         <div className="absolute top-20 left-20 w-40 h-40 sm:w-80 sm:h-80 bg-pink-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob animation-delay-4000"></div>
       </div>
 
+      {/* Hamburger Menu */}
+      <div className="absolute top-6 right-6 z-50">
+        <motion.button
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
+          onClick={() => setShowMenu(!showMenu)}
+          className="p-2 rounded-lg bg-white/10 backdrop-blur-sm border border-purple-400/50 hover:bg-white/20 transition-all duration-200"
+        >
+          <Bars3Icon className="w-6 h-6 text-purple-200" />
+        </motion.button>
 
+        {/* Dropdown Menu */}
+        {showMenu && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="absolute right-0 mt-2 w-48 bg-gray-900/95 backdrop-blur-md border border-purple-500/30 rounded-lg shadow-xl overflow-hidden"
+          >
+            <button
+              onClick={() => {
+                navigate('/clips')
+                setShowMenu(false)
+              }}
+              className="w-full px-4 py-3 text-left text-purple-200 hover:bg-purple-600/20 hover:text-white transition-colors duration-200 border-b border-purple-500/20"
+            >
+              Clips
+            </button>
+          </motion.div>
+        )}
+      </div>
 
       <div className="relative z-10 max-w-4xl mx-auto text-center pt-8 sm:pt-12 lg:pt-16">
         <motion.div

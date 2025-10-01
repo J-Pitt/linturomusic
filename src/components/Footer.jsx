@@ -7,11 +7,11 @@ const Footer = () => {
   const footerLinks = {
     music: [
       // { name: 'SoundCloud', href: 'https://soundcloud.com/linturo/tracks' }, // Commented out for future use
-      { name: 'Mixcloud', href: 'https://www.mixcloud.com/linturo/' }
+      { name: 'Mixcloud', href: 'https://www.mixcloud.com/linturo/' },
+      { name: 'YouTube', href: 'https://www.youtube.com/@linturo' }
     ],
     social: [
-      { name: 'Instagram', href: 'https://www.instagram.com/_linturo_/' },
-      { name: 'YouTube', href: 'https://www.youtube.com/@linturo' }
+      { name: 'Instagram', href: 'https://www.instagram.com/_linturo_/' }
     ]
   }
 
