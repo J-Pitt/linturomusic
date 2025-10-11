@@ -18,13 +18,22 @@ const Contact = () => {
     subject: '',
     message: '',
     eventType: '',
-    eventDate: ''
+    eventDate: '',
+    honeypot: '', // Hidden field for bot detection
+    captcha: '' // Simple math challenge
   })
 
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [showModal, setShowModal] = useState(false)
   const [modalType, setModalType] = useState('success') // 'success' or 'error'
   const [modalMessage, setModalMessage] = useState('')
+  
+  // Generate simple math captcha
+  const [captchaQuestion] = useState(() => {
+    const num1 = Math.floor(Math.random() * 10) + 1
+    const num2 = Math.floor(Math.random() * 10) + 1
+    return { num1, num2, answer: num1 + num2 }
+  })
 
   const handleChange = (e) => {
     setFormData({
@@ -35,6 +44,21 @@ const Contact = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    
+    // Bot detection: check honeypot field
+    if (formData.honeypot) {
+      console.log('Bot detected via honeypot')
+      return // Silently reject bot submissions
+    }
+    
+    // Verify captcha answer
+    if (parseInt(formData.captcha) !== captchaQuestion.answer) {
+      setModalType('error')
+      setModalMessage('Incorrect answer to the math question. Please try again.')
+      setShowModal(true)
+      return
+    }
+    
     setIsSubmitting(true)
     
     try {
@@ -64,7 +88,7 @@ const Contact = () => {
 
       if (response.ok) {
         // Reset form on success
-        setFormData({ name: '', email: '', subject: '', message: '', eventType: '', eventDate: '' })
+        setFormData({ name: '', email: '', subject: '', message: '', eventType: '', eventDate: '', honeypot: '', captcha: '' })
         setIsSubmitting(false)
         
         // Show success modal
@@ -250,6 +274,37 @@ const Contact = () => {
                 />
               </div>
 
+              {/* Honeypot field - hidden from humans */}
+              <div className="hidden">
+                <label htmlFor="honeypot">Leave this field empty</label>
+                <input
+                  type="text"
+                  id="honeypot"
+                  name="honeypot"
+                  value={formData.honeypot}
+                  onChange={handleChange}
+                  tabIndex="-1"
+                  autoComplete="off"
+                />
+              </div>
+
+              {/* Simple math captcha */}
+              <div>
+                <label htmlFor="captcha" className="block text-sm font-medium text-gray-300 mb-2">
+                  Human Check: What is {captchaQuestion.num1} + {captchaQuestion.num2}?
+                </label>
+                <input
+                  type="number"
+                  id="captcha"
+                  name="captcha"
+                  value={formData.captcha}
+                  onChange={handleChange}
+                  required
+                  className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-gray-800 text-white transition-colors duration-200 text-sm sm:text-base"
+                  placeholder="Enter the answer"
+                />
+              </div>
+
               <motion.button
                 type="submit"
                 disabled={isSubmitting}
@@ -343,9 +398,8 @@ const Contact = () => {
                 Let's have some fun!
               </h4>
               <p className="text-sm sm:text-base text-purple-100 mb-3 sm:mb-4">
-                I'm open to play music at bars, clubs, or parties - first booking is always free. 
-                I have a pioneer deck I can bring if needed, but a soundsystem is required to be provided. 
-                If we vibe, hopefully we can set something regular up!
+                I'm open to DJ at bars, clubs, or parties - really anywhere where music and dancing come together. 
+                Check out my youtube and mixcloud, if you like what you hear, don't hesitate to reach out, I'm sure we'll have a good time!
               </p>
               <div className="flex items-center">
                 <div className="w-2 h-2 sm:w-3 sm:h-3 bg-green-400 rounded-full mr-2 sm:mr-3 animate-pulse"></div>

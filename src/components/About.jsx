@@ -39,8 +39,8 @@ const About = () => {
                 My Journey
               </h3>
               <p className="text-sm sm:text-base text-gray-300 mb-4 sm:mb-6 leading-relaxed">
-                I began my DJ journey at an intimate festival inside Mt. Rainier National Park with some close friends where I learned the basics. Since then, 
-                I've worked to perfect my craft while living and playing in cities around the world - from San Francisco to London to New York. 
+                I began my DJ journey in 2016 at an intimate gathering inside Mt. Rainier National Park with some close friends. Since then, 
+                I've grown as a DJ and a music lover while living and playing around the world - from San Francisco to London to New York. 
                 My specialties are organic house and melodic house, though I also enjoy playing psytrance, psydub, 
                 tech house, and deep dubstep.
               </p>

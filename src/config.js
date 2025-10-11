@@ -17,6 +17,7 @@ export const config = {
     VIDEO1: import.meta.env.VITE_VIDEO_FILE_1 || 'https://linturomusic.s3.us-west-2.amazonaws.com/wourldtourradioclip.mp4',
     VIDEO2: import.meta.env.VITE_VIDEO_FILE_2 || 'https://linturomusic.s3.us-west-2.amazonaws.com/worldtourradioclip2.mp4',
     VIDEO3: import.meta.env.VITE_VIDEO_FILE_3 || 'https://linturomusic.s3.us-west-2.amazonaws.com/rooftopclip.mp4',
+    VIDEO4: import.meta.env.VITE_VIDEO_FILE_4 || 'https://linturomusic.s3.us-west-2.amazonaws.com/rec-1-final-8min.mp4',
   },
   
   // App metadata

@@ -151,6 +151,25 @@ const Clips = () => {
               </video>
             </div>
           </motion.div>
+
+          {/* Video Player 4 */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 1.2 }}
+            className="max-w-4xl mx-auto mb-8"
+          >
+            <div className="rounded-lg overflow-hidden shadow-2xl border border-purple-500/30">
+              <video
+                controls
+                className="w-full h-auto"
+                preload="metadata"
+              >
+                <source src={config.VIDEO_FILES.VIDEO4} type="video/mp4" />
+                Your browser does not support the video tag.
+              </video>
+            </div>
+          </motion.div>
         </motion.div>
       </div>
     </section>
