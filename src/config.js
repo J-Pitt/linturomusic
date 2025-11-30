@@ -10,6 +10,7 @@ export const config = {
     SET1: import.meta.env.VITE_AUDIO_SET1 || 'https://linturomusic.s3.us-west-2.amazonaws.com/72825.WAV',
     SET2: import.meta.env.VITE_AUDIO_SET2 || 'https://linturomusic.s3.us-west-2.amazonaws.com/summerSessions.WAV',
     SET3: import.meta.env.VITE_AUDIO_SET3 || 'https://linturomusic.s3.us-west-2.amazonaws.com/521_house.wav',
+    SET4: import.meta.env.VITE_AUDIO_SET4 || 'https://linturomusic.s3.us-west-2.amazonaws.com/winterHigh.WAV',
   },
   
   // Video file URLs (obfuscated in production)
