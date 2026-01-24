@@ -8,6 +8,7 @@ export const config = {
   // Audio file URLs (obfuscated in production)
   AUDIO_FILES: {
     SET1: import.meta.env.VITE_AUDIO_SET1 || 'https://linturomusic.s3.us-west-2.amazonaws.com/jan26house.WAV',
+    SET2: import.meta.env.VITE_AUDIO_SET2 || 'https://linturomusic.s3.us-west-2.amazonaws.com/newnew.WAV',
   },
   
   // Video file URLs (obfuscated in production)

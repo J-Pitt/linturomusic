@@ -38,6 +38,9 @@ const About = () => {
               <h3 className="text-xl sm:text-2xl font-bold text-white mb-3 sm:mb-4">
                 My Journey
               </h3>
+              <p className="text-sm sm:text-base text-gray-300 mb-4 sm:mb-6 leading-relaxed">
+                I've been playing music off and on for almost ten years, it's something I have a deep passion for. My taste and style has evolved over the years, living in some of the most music centric cities in the world has given me the ability to immerse myself in different scenes and allowed me the time to hone in on exactly what I resonate most with.
+              </p>
               <p className="text-sm sm:text-base text-gray-300 leading-relaxed">
                 I'm happy to play music anywhere people will enjoy it. For me, music and the connection it encourages is therapeutic. As lifelong music lover, I aim 
                 to curate not only a great vibe, but a unique journey through sound. I'm Brooklyn based, so if you're in the area and want to jam, or you need a DJ for an event, please drop me a line, I'm always more than happy to connect.
