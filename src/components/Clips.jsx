@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Bars3Icon, ArrowLeftIcon } from '@heroicons/react/24/outline'
+import { ArrowLeftIcon } from '@heroicons/react/24/outline'
 import { config } from '../config'
 
 const Clips = () => {
@@ -17,15 +17,15 @@ const Clips = () => {
         <div className="absolute top-20 left-20 w-40 h-40 sm:w-80 sm:h-80 bg-pink-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob animation-delay-4000"></div>
       </div>
 
-      {/* Hamburger Menu */}
+      {/* Video Clips Menu */}
       <div className="absolute top-6 right-6 z-50">
         <motion.button
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.9 }}
           onClick={() => setShowMenu(!showMenu)}
-          className="p-2 rounded-lg bg-white/10 backdrop-blur-sm border border-purple-400/50 hover:bg-white/20 transition-all duration-200"
+          className="w-fit px-3 py-1.5 rounded-lg bg-white/10 backdrop-blur-sm border border-purple-400/50 hover:bg-white/20 transition-all duration-200 text-purple-200 text-sm font-medium"
         >
-          <Bars3Icon className="w-6 h-6 text-purple-200" />
+          Video Clips
         </motion.button>
 
         {/* Dropdown Menu */}

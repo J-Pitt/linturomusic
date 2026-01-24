@@ -38,12 +38,6 @@ const About = () => {
               <h3 className="text-xl sm:text-2xl font-bold text-white mb-3 sm:mb-4">
                 My Journey
               </h3>
-              <p className="text-sm sm:text-base text-gray-300 mb-4 sm:mb-6 leading-relaxed">
-                I began my DJ journey in 2016 at an intimate gathering inside Mt. Rainier National Park with some close friends. Since then, 
-                I've grown as a DJ and a music lover while living and playing around the world - from San Francisco to London to New York. 
-                My specialties are organic house and melodic house, though I also enjoy playing psytrance, psydub, 
-                tech house, and deep dubstep.
-              </p>
               <p className="text-sm sm:text-base text-gray-300 leading-relaxed">
                 I'm happy to play music anywhere people will enjoy it. For me, music and the connection it encourages is therapeutic. As lifelong music lover, I aim 
                 to curate not only a great vibe, but a unique journey through sound. I'm Brooklyn based, so if you're in the area and want to jam, or you need a DJ for an event, please drop me a line, I'm always more than happy to connect.
