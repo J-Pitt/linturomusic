@@ -21,7 +21,7 @@ const About = () => {
             Learn more about <span className="text-3xl sm:text-4xl lg:text-5xl bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent font-brand">Linturo</span>
           </h2>
           <p className="text-base sm:text-lg text-purple-300 max-w-2xl mx-auto px-4">
-            A passionate electronic music lover and DJ.
+            A passionate house music lover and DJ.
           </p>
         </motion.div>
 
