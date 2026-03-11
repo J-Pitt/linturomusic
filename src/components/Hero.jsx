@@ -19,7 +19,8 @@ const Hero = () => {
 
   const audioUrls = {
     set1: config.AUDIO_FILES.SET1,
-    set2: config.AUDIO_FILES.SET2
+    set2: config.AUDIO_FILES.SET2,
+    set3: config.AUDIO_FILES.SET3
   }
 
   const scrollToAbout = () => {
@@ -312,6 +313,40 @@ const Hero = () => {
                 <>
                   <PlayIcon className="w-5 h-5 sm:w-6 sm:h-6 mr-2" />
                   Night Skies
+                </>
+              )}
+            </motion.button>
+
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => handleAudioToggle('set3')}
+              disabled={isLoading && currentSet === 'set3'}
+              className={`w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 font-semibold rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed ${
+                currentSet === 'set3' && isPlaying 
+                  ? 'bg-gradient-to-r from-red-600 to-orange-600 text-white' 
+                  : 'bg-gradient-to-r from-purple-600 to-pink-600 text-white'
+              }`}
+            >
+              {isLoading && currentSet === 'set3' ? (
+                <>
+                  <div className="animate-spin rounded-full h-5 w-5 sm:h-6 sm:w-6 border-b-2 border-white mr-2"></div>
+                  Loading...
+                </>
+              ) : audioError && currentSet === 'set3' ? (
+                <>
+                  <PlayIcon className="w-5 h-5 sm:w-6 sm:h-6 mr-2" />
+                  Try Again
+                </>
+              ) : currentSet === 'set3' && isPlaying ? (
+                <>
+                  <PauseIcon className="w-5 h-5 sm:w-6 sm:h-6 mr-2" />
+                  Pause Tech House Tuesday
+                </>
+              ) : (
+                <>
+                  <PlayIcon className="w-5 h-5 sm:w-6 sm:h-6 mr-2" />
+                  Tech House Tuesday
                 </>
               )}
             </motion.button>
