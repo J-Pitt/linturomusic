@@ -12,6 +12,7 @@ export const config = {
     SET3: import.meta.env.VITE_AUDIO_SET3 || 'https://linturomusic.s3.us-west-2.amazonaws.com/tech_house.WAV',
     SET4: import.meta.env.VITE_AUDIO_SET4 || 'https://linturomusic.s3.us-west-2.amazonaws.com/deepHaus.WAV',
     SET5: import.meta.env.VITE_AUDIO_SET5 || 'https://linturomusic.s3.us-west-2.amazonaws.com/minimalHaus.WAV',
+    SET6: import.meta.env.VITE_AUDIO_SET6 || 'https://linturomusic.s3.us-west-2.amazonaws.com/summerRays.WAV',
   },
   
   // Video file URLs (obfuscated in production)
