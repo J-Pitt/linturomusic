@@ -3,9 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <title>linturo business card — print export</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="fonts.css" />
   <style>
     /* US standard + 0.125" bleed per side → 3.75" × 2.25" */
     @page {
@@ -90,14 +88,8 @@
     }
 
     .brand {
-      font-family: 'Caveat', cursive;
       font-size: 0.72in;
-      font-weight: 700;
       line-height: 0.9;
-      background: linear-gradient(90deg, var(--purple-400), var(--pink-400));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
     }
 
     .waves {
@@ -144,10 +136,8 @@
     }
 
     .name-line {
-      font-family: 'Caveat', cursive;
       font-size: 0.28in;
-      font-weight: 600;
-      color: var(--purple-400);
+      line-height: 1;
     }
 
     .contact-row {
@@ -185,7 +175,7 @@
     <div class="blob blob-3"></div>
     <div class="safe">
       <div>
-        <p class="brand">linturo</p>
+        <p class="brand font-brand">linturo</p>
       </div>
       <div>
         <div class="waves" aria-hidden="true">
@@ -206,7 +196,7 @@
   <!-- Page 2: Back -->
   <section class="page back" aria-label="Back">
     <div class="safe">
-      <p class="name-line">linturo</p>
+      <p class="name-line font-brand">linturo</p>
       <div class="contact-row">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />

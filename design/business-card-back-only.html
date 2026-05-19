@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <title>linturo business card — back</title>
-  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600&family=Inter:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="fonts.css" />
   <style>
     @page { size: 3.75in 2.25in; margin: 0; }
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -12,7 +12,7 @@
       background: linear-gradient(145deg, #0f0f14 0%, #1e1033 50%, #0f172a 100%); }
     .safe { position: absolute; inset: 0.125in; display: flex; flex-direction: column;
       justify-content: center; gap: 0.14in; font-family: Inter, sans-serif; }
-    .name-line { font-family: 'Caveat', cursive; font-size: 0.28in; font-weight: 600; color: #c084fc; }
+    .name-line { font-size: 0.28in; line-height: 1; }
     .contact-row { display: flex; align-items: center; gap: 0.1in; font-size: 0.085in; color: #e9d5ff; }
     .contact-row svg { width: 0.14in; height: 0.14in; flex-shrink: 0; color: #f472b6; }
     .divider { height: 1px; background: linear-gradient(90deg, transparent, rgba(168,85,247,0.5), transparent); margin: 0.04in 0; }
@@ -22,7 +22,7 @@
 <body>
   <div class="page">
     <div class="safe">
-      <p class="name-line">linturo</p>
+      <p class="name-line font-brand">linturo</p>
       <div class="contact-row">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75"/></svg>
         <span>linturomusic@gmail.com</span>

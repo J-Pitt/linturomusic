@@ -1,0 +1,26 @@
+/* Embedded fonts — matches linturomusic.com (Caveat brand + Inter body) */
+@font-face {
+  font-family: 'Caveat';
+  font-style: normal;
+  font-weight: 700;
+  font-display: block;
+  src: url('./fonts/Caveat-Bold.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 400;
+  font-display: block;
+  src: url('./fonts/Inter-Regular.ttf') format('truetype');
+}
+
+.font-brand {
+  font-family: 'Caveat', cursive;
+  font-weight: 700;
+  background: linear-gradient(to right, #c084fc, #f472b6);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: #c084fc; /* fallback if clip unsupported */
+}

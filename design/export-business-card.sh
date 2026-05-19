@@ -16,17 +16,24 @@ if [[ ! -x "$CHROME" ]]; then
   exit 1
 fi
 
+CHROME_FLAGS=(
+  --headless=new
+  --disable-gpu
+  --run-all-compositor-stages-before-draw
+  --virtual-time-budget=5000
+)
+
 export_pdf() {
   local html="$1"
   local pdf="$2"
-  "$CHROME" --headless=new --disable-gpu --no-pdf-header-footer \
+  "$CHROME" "${CHROME_FLAGS[@]}" --no-pdf-header-footer \
     --print-to-pdf="$pdf" "file://${html}"
 }
 
 export_png() {
   local html="$1"
   local png="$2"
-  "$CHROME" --headless=new --disable-gpu \
+  "$CHROME" "${CHROME_FLAGS[@]}" \
     --window-size="${PNG_W},${PNG_H}" \
     --screenshot="$png" \
     --default-background-color=00000000 \
