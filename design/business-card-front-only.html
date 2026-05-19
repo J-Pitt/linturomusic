@@ -14,9 +14,23 @@
     .blob-1 { width: 1.7in; height: 1.7in; top: -0.45in; right: -0.35in; background: #a855f7; opacity: 0.45; }
     .blob-2 { width: 1.3in; height: 1.3in; bottom: -0.4in; left: -0.3in; background: #3b82f6; opacity: 0.35; }
     .blob-3 { width: 1in; height: 1in; top: 0.55in; left: 0.35in; background: #ec4899; opacity: 0.3; }
-    .safe { position: absolute; inset: 0.125in; display: flex; flex-direction: column; justify-content: space-between; z-index: 1; }
-    .safe > div:first-child { padding-top: 0.28in; }
-    .brand { font-size: 0.72in; line-height: 0.9; }
+    .safe {
+      position: absolute;
+      inset: 0.14in 0.12in 0.14in 0.24in;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1;
+    }
+    .front-content {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 0.22in;
+      width: 100%;
+      padding-left: 0.06in;
+    }
+    .brand { font-size: 0.68in; line-height: 0.9; }
     .waves { display: flex; align-items: flex-end; gap: 0.04in; height: 0.35in; }
     .wave-bar { width: 0.06in; border-radius: 999px; background: linear-gradient(to top, #c084fc, #f472b6); opacity: 0.85; }
     .wave-bar:nth-child(1) { height: 0.14in; } .wave-bar:nth-child(2) { height: 0.28in; }
@@ -33,13 +47,15 @@
     <div class="blob blob-2"></div>
     <div class="blob blob-3"></div>
     <div class="safe">
-      <div><p class="brand font-brand">linturo</p></div>
-      <div>
+      <div class="front-content">
+        <p class="brand font-brand">linturo</p>
+        <div class="bottom-block">
         <div class="waves">
           <span class="wave-bar"></span><span class="wave-bar"></span><span class="wave-bar"></span><span class="wave-bar"></span>
           <span class="wave-bar"></span><span class="wave-bar"></span><span class="wave-bar"></span><span class="wave-bar"></span>
         </div>
         <p class="genres">House · Tech · Bass</p>
+        </div>
       </div>
     </div>
   </div>

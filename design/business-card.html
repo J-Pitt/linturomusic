@@ -120,18 +120,23 @@
       position: relative;
       z-index: 1;
       height: 100%;
-      padding: 0.28in 0.32in;
+      padding: 0.2in 0.28in 0.2in 0.38in;
       display: flex;
-      flex-direction: column;
-      justify-content: space-between;
+      align-items: center;
+      justify-content: center;
     }
 
-    .card-front .inner > div:first-child {
-      padding-top: 0.22in;
+    .card-front .front-content {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 0.18in;
+      width: 100%;
+      padding-left: 0.04in;
     }
 
     .brand {
-      font-size: 0.72in;
+      font-size: 0.64in;
       line-height: 0.9;
     }
 
@@ -280,10 +285,9 @@
         <div class="blob blob-2"></div>
         <div class="blob blob-3"></div>
         <div class="inner">
-          <div>
+          <div class="front-content">
             <p class="brand font-brand">linturo</p>
-          </div>
-          <div>
+            <div class="bottom-block">
             <div class="waves" aria-hidden="true">
               <span class="wave-bar"></span>
               <span class="wave-bar"></span>
@@ -295,6 +299,7 @@
               <span class="wave-bar"></span>
             </div>
             <p class="genres" style="margin-top: 0.12in;">House · Tech · Bass</p>
+            </div>
           </div>
         </div>
       </article>

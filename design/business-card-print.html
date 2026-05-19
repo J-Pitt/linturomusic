@@ -47,9 +47,10 @@
     /* Safe zone = trim area; bleed fills full page */
     .safe {
       position: absolute;
-      inset: var(--bleed);
+      inset: 0.14in 0.12in 0.14in 0.24in;
       display: flex;
-      flex-direction: column;
+      align-items: center;
+      justify-content: center;
     }
 
     /* —— Front —— */
@@ -83,16 +84,20 @@
     }
 
     .front .safe {
-      justify-content: space-between;
       z-index: 1;
     }
 
-    .front .safe > div:first-child {
-      padding-top: 0.28in;
+    .front-content {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 0.22in;
+      width: 100%;
+      padding-left: 0.06in;
     }
 
     .brand {
-      font-size: 0.72in;
+      font-size: 0.68in;
       line-height: 0.9;
     }
 
@@ -134,6 +139,7 @@
     }
 
     .back .safe {
+      inset: 0.125in;
       justify-content: center;
       gap: 0.14in;
       font-family: 'Inter', system-ui, sans-serif;
@@ -178,10 +184,9 @@
     <div class="blob blob-2"></div>
     <div class="blob blob-3"></div>
     <div class="safe">
-      <div>
+      <div class="front-content">
         <p class="brand font-brand">linturo</p>
-      </div>
-      <div>
+        <div class="bottom-block">
         <div class="waves" aria-hidden="true">
           <span class="wave-bar"></span>
           <span class="wave-bar"></span>
@@ -193,6 +198,7 @@
           <span class="wave-bar"></span>
         </div>
         <p class="genres">House · Tech · Bass</p>
+        </div>
       </div>
     </div>
   </section>
