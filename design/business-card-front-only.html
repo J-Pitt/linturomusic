@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>linturo business card — front</title>
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@700&family=Inter:wght@500&display=swap" rel="stylesheet" />
+  <style>
+    @page { size: 3.75in 2.25in; margin: 0; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { width: 3.75in; height: 2.25in; overflow: hidden; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .page { width: 3.75in; height: 2.25in; position: relative; overflow: hidden;
+      background: linear-gradient(135deg, #581c87 0%, #0a0a0f 45%, #1e1b4b 100%); }
+    .blob { position: absolute; border-radius: 50%; filter: blur(28px); pointer-events: none; }
+    .blob-1 { width: 1.7in; height: 1.7in; top: -0.45in; right: -0.35in; background: #a855f7; opacity: 0.45; }
+    .blob-2 { width: 1.3in; height: 1.3in; bottom: -0.4in; left: -0.3in; background: #3b82f6; opacity: 0.35; }
+    .blob-3 { width: 1in; height: 1in; top: 0.55in; left: 0.35in; background: #ec4899; opacity: 0.3; }
+    .safe { position: absolute; inset: 0.125in; display: flex; flex-direction: column; justify-content: space-between; z-index: 1; }
+    .brand { font-family: 'Caveat', cursive; font-size: 0.72in; font-weight: 700; line-height: 0.9;
+      background: linear-gradient(90deg, #c084fc, #f472b6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .waves { display: flex; align-items: flex-end; gap: 0.04in; height: 0.35in; }
+    .wave-bar { width: 0.06in; border-radius: 999px; background: linear-gradient(to top, #c084fc, #f472b6); opacity: 0.85; }
+    .wave-bar:nth-child(1) { height: 0.14in; } .wave-bar:nth-child(2) { height: 0.28in; }
+    .wave-bar:nth-child(3) { height: 0.35in; } .wave-bar:nth-child(4) { height: 0.22in; }
+    .wave-bar:nth-child(5) { height: 0.32in; } .wave-bar:nth-child(6) { height: 0.18in; }
+    .wave-bar:nth-child(7) { height: 0.3in; } .wave-bar:nth-child(8) { height: 0.12in; }
+    .genres { font-family: Inter, sans-serif; font-size: 0.075in; letter-spacing: 0.14em;
+      text-transform: uppercase; color: rgba(216,180,254,0.75); margin-top: 0.12in; }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+    <div class="blob blob-3"></div>
+    <div class="safe">
+      <div><p class="brand">linturo</p></div>
+      <div>
+        <div class="waves">
+          <span class="wave-bar"></span><span class="wave-bar"></span><span class="wave-bar"></span><span class="wave-bar"></span>
+          <span class="wave-bar"></span><span class="wave-bar"></span><span class="wave-bar"></span><span class="wave-bar"></span>
+        </div>
+        <p class="genres">House · Tech · Bass</p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
