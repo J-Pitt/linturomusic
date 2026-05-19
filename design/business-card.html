@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>linturo — Business Card</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --purple-400: #c084fc;
+      --purple-500: #a855f7;
+      --purple-600: #9333ea;
+      --pink-400: #f472b6;
+      --pink-500: #ec4899;
+      --card-w: 3.5in;
+      --card-h: 2in;
+      --bleed: 0.125in;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: #1a1a2e;
+      color: #e9d5ff;
+      padding: 2rem;
+      min-height: 100vh;
+    }
+
+    .instructions {
+      max-width: 36rem;
+      margin: 0 auto 2rem;
+      padding: 1rem 1.25rem;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(168, 85, 247, 0.35);
+      border-radius: 0.75rem;
+      font-size: 0.875rem;
+      line-height: 1.6;
+      color: #d8b4fe;
+    }
+
+    .instructions h1 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #f3e8ff;
+      margin-bottom: 0.5rem;
+    }
+
+    .sheet {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1.5rem;
+      justify-content: center;
+      align-items: flex-start;
+    }
+
+    .card-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .card-label {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: #a78bfa;
+    }
+
+    .card {
+      width: var(--card-w);
+      height: var(--card-h);
+      position: relative;
+      overflow: hidden;
+      border-radius: 0.12in;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+    }
+
+    /* —— Front —— */
+    .card-front {
+      background: linear-gradient(135deg, #581c87 0%, #0a0a0f 45%, #1e1b4b 100%);
+    }
+
+    .card-front .blob {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(28px);
+      opacity: 0.45;
+      pointer-events: none;
+    }
+
+    .card-front .blob-1 {
+      width: 1.6in;
+      height: 1.6in;
+      top: -0.4in;
+      right: -0.3in;
+      background: #a855f7;
+    }
+
+    .card-front .blob-2 {
+      width: 1.2in;
+      height: 1.2in;
+      bottom: -0.35in;
+      left: -0.25in;
+      background: #3b82f6;
+      opacity: 0.35;
+    }
+
+    .card-front .blob-3 {
+      width: 0.9in;
+      height: 0.9in;
+      top: 0.5in;
+      left: 0.4in;
+      background: #ec4899;
+      opacity: 0.3;
+    }
+
+    .card-front .inner {
+      position: relative;
+      z-index: 1;
+      height: 100%;
+      padding: 0.28in 0.32in;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .brand {
+      font-family: 'Caveat', cursive;
+      font-size: 0.72in;
+      font-weight: 700;
+      line-height: 0.9;
+      background: linear-gradient(90deg, var(--purple-400), var(--pink-400));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .tagline {
+      font-size: 0.11in;
+      font-weight: 500;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: #e9d5ff;
+      margin-top: 0.04in;
+    }
+
+    .waves {
+      display: flex;
+      align-items: flex-end;
+      gap: 0.04in;
+      height: 0.35in;
+    }
+
+    .wave-bar {
+      width: 0.06in;
+      border-radius: 999px;
+      background: linear-gradient(to top, var(--purple-400), var(--pink-400));
+      opacity: 0.85;
+    }
+
+  .wave-bar:nth-child(1) { height: 0.14in; }
+  .wave-bar:nth-child(2) { height: 0.28in; }
+  .wave-bar:nth-child(3) { height: 0.35in; }
+  .wave-bar:nth-child(4) { height: 0.22in; }
+  .wave-bar:nth-child(5) { height: 0.32in; }
+  .wave-bar:nth-child(6) { height: 0.18in; }
+  .wave-bar:nth-child(7) { height: 0.3in; }
+  .wave-bar:nth-child(8) { height: 0.12in; }
+
+    .genres {
+      font-size: 0.075in;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: rgba(216, 180, 254, 0.75);
+    }
+
+    /* —— Back —— */
+    .card-back {
+      background: linear-gradient(145deg, #0f0f14 0%, #1e1033 50%, #0f172a 100%);
+      border: 1px solid rgba(168, 85, 247, 0.25);
+    }
+
+    .card-back .inner {
+      height: 100%;
+      padding: 0.26in 0.32in;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 0.14in;
+    }
+
+    .card-back .name-line {
+      font-family: 'Caveat', cursive;
+      font-size: 0.28in;
+      font-weight: 600;
+      color: var(--purple-400);
+      margin-bottom: 0.02in;
+    }
+
+    .contact-row {
+      display: flex;
+      align-items: center;
+      gap: 0.1in;
+      font-size: 0.085in;
+      color: #e9d5ff;
+      line-height: 1.3;
+    }
+
+    .contact-row .icon {
+      width: 0.14in;
+      height: 0.14in;
+      flex-shrink: 0;
+      color: var(--pink-400);
+    }
+
+    .contact-row a {
+      color: #e9d5ff;
+      text-decoration: none;
+    }
+
+    .divider {
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(168, 85, 247, 0.5), transparent);
+      margin: 0.06in 0;
+    }
+
+    .social {
+      font-size: 0.072in;
+      color: rgba(216, 180, 254, 0.8);
+      letter-spacing: 0.02em;
+    }
+
+    @media print {
+      body {
+        background: white;
+        padding: 0;
+      }
+
+      .instructions { display: none; }
+
+      .sheet {
+        gap: 0;
+        page-break-inside: avoid;
+      }
+
+      .card-wrap {
+        page-break-inside: avoid;
+        break-inside: avoid;
+      }
+
+      .card-label { display: none; }
+
+      .card {
+        box-shadow: none;
+        border-radius: 0;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+
+      @page {
+        size: letter;
+        margin: 0.5in;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="instructions">
+    <h1>linturo business card — print guide</h1>
+    <p>
+      Standard US size: <strong>3.5″ × 2″</strong>. Open this file in Chrome or Safari,
+      use <strong>File → Print</strong>, enable <strong>Background graphics</strong>,
+      and set scale to 100%. Print front and back on separate sheets (or duplex), then trim.
+      For professional printing, export to PDF and send to your printer with bleed if required.
+    </p>
+  </div>
+
+  <div class="sheet">
+    <div class="card-wrap">
+      <span class="card-label">Front</span>
+      <article class="card card-front" aria-label="linturo business card front">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+        <div class="blob blob-3"></div>
+        <div class="inner">
+          <div>
+            <p class="brand">linturo</p>
+            <p class="tagline">Brooklyn based DJ</p>
+          </div>
+          <div>
+            <div class="waves" aria-hidden="true">
+              <span class="wave-bar"></span>
+              <span class="wave-bar"></span>
+              <span class="wave-bar"></span>
+              <span class="wave-bar"></span>
+              <span class="wave-bar"></span>
+              <span class="wave-bar"></span>
+              <span class="wave-bar"></span>
+              <span class="wave-bar"></span>
+            </div>
+            <p class="genres" style="margin-top: 0.12in;">House · Deep · Tech</p>
+          </div>
+        </div>
+      </article>
+    </div>
+
+    <div class="card-wrap">
+      <span class="card-label">Back</span>
+      <article class="card card-back" aria-label="linturo business card back">
+        <div class="inner">
+          <p class="name-line">linturo</p>
+          <div class="contact-row">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
+            </svg>
+            <a href="mailto:linturomusic@gmail.com">linturomusic@gmail.com</a>
+          </div>
+          <div class="contact-row">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9.004 9.004 0 008.716-6.747M12 21a9.004 9.004 0 01-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 017.843 4.582M12 3a8.997 8.997 0 00-7.843 4.582m15.686 0A11.953 11.953 0 0112 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0121 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0112 16.5c-3.162 0-6.133-.815-8.716-2.247m0 0A9.015 9.015 0 013 12c0-1.605.42-3.113 1.157-4.418" />
+            </svg>
+            <span>linturomusic.com</span>
+          </div>
+          <div class="contact-row">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
+              <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
+            </svg>
+            <span>Brooklyn, New York</span>
+          </div>
+          <div class="divider"></div>
+          <p class="social">@_linturo_ · soundcloud.com/linturo · youtube.com/@linturo</p>
+        </div>
+      </article>
+    </div>
+  </div>
+</body>
+</html>

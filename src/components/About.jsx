@@ -39,7 +39,7 @@ const About = () => {
                 My Journey
               </h3>
               <p className="text-sm sm:text-base text-gray-300 mb-4 sm:mb-6 leading-relaxed">
-                I've been playing music off and on for almost ten years, it's something I have a deep passion for. My taste and style has evolved over the years, living in some of the most music centric cities in the world has given me the ability to immerse myself in different scenes and allowed me the time to hone in on exactly what I resonate most with.
+                I've been playing music off and on for almost ten years, it's something I have a deep passion for. My taste and style has evolved over the years through extensive travels across the US and Europe. I've had the fortunate ability to immerse myself in different scenes and that allowed me the time to identify the musical styles I resonate the most with.
               </p>
               <p className="text-sm sm:text-base text-gray-300 leading-relaxed">
                 I'm happy to play music anywhere people will enjoy it. For me, music and the connection it encourages is therapeutic. As lifelong music lover, I aim 

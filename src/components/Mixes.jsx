@@ -11,13 +11,13 @@ import {
 import { config } from '../config'
 
 const MIXES = [
+  { id: 'set7', title: 'Spring Showers', url: config.AUDIO_FILES.SET7 },
   { id: 'set1', title: 'The Space Beyond', url: config.AUDIO_FILES.SET1 },
   { id: 'set2', title: 'Night Skies', url: config.AUDIO_FILES.SET2 },
   { id: 'set3', title: 'Tech House Tuesday', url: config.AUDIO_FILES.SET3 },
   { id: 'set4', title: 'Deep Haus', url: config.AUDIO_FILES.SET4 },
   { id: 'set5', title: 'Minimal Haus', url: config.AUDIO_FILES.SET5 },
   { id: 'set6', title: 'Summer Rays', url: config.AUDIO_FILES.SET6 },
-  { id: 'set7', title: 'Spring Showers', url: config.AUDIO_FILES.SET7 },
 ]
 
 const Mixes = () => {
