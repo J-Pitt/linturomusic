@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { ArrowDownIcon, PlayIcon, PauseIcon, Bars3Icon } from '@heroicons/react/24/outline'
+import { ArrowDownIcon, PlayIcon, PauseIcon, Bars3Icon, FilmIcon } from '@heroicons/react/24/outline'
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { config } from '../config'
@@ -23,7 +23,8 @@ const Hero = () => {
     set3: config.AUDIO_FILES.SET3,
     set4: config.AUDIO_FILES.SET4,
     set5: config.AUDIO_FILES.SET5,
-    set6: config.AUDIO_FILES.SET6
+    set6: config.AUDIO_FILES.SET6,
+    set7: config.AUDIO_FILES.SET7
   }
 
   const scrollToAbout = () => {
@@ -250,7 +251,7 @@ const Hero = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 1.0 }}
-            className="flex flex-col sm:flex-row gap-4 justify-center items-center"
+            className="flex flex-col sm:flex-row flex-wrap gap-4 justify-center items-center max-w-4xl mx-auto"
           >
             <motion.button
               whileHover={{ scale: 1.05 }}
@@ -454,6 +455,50 @@ const Hero = () => {
                   Summer Rays
                 </>
               )}
+            </motion.button>
+
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => handleAudioToggle('set7')}
+              disabled={isLoading && currentSet === 'set7'}
+              className={`w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 font-semibold rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed ${
+                currentSet === 'set7' && isPlaying 
+                  ? 'bg-gradient-to-r from-red-600 to-orange-600 text-white' 
+                  : 'bg-gradient-to-r from-purple-600 to-pink-600 text-white'
+              }`}
+            >
+              {isLoading && currentSet === 'set7' ? (
+                <>
+                  <div className="animate-spin rounded-full h-5 w-5 sm:h-6 sm:w-6 border-b-2 border-white mr-2"></div>
+                  Loading...
+                </>
+              ) : audioError && currentSet === 'set7' ? (
+                <>
+                  <PlayIcon className="w-5 h-5 sm:w-6 sm:h-6 mr-2" />
+                  Try Again
+                </>
+              ) : currentSet === 'set7' && isPlaying ? (
+                <>
+                  <PauseIcon className="w-5 h-5 sm:w-6 sm:h-6 mr-2" />
+                  Pause Spring Showers
+                </>
+              ) : (
+                <>
+                  <PlayIcon className="w-5 h-5 sm:w-6 sm:h-6 mr-2" />
+                  Spring Showers
+                </>
+              )}
+            </motion.button>
+
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => navigate('/clips')}
+              className="w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 font-semibold rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 flex items-center justify-center bg-white/10 backdrop-blur-sm border-2 border-purple-400/60 text-purple-100 hover:bg-white/20 hover:border-pink-400/60"
+            >
+              <FilmIcon className="w-5 h-5 sm:w-6 sm:h-6 mr-2" />
+              Clips
             </motion.button>
           </motion.div>
 
