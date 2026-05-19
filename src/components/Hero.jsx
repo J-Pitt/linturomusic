@@ -1,168 +1,25 @@
 import { motion } from 'framer-motion'
-import { ArrowDownIcon, PlayIcon, PauseIcon, Bars3Icon, FilmIcon } from '@heroicons/react/24/outline'
-import { useState, useRef, useEffect } from 'react'
+import { ArrowDownIcon, Bars3Icon, FilmIcon, MusicalNoteIcon } from '@heroicons/react/24/outline'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { config } from '../config'
 
 const Hero = () => {
-  const [currentSet, setCurrentSet] = useState(null) // 'set1' or 'set2'
-  const [isPlaying, setIsPlaying] = useState(false)
-  const [audioError, setAudioError] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
-  const [currentTime, setCurrentTime] = useState(0)
-  const [duration, setDuration] = useState(0)
-  const [showControls, setShowControls] = useState(false)
   const [showImageModal, setShowImageModal] = useState(false)
   const [showMenu, setShowMenu] = useState(false)
-  const audioRef = useRef(null)
   const navigate = useNavigate()
-
-  const audioUrls = {
-    set1: config.AUDIO_FILES.SET1,
-    set2: config.AUDIO_FILES.SET2,
-    set3: config.AUDIO_FILES.SET3,
-    set4: config.AUDIO_FILES.SET4,
-    set5: config.AUDIO_FILES.SET5,
-    set6: config.AUDIO_FILES.SET6,
-    set7: config.AUDIO_FILES.SET7
-  }
 
   const scrollToAbout = () => {
     document.getElementById('about')?.scrollIntoView({ behavior: 'smooth' })
   }
 
-  const formatTime = (timeInSeconds) => {
-    if (isNaN(timeInSeconds)) return '0:00'
-    const minutes = Math.floor(timeInSeconds / 60)
-    const seconds = Math.floor(timeInSeconds % 60)
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`
-  }
-
-  const handleSeek = (e) => {
-    if (!audioRef.current) return
-    const rect = e.currentTarget.getBoundingClientRect()
-    const clickPosition = (e.clientX - rect.left) / rect.width
-    const newTime = clickPosition * duration
-    audioRef.current.currentTime = newTime
-    setCurrentTime(newTime)
-  }
-
-  const handleAudioToggle = async (setType) => {
-    // If switching to a different set, stop current audio and reset
-    if (currentSet !== setType) {
-      if (audioRef.current) {
-        audioRef.current.pause()
-        audioRef.current = null
-      }
-      setIsPlaying(false)
-      setCurrentTime(0)
-      setDuration(0)
-      setShowControls(false)
-      setAudioError(false)
-      setCurrentSet(setType)
-    }
-
-    if (audioError) {
-      // If there was an error, try to reload the audio
-      setAudioError(false)
-      audioRef.current = null
-    }
-
-    if (!audioRef.current) {
-      setIsLoading(true)
-      try {
-        // Create audio element with CORS settings
-        audioRef.current = new Audio()
-        audioRef.current.crossOrigin = 'anonymous'
-        audioRef.current.preload = 'metadata'
-        
-        // Set up event listeners
-        audioRef.current.addEventListener('loadedmetadata', () => {
-          setIsLoading(false)
-          setDuration(audioRef.current.duration)
-        })
-        
-        audioRef.current.addEventListener('timeupdate', () => {
-          setCurrentTime(audioRef.current.currentTime)
-        })
-        
-        audioRef.current.addEventListener('ended', () => {
-          setIsPlaying(false)
-          setShowControls(false)
-          setCurrentTime(0)
-        })
-        
-        audioRef.current.addEventListener('error', (e) => {
-          console.error('Audio playback error:', e)
-          console.error('Audio error details:', {
-            error: e.target.error,
-            networkState: e.target.networkState,
-            readyState: e.target.readyState,
-            src: e.target.src
-          })
-          setIsPlaying(false)
-          setIsLoading(false)
-          setAudioError(true)
-          setShowControls(false)
-        })
-
-        // Use the appropriate audio URL
-        const audioUrl = audioUrls[setType]
-        
-        // Set the source after setting up listeners
-        audioRef.current.src = audioUrl
-        
-        // Try to load the audio
-        await audioRef.current.load()
-      } catch (error) {
-        console.error('Error loading audio:', error)
-        setIsLoading(false)
-        setAudioError(true)
-        return
-      }
-    }
-
-    if (isPlaying) {
-      audioRef.current.pause()
-      setIsPlaying(false)
-      setShowControls(false)
-    } else {
-      try {
-        setIsLoading(true)
-        await audioRef.current.play()
-        setIsPlaying(true)
-        setShowControls(true)
-        setIsLoading(false)
-      } catch (error) {
-        console.error('Error playing audio:', error)
-        setIsPlaying(false)
-        setIsLoading(false)
-        setAudioError(true)
-        setShowControls(false)
-      }
-    }
-  }
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      if (audioRef.current) {
-        audioRef.current.pause()
-        audioRef.current = null
-      }
-    }
-  }, [])
-
   return (
     <section className="min-h-screen bg-gradient-to-br from-purple-900 via-black to-blue-900 relative overflow-hidden px-4 sm:px-6 lg:px-8">
-      {/* Background decoration */}
       <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute -top-20 -right-20 w-40 h-40 sm:w-80 sm:h-80 bg-purple-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob"></div>
-        <div className="absolute -bottom-20 -left-20 w-40 h-40 sm:w-80 sm:h-80 bg-blue-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob animation-delay-2000"></div>
-        <div className="absolute top-20 left-20 w-40 h-40 sm:w-80 sm:h-80 bg-pink-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob animation-delay-4000"></div>
+        <motion.div className="absolute -top-20 -right-20 w-40 h-40 sm:w-80 sm:h-80 bg-purple-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob" />
+        <motion.div className="absolute -bottom-20 -left-20 w-40 h-40 sm:w-80 sm:h-80 bg-blue-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob animation-delay-2000" />
+        <motion.div className="absolute top-20 left-20 w-40 h-40 sm:w-80 sm:h-80 bg-pink-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob animation-delay-4000" />
       </div>
 
-      {/* Hamburger Menu */}
       <div className="absolute top-6 right-6 z-50">
         <motion.button
           whileHover={{ scale: 1.1 }}
@@ -173,20 +30,21 @@ const Hero = () => {
           <Bars3Icon className="w-6 h-6 text-purple-200" />
         </motion.button>
 
-        {/* Dropdown Menu */}
         {showMenu && (
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
             className="absolute right-0 mt-2 w-48 bg-gray-900/95 backdrop-blur-md border border-purple-500/30 rounded-lg shadow-xl overflow-hidden"
           >
             <button
-              onClick={() => {
-                navigate('/clips')
-                setShowMenu(false)
-              }}
+              onClick={() => { navigate('/mixes'); setShowMenu(false) }}
               className="w-full px-4 py-3 text-left text-purple-200 hover:bg-purple-600/20 hover:text-white transition-colors duration-200 border-b border-purple-500/20"
+            >
+              Mixes
+            </button>
+            <button
+              onClick={() => { navigate('/clips'); setShowMenu(false) }}
+              className="w-full px-4 py-3 text-left text-purple-200 hover:bg-purple-600/20 hover:text-white transition-colors duration-200"
             >
               Clips
             </button>
@@ -211,7 +69,6 @@ const Hero = () => {
             </span>
           </motion.h1>
 
-          {/* DJ Image */}
           <motion.div
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -241,374 +98,95 @@ const Hero = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.8 }}
-            className="text-lg sm:text-xl text-purple-300 mb-8 sm:mb-12 max-w-xl mx-auto px-4"
+            className="text-lg sm:text-xl text-purple-300 mb-8 sm:mb-10 max-w-xl mx-auto px-4"
           >
             Just a music lover looking to connect with like minded individuals. If you like my style, drop me a line, looking to play venues in Brooklyn and Manhattan.
           </motion.p>
-
 
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 1.0 }}
-            className="flex flex-col sm:flex-row flex-wrap gap-4 justify-center items-center max-w-4xl mx-auto"
+            className="flex flex-col sm:flex-row gap-4 justify-center items-center"
           >
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              onClick={() => handleAudioToggle('set1')}
-              disabled={isLoading && currentSet === 'set1'}
-              className={`w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 font-semibold rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed ${
-                currentSet === 'set1' && isPlaying 
-                  ? 'bg-gradient-to-r from-red-600 to-orange-600 text-white' 
-                  : 'bg-gradient-to-r from-purple-600 to-pink-600 text-white'
-              }`}
+              onClick={() => navigate('/mixes')}
+              className="w-full sm:w-auto px-8 py-3.5 sm:py-4 font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white"
             >
-              {isLoading && currentSet === 'set1' ? (
-                <>
-                  <div className="animate-spin rounded-full h-5 w-5 sm:h-6 sm:w-6 border-b-2 border-white mr-2"></div>
-                  Loading...
-                </>
-              ) : audioError && currentSet === 'set1' ? (
-                <>
-                  <PlayIcon className="w-5 h-5 sm:w-6 sm:h-6 mr-2" />
-                  Try Again
-                </>
-              ) : currentSet === 'set1' && isPlaying ? (
-                <>
-                  <PauseIcon className="w-5 h-5 sm:w-6 sm:h-6 mr-2" />
-                  Pause The Space Beyond
-                </>
-              ) : (
-                <>
-                  <PlayIcon className="w-5 h-5 sm:w-6 sm:h-6 mr-2" />
-                  The Space Beyond
-                </>
-              )}
-            </motion.button>
-
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => handleAudioToggle('set2')}
-              disabled={isLoading && currentSet === 'set2'}
-              className={`w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 font-semibold rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed ${
-                currentSet === 'set2' && isPlaying 
-                  ? 'bg-gradient-to-r from-red-600 to-orange-600 text-white' 
-                  : 'bg-gradient-to-r from-purple-600 to-pink-600 text-white'
-              }`}
-            >
-              {isLoading && currentSet === 'set2' ? (
-                <>
-                  <div className="animate-spin rounded-full h-5 w-5 sm:h-6 sm:w-6 border-b-2 border-white mr-2"></div>
-                  Loading...
-                </>
-              ) : audioError && currentSet === 'set2' ? (
-                <>
-                  <PlayIcon className="w-5 h-5 sm:w-6 sm:h-6 mr-2" />
-                  Try Again
-                </>
-              ) : currentSet === 'set2' && isPlaying ? (
-                <>
-                  <PauseIcon className="w-5 h-5 sm:w-6 sm:h-6 mr-2" />
-                  Pause Night Skies
-                </>
-              ) : (
-                <>
-                  <PlayIcon className="w-5 h-5 sm:w-6 sm:h-6 mr-2" />
-                  Night Skies
-                </>
-              )}
-            </motion.button>
-
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => handleAudioToggle('set3')}
-              disabled={isLoading && currentSet === 'set3'}
-              className={`w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 font-semibold rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed ${
-                currentSet === 'set3' && isPlaying 
-                  ? 'bg-gradient-to-r from-red-600 to-orange-600 text-white' 
-                  : 'bg-gradient-to-r from-purple-600 to-pink-600 text-white'
-              }`}
-            >
-              {isLoading && currentSet === 'set3' ? (
-                <>
-                  <div className="animate-spin rounded-full h-5 w-5 sm:h-6 sm:w-6 border-b-2 border-white mr-2"></div>
-                  Loading...
-                </>
-              ) : audioError && currentSet === 'set3' ? (
-                <>
-                  <PlayIcon className="w-5 h-5 sm:w-6 sm:h-6 mr-2" />
-                  Try Again
-                </>
-              ) : currentSet === 'set3' && isPlaying ? (
-                <>
-                  <PauseIcon className="w-5 h-5 sm:w-6 sm:h-6 mr-2" />
-                  Pause Tech House Tuesday
-                </>
-              ) : (
-                <>
-                  <PlayIcon className="w-5 h-5 sm:w-6 sm:h-6 mr-2" />
-                  Tech House Tuesday
-                </>
-              )}
-            </motion.button>
-
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => handleAudioToggle('set4')}
-              disabled={isLoading && currentSet === 'set4'}
-              className={`w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 font-semibold rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed ${
-                currentSet === 'set4' && isPlaying 
-                  ? 'bg-gradient-to-r from-red-600 to-orange-600 text-white' 
-                  : 'bg-gradient-to-r from-purple-600 to-pink-600 text-white'
-              }`}
-            >
-              {isLoading && currentSet === 'set4' ? (
-                <>
-                  <div className="animate-spin rounded-full h-5 w-5 sm:h-6 sm:w-6 border-b-2 border-white mr-2"></div>
-                  Loading...
-                </>
-              ) : audioError && currentSet === 'set4' ? (
-                <>
-                  <PlayIcon className="w-5 h-5 sm:w-6 sm:h-6 mr-2" />
-                  Try Again
-                </>
-              ) : currentSet === 'set4' && isPlaying ? (
-                <>
-                  <PauseIcon className="w-5 h-5 sm:w-6 sm:h-6 mr-2" />
-                  Pause Deep Haus
-                </>
-              ) : (
-                <>
-                  <PlayIcon className="w-5 h-5 sm:w-6 sm:h-6 mr-2" />
-                  Deep Haus
-                </>
-              )}
-            </motion.button>
-
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => handleAudioToggle('set5')}
-              disabled={isLoading && currentSet === 'set5'}
-              className={`w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 font-semibold rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed ${
-                currentSet === 'set5' && isPlaying 
-                  ? 'bg-gradient-to-r from-red-600 to-orange-600 text-white' 
-                  : 'bg-gradient-to-r from-purple-600 to-pink-600 text-white'
-              }`}
-            >
-              {isLoading && currentSet === 'set5' ? (
-                <>
-                  <div className="animate-spin rounded-full h-5 w-5 sm:h-6 sm:w-6 border-b-2 border-white mr-2"></div>
-                  Loading...
-                </>
-              ) : audioError && currentSet === 'set5' ? (
-                <>
-                  <PlayIcon className="w-5 h-5 sm:w-6 sm:h-6 mr-2" />
-                  Try Again
-                </>
-              ) : currentSet === 'set5' && isPlaying ? (
-                <>
-                  <PauseIcon className="w-5 h-5 sm:w-6 sm:h-6 mr-2" />
-                  Pause Minimal Haus
-                </>
-              ) : (
-                <>
-                  <PlayIcon className="w-5 h-5 sm:w-6 sm:h-6 mr-2" />
-                  Minimal Haus
-                </>
-              )}
-            </motion.button>
-
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => handleAudioToggle('set6')}
-              disabled={isLoading && currentSet === 'set6'}
-              className={`w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 font-semibold rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed ${
-                currentSet === 'set6' && isPlaying 
-                  ? 'bg-gradient-to-r from-red-600 to-orange-600 text-white' 
-                  : 'bg-gradient-to-r from-purple-600 to-pink-600 text-white'
-              }`}
-            >
-              {isLoading && currentSet === 'set6' ? (
-                <>
-                  <div className="animate-spin rounded-full h-5 w-5 sm:h-6 sm:w-6 border-b-2 border-white mr-2"></div>
-                  Loading...
-                </>
-              ) : audioError && currentSet === 'set6' ? (
-                <>
-                  <PlayIcon className="w-5 h-5 sm:w-6 sm:h-6 mr-2" />
-                  Try Again
-                </>
-              ) : currentSet === 'set6' && isPlaying ? (
-                <>
-                  <PauseIcon className="w-5 h-5 sm:w-6 sm:h-6 mr-2" />
-                  Pause Summer Rays
-                </>
-              ) : (
-                <>
-                  <PlayIcon className="w-5 h-5 sm:w-6 sm:h-6 mr-2" />
-                  Summer Rays
-                </>
-              )}
-            </motion.button>
-
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => handleAudioToggle('set7')}
-              disabled={isLoading && currentSet === 'set7'}
-              className={`w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 font-semibold rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed ${
-                currentSet === 'set7' && isPlaying 
-                  ? 'bg-gradient-to-r from-red-600 to-orange-600 text-white' 
-                  : 'bg-gradient-to-r from-purple-600 to-pink-600 text-white'
-              }`}
-            >
-              {isLoading && currentSet === 'set7' ? (
-                <>
-                  <div className="animate-spin rounded-full h-5 w-5 sm:h-6 sm:w-6 border-b-2 border-white mr-2"></div>
-                  Loading...
-                </>
-              ) : audioError && currentSet === 'set7' ? (
-                <>
-                  <PlayIcon className="w-5 h-5 sm:w-6 sm:h-6 mr-2" />
-                  Try Again
-                </>
-              ) : currentSet === 'set7' && isPlaying ? (
-                <>
-                  <PauseIcon className="w-5 h-5 sm:w-6 sm:h-6 mr-2" />
-                  Pause Spring Showers
-                </>
-              ) : (
-                <>
-                  <PlayIcon className="w-5 h-5 sm:w-6 sm:h-6 mr-2" />
-                  Spring Showers
-                </>
-              )}
+              <MusicalNoteIcon className="w-5 h-5 sm:w-6 sm:h-6" />
+              Mixes
             </motion.button>
 
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={() => navigate('/clips')}
-              className="w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 font-semibold rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 flex items-center justify-center bg-white/10 backdrop-blur-sm border-2 border-purple-400/60 text-purple-100 hover:bg-white/20 hover:border-pink-400/60"
+              className="w-full sm:w-auto px-8 py-3.5 sm:py-4 font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center gap-2 bg-white/10 backdrop-blur-sm border-2 border-purple-400/60 text-purple-100 hover:bg-white/20 hover:border-pink-400/60"
             >
-              <FilmIcon className="w-5 h-5 sm:w-6 sm:h-6 mr-2" />
+              <FilmIcon className="w-5 h-5 sm:w-6 sm:h-6" />
               Clips
             </motion.button>
           </motion.div>
 
-          {/* Media Controls */}
-          {showControls && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
-              className="mt-6 max-w-md mx-auto bg-black/20 backdrop-blur-sm rounded-lg p-4 border border-purple-500/30"
-            >
-              {/* Progress Bar */}
-              <div className="mb-3">
-                <div
-                  className="w-full h-2 bg-gray-700 rounded-full cursor-pointer overflow-hidden"
-                  onClick={handleSeek}
-                >
-                  <div
-                    className="h-full bg-gradient-to-r from-purple-400 to-pink-400 transition-all duration-100"
-                    style={{ width: `${duration > 0 ? (currentTime / duration) * 100 : 0}%` }}
-                  ></div>
-                </div>
-              </div>
-
-              {/* Time Display */}
-              <div className="flex justify-between items-center text-sm text-purple-200">
-                <span>{formatTime(currentTime)}</span>
-                <span className="text-xs text-purple-300">Now Playing</span>
-                <span>{formatTime(duration)}</span>
-              </div>
-            </motion.div>
-          )}
-
-          {audioError && (
-            <motion.p
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="text-red-400 text-sm mt-4"
-            >
-              Audio temporarily unavailable. Please try again later.
-            </motion.p>
-          )}
-
-          {/* Music waves - always visible, animated when playing */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            className={`flex justify-center space-x-3 items-end ${isPlaying ? 'mt-4' : 'mt-12'}`}
+            transition={{ duration: 0.5, delay: 1.1 }}
+            className="flex justify-center space-x-3 items-end mt-12"
             style={{ height: '80px' }}
           >
             {[...Array(8)].map((_, i) => (
               <motion.div
                 key={i}
-                animate={isPlaying ? { height: [30, 80, 30] } : { height: 30 }}
-                transition={{ duration: 0.6, repeat: isPlaying ? Infinity : 0, delay: i * 0.1 }}
-                className="w-3 bg-gradient-to-t from-purple-400 to-pink-400 rounded-full"
+                animate={{ height: [30, 55, 30] }}
+                transition={{ duration: 1.2, repeat: Infinity, delay: i * 0.1 }}
+                className="w-3 bg-gradient-to-t from-purple-400 to-pink-400 rounded-full opacity-60"
                 style={{ height: '30px' }}
               />
             ))}
           </motion.div>
 
-          {/* Arrow button - positioned in content flow */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 1, delay: 1.2 }}
-            className={`flex justify-center ${isPlaying ? 'mt-4' : 'mt-8'}`}
+            className="flex justify-center mt-8"
           >
             <motion.button
               onClick={scrollToAbout}
               animate={{ y: [0, 10, 0] }}
-              transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+              transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
               className="p-2 rounded-full bg-white/10 backdrop-blur-sm border border-purple-400"
             >
               <ArrowDownIcon className="h-5 w-5 sm:h-6 sm:w-6 text-purple-200" />
             </motion.button>
           </motion.div>
-
         </motion.div>
       </div>
 
-      {/* Image Modal */}
       {showImageModal && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
           className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
           onClick={() => setShowImageModal(false)}
         >
           <motion.div
             initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.8, opacity: 0 }}
-            transition={{ type: "spring", damping: 25, stiffness: 300 }}
             className="relative max-w-2xl w-full"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Close Button */}
             <button
               onClick={() => setShowImageModal(false)}
-              className="absolute -top-4 -right-4 z-10 w-10 h-10 bg-purple-600 hover:bg-purple-700 rounded-full flex items-center justify-center text-white shadow-lg transition-colors duration-200"
+              className="absolute -top-4 -right-4 z-10 w-10 h-10 bg-purple-600 hover:bg-purple-700 rounded-full flex items-center justify-center text-white shadow-lg"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
-
-            {/* Image */}
             <img
               src="https://linturomusic.s3.us-west-2.amazonaws.com/profile.jpg"
               alt="Linturo DJ"
@@ -621,4 +199,4 @@ const Hero = () => {
   )
 }
 
-export default Hero 
+export default Hero

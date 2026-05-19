@@ -100,6 +100,15 @@ const Clips = () => {
                 navigate('/')
                 setShowMenu(false)
               }}
+              className="w-full px-4 py-3.5 text-left text-purple-200 hover:bg-purple-600/25 hover:text-white transition-colors duration-200 border-b border-purple-500/20"
+            >
+              Home
+            </button>
+            <button
+              onClick={() => {
+                navigate('/mixes')
+                setShowMenu(false)
+              }}
               className="w-full px-4 py-3.5 text-left text-purple-200 hover:bg-purple-600/25 hover:text-white transition-colors duration-200"
             >
               Mixes
