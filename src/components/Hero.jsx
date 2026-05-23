@@ -1,16 +1,143 @@
 import { motion } from 'framer-motion'
-import { ArrowDownIcon, Bars3Icon, FilmIcon, MusicalNoteIcon } from '@heroicons/react/24/outline'
-import { useState } from 'react'
+import {
+  ArrowDownIcon,
+  Bars3Icon,
+  FilmIcon,
+  MusicalNoteIcon,
+  PauseIcon,
+  PlayIcon,
+} from '@heroicons/react/24/outline'
+import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { config } from '../config'
+
+const FEATURED_RECENT = [
+  { id: 'colors', title: 'Colors', url: config.AUDIO_FILES.COLORS },
+  { id: 'takingOff', title: 'Taking Off', url: config.AUDIO_FILES.TAKING_OFF },
+]
 
 const Hero = () => {
   const [showImageModal, setShowImageModal] = useState(false)
   const [showMenu, setShowMenu] = useState(false)
+  const [currentSet, setCurrentSet] = useState(null)
+  const [isPlaying, setIsPlaying] = useState(false)
+  const [audioError, setAudioError] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
+  const [currentTime, setCurrentTime] = useState(0)
+  const [duration, setDuration] = useState(0)
+  const [showControls, setShowControls] = useState(false)
+  const audioRef = useRef(null)
   const navigate = useNavigate()
+
+  const audioUrls = Object.fromEntries(FEATURED_RECENT.map((m) => [m.id, m.url]))
 
   const scrollToAbout = () => {
     document.getElementById('about')?.scrollIntoView({ behavior: 'smooth' })
   }
+
+  const formatTime = (timeInSeconds) => {
+    if (isNaN(timeInSeconds)) return '0:00'
+    const minutes = Math.floor(timeInSeconds / 60)
+    const seconds = Math.floor(timeInSeconds % 60)
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`
+  }
+
+  const handleSeek = (e) => {
+    if (!audioRef.current) return
+    const rect = e.currentTarget.getBoundingClientRect()
+    const clickPosition = (e.clientX - rect.left) / rect.width
+    const newTime = clickPosition * duration
+    audioRef.current.currentTime = newTime
+    setCurrentTime(newTime)
+  }
+
+  const handleAudioToggle = async (setType) => {
+    if (currentSet !== setType) {
+      if (audioRef.current) {
+        audioRef.current.pause()
+        audioRef.current = null
+      }
+      setIsPlaying(false)
+      setCurrentTime(0)
+      setDuration(0)
+      setShowControls(false)
+      setAudioError(false)
+      setCurrentSet(setType)
+    }
+
+    if (audioError) {
+      setAudioError(false)
+      audioRef.current = null
+    }
+
+    if (!audioRef.current) {
+      setIsLoading(true)
+      try {
+        audioRef.current = new Audio()
+        audioRef.current.crossOrigin = 'anonymous'
+        audioRef.current.preload = 'metadata'
+
+        audioRef.current.addEventListener('loadedmetadata', () => {
+          setIsLoading(false)
+          setDuration(audioRef.current.duration)
+        })
+
+        audioRef.current.addEventListener('timeupdate', () => {
+          setCurrentTime(audioRef.current.currentTime)
+        })
+
+        audioRef.current.addEventListener('ended', () => {
+          setIsPlaying(false)
+          setShowControls(false)
+          setCurrentTime(0)
+        })
+
+        audioRef.current.addEventListener('error', () => {
+          setIsPlaying(false)
+          setIsLoading(false)
+          setAudioError(true)
+          setShowControls(false)
+        })
+
+        audioRef.current.src = audioUrls[setType]
+        await audioRef.current.load()
+      } catch {
+        setIsLoading(false)
+        setAudioError(true)
+        return
+      }
+    }
+
+    if (isPlaying) {
+      audioRef.current.pause()
+      setIsPlaying(false)
+      setShowControls(false)
+    } else {
+      try {
+        setIsLoading(true)
+        await audioRef.current.play()
+        setIsPlaying(true)
+        setShowControls(true)
+        setIsLoading(false)
+      } catch {
+        setIsPlaying(false)
+        setIsLoading(false)
+        setAudioError(true)
+        setShowControls(false)
+      }
+    }
+  }
+
+  useEffect(() => {
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause()
+        audioRef.current = null
+      }
+    }
+  }, [])
+
+  const currentMix = FEATURED_RECENT.find((m) => m.id === currentSet)
 
   return (
     <section className="min-h-screen bg-gradient-to-br from-purple-900 via-black to-blue-900 relative overflow-hidden px-4 sm:px-6 lg:px-8">
@@ -133,16 +260,90 @@ const Hero = () => {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 1.05 }}
+            className="mt-8 sm:mt-10 max-w-md mx-auto"
+          >
+            <p className="text-sm uppercase tracking-widest text-purple-400/90 mb-4 font-medium">
+              Most Recent
+            </p>
+
+            <div className="flex flex-col gap-3">
+              {FEATURED_RECENT.map((mix) => {
+                const active = currentSet === mix.id
+                const playing = active && isPlaying
+                const loading = isLoading && active
+
+                return (
+                  <motion.button
+                    key={mix.id}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => handleAudioToggle(mix.id)}
+                    disabled={loading}
+                    className={`w-full flex items-center justify-between gap-3 px-5 py-3.5 rounded-xl font-semibold transition-all duration-300 disabled:opacity-60 ${
+                      playing
+                        ? 'bg-gradient-to-r from-red-600/90 to-orange-600/90 text-white shadow-lg'
+                        : 'bg-white/10 backdrop-blur-sm text-purple-100 border border-purple-500/40 hover:border-purple-400/60 hover:bg-white/15'
+                    }`}
+                  >
+                    <span className="flex items-center gap-3">
+                      {loading ? (
+                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white shrink-0" />
+                      ) : playing ? (
+                        <PauseIcon className="w-5 h-5 shrink-0" />
+                      ) : (
+                        <PlayIcon className="w-5 h-5 shrink-0 text-pink-300" />
+                      )}
+                      {mix.title}
+                    </span>
+                  </motion.button>
+                )
+              })}
+            </div>
+
+            {showControls && currentMix && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mt-4 p-4 rounded-xl bg-black/30 backdrop-blur-sm border border-purple-500/30 text-left"
+              >
+                <p className="text-center text-purple-200 text-sm mb-3">{currentMix.title}</p>
+                <div
+                  className="w-full h-2 bg-gray-700 rounded-full cursor-pointer overflow-hidden mb-2"
+                  onClick={handleSeek}
+                >
+                  <div
+                    className="h-full bg-gradient-to-r from-purple-400 to-pink-400 transition-all duration-100"
+                    style={{ width: `${duration > 0 ? (currentTime / duration) * 100 : 0}%` }}
+                  />
+                </div>
+                <div className="flex justify-between text-xs text-purple-200">
+                  <span>{formatTime(currentTime)}</span>
+                  <span>{formatTime(duration)}</span>
+                </div>
+              </motion.div>
+            )}
+
+            {audioError && (
+              <p className="text-red-400 text-sm mt-3">
+                Audio temporarily unavailable. Please try again.
+              </p>
+            )}
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 1.1 }}
-            className="flex justify-center space-x-3 items-end mt-12"
+            className={`flex justify-center space-x-3 items-end ${isPlaying ? 'mt-6' : 'mt-10'}`}
             style={{ height: '80px' }}
           >
             {[...Array(8)].map((_, i) => (
               <motion.div
                 key={i}
-                animate={{ height: [30, 55, 30] }}
-                transition={{ duration: 1.2, repeat: Infinity, delay: i * 0.1 }}
-                className="w-3 bg-gradient-to-t from-purple-400 to-pink-400 rounded-full opacity-60"
+                animate={isPlaying ? { height: [30, 80, 30] } : { height: 30 }}
+                transition={{ duration: 0.6, repeat: isPlaying ? Infinity : 0, delay: i * 0.1 }}
+                className="w-3 bg-gradient-to-t from-purple-400 to-pink-400 rounded-full"
                 style={{ height: '30px' }}
               />
             ))}
@@ -152,7 +353,7 @@ const Hero = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 1, delay: 1.2 }}
-            className="flex justify-center mt-8"
+            className={`flex justify-center ${isPlaying ? 'mt-4' : 'mt-8'}`}
           >
             <motion.button
               onClick={scrollToAbout}

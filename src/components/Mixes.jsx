@@ -11,6 +11,8 @@ import {
 import { config } from '../config'
 
 const MIXES = [
+  { id: 'colors', title: 'Colors', url: config.AUDIO_FILES.COLORS },
+  { id: 'takingOff', title: 'Taking Off', url: config.AUDIO_FILES.TAKING_OFF },
   { id: 'set7', title: 'Spring Showers', url: config.AUDIO_FILES.SET7 },
   { id: 'set1', title: 'The Space Beyond', url: config.AUDIO_FILES.SET1 },
   { id: 'set2', title: 'Night Skies', url: config.AUDIO_FILES.SET2 },
