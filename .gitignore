@@ -12,6 +12,10 @@ dist
 dist-ssr
 *.local
 
+# Generated video outputs (large)
+video/output/
+.venv-video/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
