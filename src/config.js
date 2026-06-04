@@ -16,6 +16,8 @@ export const config = {
     SET7: import.meta.env.VITE_AUDIO_SET7 || 'https://linturomusic.s3.us-west-2.amazonaws.com/springShowers.WAV',
     COLORS: import.meta.env.VITE_AUDIO_COLORS || 'https://linturomusic.s3.us-west-2.amazonaws.com/colors.WAV',
     TAKING_OFF: import.meta.env.VITE_AUDIO_TAKING_OFF || 'https://linturomusic.s3.us-west-2.amazonaws.com/takingOff.WAV',
+    REFLECTIONS: import.meta.env.VITE_AUDIO_REFLECTIONS || 'https://linturomusic.s3.us-west-2.amazonaws.com/reflections.WAV',
+    RECHARGE: import.meta.env.VITE_AUDIO_RECHARGE || 'https://linturomusic.s3.us-west-2.amazonaws.com/recharge.WAV',
   },
   
   // Video file URLs (obfuscated in production)

@@ -12,6 +12,8 @@ import { useNavigate } from 'react-router-dom'
 import { config } from '../config'
 
 const FEATURED_RECENT = [
+  { id: 'reflections', title: 'Reflections', url: config.AUDIO_FILES.REFLECTIONS },
+  { id: 'recharge', title: 'Recharge', url: config.AUDIO_FILES.RECHARGE },
   { id: 'colors', title: 'Colors', url: config.AUDIO_FILES.COLORS },
   { id: 'takingOff', title: 'Taking Off', url: config.AUDIO_FILES.TAKING_OFF },
 ]

@@ -11,6 +11,8 @@ import {
 import { config } from '../config'
 
 const MIXES = [
+  { id: 'reflections', title: 'Reflections', url: config.AUDIO_FILES.REFLECTIONS },
+  { id: 'recharge', title: 'Recharge', url: config.AUDIO_FILES.RECHARGE },
   { id: 'colors', title: 'Colors', url: config.AUDIO_FILES.COLORS },
   { id: 'takingOff', title: 'Taking Off', url: config.AUDIO_FILES.TAKING_OFF },
   { id: 'set7', title: 'Spring Showers', url: config.AUDIO_FILES.SET7 },

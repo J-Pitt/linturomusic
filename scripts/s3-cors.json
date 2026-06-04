@@ -1,0 +1,16 @@
+{
+  "CORSRules": [
+    {
+      "AllowedHeaders": ["*"],
+      "AllowedMethods": ["GET", "HEAD"],
+      "AllowedOrigins": [
+        "https://linturomusic.com",
+        "https://www.linturomusic.com",
+        "http://localhost:5173",
+        "http://localhost:3000"
+      ],
+      "ExposeHeaders": ["Content-Length", "Content-Type", "ETag"],
+      "MaxAgeSeconds": 3600
+    }
+  ]
+}
