@@ -11,6 +11,12 @@ import { config } from '../config'
 
 const CLIPS = [
   {
+    id: 'fractal-zoom',
+    title: 'Fractal Zoom',
+    subtitle: 'Mandelbrot visual',
+    src: config.VIDEO_FILES.VIDEO6,
+  },
+  {
     id: 'world-tour-1',
     title: 'World Tour Radio',
     subtitle: 'Live set highlight',

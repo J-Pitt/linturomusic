@@ -14,6 +14,7 @@ dist-ssr
 
 # Generated video outputs (large)
 video/output/
+video/download/
 .venv-video/
 
 # Editor directories and files
