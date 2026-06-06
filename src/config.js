@@ -18,6 +18,8 @@ export const config = {
     TAKING_OFF: import.meta.env.VITE_AUDIO_TAKING_OFF || 'https://linturomusic.s3.us-west-2.amazonaws.com/takingOff.WAV',
     REFLECTIONS: import.meta.env.VITE_AUDIO_REFLECTIONS || 'https://linturomusic.s3.us-west-2.amazonaws.com/reflections.WAV',
     RECHARGE: import.meta.env.VITE_AUDIO_RECHARGE || 'https://linturomusic.s3.us-west-2.amazonaws.com/recharge.WAV',
+    ECHOES: import.meta.env.VITE_AUDIO_ECHOES || 'https://linturomusic.s3.us-west-2.amazonaws.com/echoes.WAV',
+    SUMMER_HEAT: import.meta.env.VITE_AUDIO_SUMMER_HEAT || 'https://linturomusic.s3.us-west-2.amazonaws.com/summerHeat.WAV',
   },
   
   // Video file URLs (obfuscated in production)
