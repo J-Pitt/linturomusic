@@ -22,6 +22,14 @@ export const config = {
     SUMMER_HEAT: import.meta.env.VITE_AUDIO_SUMMER_HEAT || 'https://linturomusic.s3.us-west-2.amazonaws.com/summerHeat.WAV',
   },
   
+  // Featured homepage visual (loops while featured mix plays)
+  FEATURED: {
+    MIX_ID: 'echoes',
+    MIX_TITLE: 'Echoes',
+    MIX_URL: import.meta.env.VITE_AUDIO_ECHOES || 'https://linturomusic.s3.us-west-2.amazonaws.com/echoes.WAV',
+    VIDEO_URL: import.meta.env.VITE_FEATURED_VIDEO || 'https://linturomusic.s3.us-west-2.amazonaws.com/echoesNatureLoop.mp4',
+  },
+
   // Video file URLs (obfuscated in production)
   VIDEO_FILES: {
     VIDEO1: import.meta.env.VITE_VIDEO_FILE_1 || 'https://linturomusic.s3.us-west-2.amazonaws.com/wourldtourradioclip.mp4',

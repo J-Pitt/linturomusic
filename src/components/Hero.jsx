@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion'
 import {
   ArrowDownIcon,
+  ArrowRightIcon,
   Bars3Icon,
   FilmIcon,
   MusicalNoteIcon,
@@ -11,29 +12,19 @@ import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { config } from '../config'
 
-const FEATURED_RECENT = [
-  { id: 'echoes', title: 'Echoes', url: config.AUDIO_FILES.ECHOES },
-  { id: 'summerHeat', title: 'Summer Heat', url: config.AUDIO_FILES.SUMMER_HEAT },
-  { id: 'reflections', title: 'Reflections', url: config.AUDIO_FILES.REFLECTIONS },
-  { id: 'recharge', title: 'Recharge', url: config.AUDIO_FILES.RECHARGE },
-  { id: 'colors', title: 'Colors', url: config.AUDIO_FILES.COLORS },
-  { id: 'takingOff', title: 'Taking Off', url: config.AUDIO_FILES.TAKING_OFF },
-]
+const { MIX_TITLE, MIX_URL, VIDEO_URL } = config.FEATURED
 
 const Hero = () => {
   const [showImageModal, setShowImageModal] = useState(false)
   const [showMenu, setShowMenu] = useState(false)
-  const [currentSet, setCurrentSet] = useState(null)
   const [isPlaying, setIsPlaying] = useState(false)
   const [audioError, setAudioError] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
-  const [showControls, setShowControls] = useState(false)
   const audioRef = useRef(null)
+  const videoRef = useRef(null)
   const navigate = useNavigate()
-
-  const audioUrls = Object.fromEntries(FEATURED_RECENT.map((m) => [m.id, m.url]))
 
   const scrollToAbout = () => {
     document.getElementById('about')?.scrollIntoView({ behavior: 'smooth' })
@@ -55,20 +46,18 @@ const Hero = () => {
     setCurrentTime(newTime)
   }
 
-  const handleAudioToggle = async (setType) => {
-    if (currentSet !== setType) {
-      if (audioRef.current) {
-        audioRef.current.pause()
-        audioRef.current = null
-      }
-      setIsPlaying(false)
-      setCurrentTime(0)
-      setDuration(0)
-      setShowControls(false)
-      setAudioError(false)
-      setCurrentSet(setType)
+  const startNatureVideo = async () => {
+    if (!videoRef.current) return
+    try {
+      videoRef.current.muted = true
+      videoRef.current.loop = true
+      await videoRef.current.play()
+    } catch {
+      // Autoplay may be blocked until user interacts
     }
+  }
 
+  const handlePlayToggle = async () => {
     if (audioError) {
       setAudioError(false)
       audioRef.current = null
@@ -92,7 +81,6 @@ const Hero = () => {
 
         audioRef.current.addEventListener('ended', () => {
           setIsPlaying(false)
-          setShowControls(false)
           setCurrentTime(0)
         })
 
@@ -100,10 +88,9 @@ const Hero = () => {
           setIsPlaying(false)
           setIsLoading(false)
           setAudioError(true)
-          setShowControls(false)
         })
 
-        audioRef.current.src = audioUrls[setType]
+        audioRef.current.src = MIX_URL
         await audioRef.current.load()
       } catch {
         setIsLoading(false)
@@ -115,24 +102,23 @@ const Hero = () => {
     if (isPlaying) {
       audioRef.current.pause()
       setIsPlaying(false)
-      setShowControls(false)
     } else {
       try {
         setIsLoading(true)
+        await startNatureVideo()
         await audioRef.current.play()
         setIsPlaying(true)
-        setShowControls(true)
         setIsLoading(false)
       } catch {
         setIsPlaying(false)
         setIsLoading(false)
         setAudioError(true)
-        setShowControls(false)
       }
     }
   }
 
   useEffect(() => {
+    startNatureVideo()
     return () => {
       if (audioRef.current) {
         audioRef.current.pause()
@@ -141,11 +127,9 @@ const Hero = () => {
     }
   }, [])
 
-  const currentMix = FEATURED_RECENT.find((m) => m.id === currentSet)
-
   return (
     <section className="min-h-screen bg-gradient-to-br from-purple-900 via-black to-blue-900 relative overflow-hidden px-4 sm:px-6 lg:px-8">
-      <div className="absolute inset-0 overflow-hidden">
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <motion.div className="absolute -top-20 -right-20 w-40 h-40 sm:w-80 sm:h-80 bg-purple-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob" />
         <motion.div className="absolute -bottom-20 -left-20 w-40 h-40 sm:w-80 sm:h-80 bg-blue-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob animation-delay-2000" />
         <motion.div className="absolute top-20 left-20 w-40 h-40 sm:w-80 sm:h-80 bg-pink-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob animation-delay-4000" />
@@ -183,7 +167,7 @@ const Hero = () => {
         )}
       </div>
 
-      <div className="relative z-10 max-w-4xl mx-auto text-center pt-8 sm:pt-12 lg:pt-16">
+      <div className="relative z-10 max-w-5xl mx-auto text-center pt-8 sm:pt-12 lg:pt-16">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -262,77 +246,92 @@ const Hero = () => {
           </motion.div>
 
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 1.05 }}
-            className="mt-8 sm:mt-10 max-w-md mx-auto"
+            className="mt-10 sm:mt-12 max-w-2xl mx-auto"
           >
-            <p className="text-sm uppercase tracking-widest text-purple-400/90 mb-4 font-medium">
-              Most Recent
-            </p>
+            <motion.div
+              className="relative rounded-2xl overflow-hidden border border-purple-400/30 shadow-2xl shadow-purple-900/40 bg-gray-950/60 backdrop-blur-md"
+              whileHover={{ y: -2 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 28 }}
+            >
+              <div className="absolute inset-0 bg-gradient-to-br from-emerald-900/20 via-transparent to-purple-900/30 pointer-events-none z-10" />
 
-            <div className="flex flex-col gap-3">
-              {FEATURED_RECENT.map((mix) => {
-                const active = currentSet === mix.id
-                const playing = active && isPlaying
-                const loading = isLoading && active
+              <div className="relative aspect-video bg-black">
+                <video
+                  ref={videoRef}
+                  src={VIDEO_URL}
+                  muted
+                  loop
+                  playsInline
+                  autoPlay
+                  preload="auto"
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent z-10 pointer-events-none" />
+              </div>
 
-                return (
+              <div className="relative z-20 px-5 sm:px-6 py-5 sm:py-6 border-t border-purple-500/20 bg-gradient-to-r from-gray-950/90 to-purple-950/80">
+                <div className="flex items-center justify-between gap-4 mb-4">
+                  <div className="text-left">
+                    <p className="text-xs uppercase tracking-widest text-emerald-300/90 font-medium mb-1">
+                      Featured mix
+                    </p>
+                    <h2 className="text-2xl sm:text-3xl font-bold text-white">{MIX_TITLE}</h2>
+                    <p className="text-sm text-purple-300/80 mt-1">Nature visuals · ambient loop</p>
+                  </div>
+
                   <motion.button
-                    key={mix.id}
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => handleAudioToggle(mix.id)}
-                    disabled={loading}
-                    className={`w-full flex items-center justify-between gap-3 px-5 py-3.5 rounded-xl font-semibold transition-all duration-300 disabled:opacity-60 ${
-                      playing
-                        ? 'bg-gradient-to-r from-red-600/90 to-orange-600/90 text-white shadow-lg'
-                        : 'bg-white/10 backdrop-blur-sm text-purple-100 border border-purple-500/40 hover:border-purple-400/60 hover:bg-white/15'
+                    whileHover={{ scale: 1.06 }}
+                    whileTap={{ scale: 0.94 }}
+                    onClick={handlePlayToggle}
+                    disabled={isLoading}
+                    className={`shrink-0 w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center shadow-lg transition-all duration-300 disabled:opacity-60 ${
+                      isPlaying
+                        ? 'bg-gradient-to-r from-red-500 to-orange-500 text-white'
+                        : 'bg-gradient-to-r from-purple-500 to-pink-500 text-white'
                     }`}
                   >
-                    <span className="flex items-center gap-3">
-                      {loading ? (
-                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white shrink-0" />
-                      ) : playing ? (
-                        <PauseIcon className="w-5 h-5 shrink-0" />
-                      ) : (
-                        <PlayIcon className="w-5 h-5 shrink-0 text-pink-300" />
-                      )}
-                      {mix.title}
-                    </span>
+                    {isLoading ? (
+                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white" />
+                    ) : isPlaying ? (
+                      <PauseIcon className="w-7 h-7" />
+                    ) : (
+                      <PlayIcon className="w-7 h-7 ml-0.5" />
+                    )}
                   </motion.button>
-                )
-              })}
-            </div>
+                </div>
 
-            {showControls && currentMix && (
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="mt-4 p-4 rounded-xl bg-black/30 backdrop-blur-sm border border-purple-500/30 text-left"
-              >
-                <p className="text-center text-purple-200 text-sm mb-3">{currentMix.title}</p>
                 <div
-                  className="w-full h-2 bg-gray-700 rounded-full cursor-pointer overflow-hidden mb-2"
+                  className="w-full h-2 bg-gray-700/80 rounded-full cursor-pointer overflow-hidden mb-2"
                   onClick={handleSeek}
                 >
                   <div
-                    className="h-full bg-gradient-to-r from-purple-400 to-pink-400 transition-all duration-100"
+                    className="h-full bg-gradient-to-r from-emerald-400 to-purple-400 transition-all duration-100"
                     style={{ width: `${duration > 0 ? (currentTime / duration) * 100 : 0}%` }}
                   />
                 </div>
-                <div className="flex justify-between text-xs text-purple-200">
+                <div className="flex justify-between text-xs text-purple-200/90">
                   <span>{formatTime(currentTime)}</span>
                   <span>{formatTime(duration)}</span>
                 </div>
-              </motion.div>
-            )}
 
-            {audioError && (
-              <p className="text-red-400 text-sm mt-3">
-                Audio temporarily unavailable. Please try again.
-              </p>
-            )}
+                {audioError && (
+                  <p className="text-red-400 text-sm mt-3 text-left">
+                    Audio temporarily unavailable. Please try again.
+                  </p>
+                )}
+
+                <button
+                  onClick={() => navigate('/mixes')}
+                  className="mt-4 inline-flex items-center gap-1.5 text-sm font-medium text-purple-300 hover:text-white transition-colors"
+                >
+                  Browse all mixes
+                  <ArrowRightIcon className="w-4 h-4" />
+                </button>
+              </div>
+            </motion.div>
           </motion.div>
 
           <motion.div
@@ -347,7 +346,7 @@ const Hero = () => {
                 key={i}
                 animate={isPlaying ? { height: [30, 80, 30] } : { height: 30 }}
                 transition={{ duration: 0.6, repeat: isPlaying ? Infinity : 0, delay: i * 0.1 }}
-                className="w-3 bg-gradient-to-t from-purple-400 to-pink-400 rounded-full"
+                className="w-3 bg-gradient-to-t from-emerald-400 to-purple-400 rounded-full"
                 style={{ height: '30px' }}
               />
             ))}
