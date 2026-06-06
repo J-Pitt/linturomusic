@@ -279,7 +279,7 @@ const Hero = () => {
                       Featured mix
                     </p>
                     <h2 className="text-2xl sm:text-3xl font-bold text-white">{MIX_TITLE}</h2>
-                    <p className="text-sm text-purple-300/80 mt-1">Nature visuals · ambient loop</p>
+                    <p className="text-sm text-purple-300/80 mt-1">Wild river · ambient loop</p>
                   </div>
 
                   <motion.button
