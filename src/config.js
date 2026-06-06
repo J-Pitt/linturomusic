@@ -28,7 +28,7 @@ export const config = {
     VIDEO2: import.meta.env.VITE_VIDEO_FILE_2 || 'https://linturomusic.s3.us-west-2.amazonaws.com/worldtourradioclip2.mp4',
     VIDEO3: import.meta.env.VITE_VIDEO_FILE_3 || 'https://linturomusic.s3.us-west-2.amazonaws.com/rooftopclip.mp4',
     VIDEO5: import.meta.env.VITE_VIDEO_FILE_5 || 'https://linturomusic.s3.us-west-2.amazonaws.com/techHouseClip.mp4',
-    VIDEO6: import.meta.env.VITE_VIDEO_FILE_6 || 'https://linturomusic.s3.us-west-2.amazonaws.com/fractalZoom.mp4',
+    VIDEO6: import.meta.env.VITE_VIDEO_FILE_6 || 'https://linturomusic.s3.us-west-2.amazonaws.com/patternsVisualMix.mp4',
   },
   
   // App metadata

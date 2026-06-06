@@ -11,9 +11,9 @@ import { config } from '../config'
 
 const CLIPS = [
   {
-    id: 'fractal-zoom',
-    title: 'Fractal Zoom',
-    subtitle: 'Mandelbrot visual',
+    id: 'patterns-visual',
+    title: 'Patterns',
+    subtitle: 'Visual mix',
     src: config.VIDEO_FILES.VIDEO6,
   },
   {
