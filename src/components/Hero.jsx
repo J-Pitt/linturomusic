@@ -1,5 +1,7 @@
 import { motion } from 'framer-motion'
 import {
+  ArrowsPointingInIcon,
+  ArrowsPointingOutIcon,
   ArrowDownIcon,
   ArrowRightIcon,
   Bars3Icon,
@@ -22,9 +24,34 @@ const Hero = () => {
   const [isLoading, setIsLoading] = useState(false)
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
+  const [isFullscreen, setIsFullscreen] = useState(false)
   const audioRef = useRef(null)
   const videoRef = useRef(null)
+  const playerContainerRef = useRef(null)
   const navigate = useNavigate()
+
+  const syncVideoToAudio = (audioTime = 0) => {
+    const video = videoRef.current
+    if (!video?.duration) return
+    video.currentTime = audioTime % video.duration
+  }
+
+  const pauseVideo = () => {
+    videoRef.current?.pause()
+  }
+
+  const playVideo = async () => {
+    const video = videoRef.current
+    if (!video) return
+    try {
+      video.muted = true
+      video.loop = true
+      syncVideoToAudio(audioRef.current?.currentTime ?? currentTime)
+      await video.play()
+    } catch {
+      // Autoplay may be blocked until user interacts
+    }
+  }
 
   const scrollToAbout = () => {
     document.getElementById('about')?.scrollIntoView({ behavior: 'smooth' })
@@ -44,16 +71,23 @@ const Hero = () => {
     const newTime = clickPosition * duration
     audioRef.current.currentTime = newTime
     setCurrentTime(newTime)
+    syncVideoToAudio(newTime)
   }
 
-  const startNatureVideo = async () => {
-    if (!videoRef.current) return
+  const toggleFullscreen = async () => {
+    const container = playerContainerRef.current
+    if (!container) return
+
     try {
-      videoRef.current.muted = true
-      videoRef.current.loop = true
-      await videoRef.current.play()
+      if (document.fullscreenElement) {
+        await document.exitFullscreen()
+      } else if (container.requestFullscreen) {
+        await container.requestFullscreen()
+      } else if (container.webkitRequestFullscreen) {
+        container.webkitRequestFullscreen()
+      }
     } catch {
-      // Autoplay may be blocked until user interacts
+      // Fullscreen not supported or denied
     }
   }
 
@@ -82,6 +116,8 @@ const Hero = () => {
         audioRef.current.addEventListener('ended', () => {
           setIsPlaying(false)
           setCurrentTime(0)
+          pauseVideo()
+          syncVideoToAudio(0)
         })
 
         audioRef.current.addEventListener('error', () => {
@@ -101,11 +137,12 @@ const Hero = () => {
 
     if (isPlaying) {
       audioRef.current.pause()
+      pauseVideo()
       setIsPlaying(false)
     } else {
       try {
         setIsLoading(true)
-        await startNatureVideo()
+        await playVideo()
         await audioRef.current.play()
         setIsPlaying(true)
         setIsLoading(false)
@@ -113,13 +150,19 @@ const Hero = () => {
         setIsPlaying(false)
         setIsLoading(false)
         setAudioError(true)
+        pauseVideo()
       }
     }
   }
 
   useEffect(() => {
-    startNatureVideo()
+    const handleFullscreenChange = () => {
+      setIsFullscreen(Boolean(document.fullscreenElement))
+    }
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange)
     return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange)
       if (audioRef.current) {
         audioRef.current.pause()
         audioRef.current = null
@@ -258,18 +301,75 @@ const Hero = () => {
             >
               <div className="absolute inset-0 bg-gradient-to-br from-emerald-900/20 via-transparent to-purple-900/30 pointer-events-none z-10" />
 
-              <div className="relative aspect-video bg-black">
+              <div
+                ref={playerContainerRef}
+                className="relative aspect-video bg-black group/player [&:fullscreen]:flex [&:fullscreen]:items-center [&:fullscreen]:justify-center [&:fullscreen]:w-screen [&:fullscreen]:h-screen [&:fullscreen]:bg-black"
+              >
                 <video
                   ref={videoRef}
                   src={VIDEO_URL}
                   muted
                   loop
                   playsInline
-                  autoPlay
                   preload="auto"
-                  className="w-full h-full object-cover"
+                  className={`w-full h-full object-cover ${isFullscreen ? 'max-h-screen max-w-screen' : ''}`}
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent z-10 pointer-events-none" />
+
+                <div className="absolute top-3 right-3 z-20 flex gap-2 opacity-100 sm:opacity-0 sm:group-hover/player:opacity-100 focus-within:opacity-100 transition-opacity">
+                  <button
+                    type="button"
+                    onClick={toggleFullscreen}
+                    aria-label={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
+                    className="p-2 rounded-lg bg-black/60 backdrop-blur-sm border border-white/20 text-white hover:bg-black/80 transition-colors"
+                  >
+                    {isFullscreen ? (
+                      <ArrowsPointingInIcon className="w-5 h-5" />
+                    ) : (
+                      <ArrowsPointingOutIcon className="w-5 h-5" />
+                    )}
+                  </button>
+                </div>
+
+                {isFullscreen && (
+                  <div className="absolute bottom-0 inset-x-0 z-20 px-4 sm:px-6 py-4 bg-gradient-to-t from-black/90 to-transparent">
+                    <div className="flex items-center justify-between gap-4 mb-3">
+                      <div className="text-left">
+                        <p className="text-xs uppercase tracking-widest text-emerald-300/90 font-medium">
+                          Featured mix
+                        </p>
+                        <p className="text-lg font-semibold text-white">{MIX_TITLE}</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handlePlayToggle}
+                        disabled={isLoading}
+                        className="shrink-0 w-12 h-12 rounded-full flex items-center justify-center bg-white/15 border border-white/25 text-white hover:bg-white/25 transition-colors disabled:opacity-60"
+                      >
+                        {isLoading ? (
+                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white" />
+                        ) : isPlaying ? (
+                          <PauseIcon className="w-6 h-6" />
+                        ) : (
+                          <PlayIcon className="w-6 h-6 ml-0.5" />
+                        )}
+                      </button>
+                    </div>
+                    <div
+                      className="w-full h-1.5 bg-white/20 rounded-full cursor-pointer overflow-hidden mb-2"
+                      onClick={handleSeek}
+                    >
+                      <div
+                        className="h-full bg-gradient-to-r from-emerald-400 to-purple-400"
+                        style={{ width: `${duration > 0 ? (currentTime / duration) * 100 : 0}%` }}
+                      />
+                    </div>
+                    <div className="flex justify-between text-xs text-white/80">
+                      <span>{formatTime(currentTime)}</span>
+                      <span>{formatTime(duration)}</span>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="relative z-20 px-5 sm:px-6 py-5 sm:py-6 border-t border-purple-500/20 bg-gradient-to-r from-gray-950/90 to-purple-950/80">
