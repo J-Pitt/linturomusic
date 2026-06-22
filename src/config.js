@@ -20,6 +20,7 @@ export const config = {
     RECHARGE: import.meta.env.VITE_AUDIO_RECHARGE || 'https://linturomusic.s3.us-west-2.amazonaws.com/recharge.WAV',
     ECHOES: import.meta.env.VITE_AUDIO_ECHOES || 'https://linturomusic.s3.us-west-2.amazonaws.com/echoes.WAV',
     SUMMER_HEAT: import.meta.env.VITE_AUDIO_SUMMER_HEAT || 'https://linturomusic.s3.us-west-2.amazonaws.com/summerHeat.WAV',
+    LETS_GET_DOWN: import.meta.env.VITE_AUDIO_LETS_GET_DOWN || 'https://linturomusic.s3.us-west-2.amazonaws.com/letsGetDown.WAV',
   },
   
   // Featured homepage visual (loops while featured mix plays)

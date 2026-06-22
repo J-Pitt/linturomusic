@@ -1,9 +1,6 @@
 import { motion } from 'framer-motion'
 import {
-  ArrowsPointingInIcon,
-  ArrowsPointingOutIcon,
   ArrowDownIcon,
-  ArrowRightIcon,
   Bars3Icon,
   FilmIcon,
   MusicalNoteIcon,
@@ -14,44 +11,27 @@ import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { config } from '../config'
 
-const { MIX_TITLE, MIX_URL, VIDEO_URL } = config.FEATURED
+const RECENT_MIXES = [
+  { id: 'letsGetDown', title: "Let's Get Down", url: config.AUDIO_FILES.LETS_GET_DOWN },
+  { id: 'echoes', title: 'Echoes', url: config.AUDIO_FILES.ECHOES },
+  { id: 'recharge', title: 'Recharge', url: config.AUDIO_FILES.RECHARGE },
+  { id: 'reflections', title: 'Reflections', url: config.AUDIO_FILES.REFLECTIONS },
+]
 
 const Hero = () => {
   const [showImageModal, setShowImageModal] = useState(false)
   const [showMenu, setShowMenu] = useState(false)
+  const [currentSet, setCurrentSet] = useState(null)
   const [isPlaying, setIsPlaying] = useState(false)
   const [audioError, setAudioError] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
-  const [isFullscreen, setIsFullscreen] = useState(false)
+  const [showControls, setShowControls] = useState(false)
   const audioRef = useRef(null)
-  const videoRef = useRef(null)
-  const playerContainerRef = useRef(null)
   const navigate = useNavigate()
 
-  const syncVideoToAudio = (audioTime = 0) => {
-    const video = videoRef.current
-    if (!video?.duration) return
-    video.currentTime = audioTime % video.duration
-  }
-
-  const pauseVideo = () => {
-    videoRef.current?.pause()
-  }
-
-  const playVideo = async () => {
-    const video = videoRef.current
-    if (!video) return
-    try {
-      video.muted = true
-      video.loop = true
-      syncVideoToAudio(audioRef.current?.currentTime ?? currentTime)
-      await video.play()
-    } catch {
-      // Autoplay may be blocked until user interacts
-    }
-  }
+  const audioUrls = Object.fromEntries(RECENT_MIXES.map((m) => [m.id, m.url]))
 
   const scrollToAbout = () => {
     document.getElementById('about')?.scrollIntoView({ behavior: 'smooth' })
@@ -71,27 +51,22 @@ const Hero = () => {
     const newTime = clickPosition * duration
     audioRef.current.currentTime = newTime
     setCurrentTime(newTime)
-    syncVideoToAudio(newTime)
   }
 
-  const toggleFullscreen = async () => {
-    const container = playerContainerRef.current
-    if (!container) return
-
-    try {
-      if (document.fullscreenElement) {
-        await document.exitFullscreen()
-      } else if (container.requestFullscreen) {
-        await container.requestFullscreen()
-      } else if (container.webkitRequestFullscreen) {
-        container.webkitRequestFullscreen()
+  const handleAudioToggle = async (setType) => {
+    if (currentSet !== setType) {
+      if (audioRef.current) {
+        audioRef.current.pause()
+        audioRef.current = null
       }
-    } catch {
-      // Fullscreen not supported or denied
+      setIsPlaying(false)
+      setCurrentTime(0)
+      setDuration(0)
+      setShowControls(false)
+      setAudioError(false)
+      setCurrentSet(setType)
     }
-  }
 
-  const handlePlayToggle = async () => {
     if (audioError) {
       setAudioError(false)
       audioRef.current = null
@@ -115,18 +90,18 @@ const Hero = () => {
 
         audioRef.current.addEventListener('ended', () => {
           setIsPlaying(false)
+          setShowControls(false)
           setCurrentTime(0)
-          pauseVideo()
-          syncVideoToAudio(0)
         })
 
         audioRef.current.addEventListener('error', () => {
           setIsPlaying(false)
           setIsLoading(false)
           setAudioError(true)
+          setShowControls(false)
         })
 
-        audioRef.current.src = MIX_URL
+        audioRef.current.src = audioUrls[setType]
         await audioRef.current.load()
       } catch {
         setIsLoading(false)
@@ -137,38 +112,34 @@ const Hero = () => {
 
     if (isPlaying) {
       audioRef.current.pause()
-      pauseVideo()
       setIsPlaying(false)
+      setShowControls(false)
     } else {
       try {
         setIsLoading(true)
-        await playVideo()
         await audioRef.current.play()
         setIsPlaying(true)
+        setShowControls(true)
         setIsLoading(false)
       } catch {
         setIsPlaying(false)
         setIsLoading(false)
         setAudioError(true)
-        pauseVideo()
+        setShowControls(false)
       }
     }
   }
 
   useEffect(() => {
-    const handleFullscreenChange = () => {
-      setIsFullscreen(Boolean(document.fullscreenElement))
-    }
-
-    document.addEventListener('fullscreenchange', handleFullscreenChange)
     return () => {
-      document.removeEventListener('fullscreenchange', handleFullscreenChange)
       if (audioRef.current) {
         audioRef.current.pause()
         audioRef.current = null
       }
     }
   }, [])
+
+  const currentMix = RECENT_MIXES.find((m) => m.id === currentSet)
 
   return (
     <section className="min-h-screen bg-gradient-to-br from-purple-900 via-black to-blue-900 relative overflow-hidden px-4 sm:px-6 lg:px-8">
@@ -210,7 +181,7 @@ const Hero = () => {
         )}
       </div>
 
-      <div className="relative z-10 max-w-5xl mx-auto text-center pt-8 sm:pt-12 lg:pt-16">
+      <div className="relative z-10 max-w-4xl mx-auto text-center pt-8 sm:pt-12 lg:pt-16">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -289,149 +260,77 @@ const Hero = () => {
           </motion.div>
 
           <motion.div
-            initial={{ opacity: 0, y: 24 }}
+            initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 1.05 }}
-            className="mt-10 sm:mt-12 max-w-2xl mx-auto"
+            className="mt-8 sm:mt-10 max-w-md mx-auto"
           >
-            <motion.div
-              className="relative rounded-2xl overflow-hidden border border-purple-400/30 shadow-2xl shadow-purple-900/40 bg-gray-950/60 backdrop-blur-md"
-              whileHover={{ y: -2 }}
-              transition={{ type: 'spring', stiffness: 300, damping: 28 }}
-            >
-              <div className="absolute inset-0 bg-gradient-to-br from-emerald-900/20 via-transparent to-purple-900/30 pointer-events-none z-10" />
+            <p className="text-sm uppercase tracking-widest text-purple-400/90 mb-4 font-medium">
+              Recent Mixes
+            </p>
 
-              <div
-                ref={playerContainerRef}
-                className="relative aspect-video bg-black group/player [&:fullscreen]:flex [&:fullscreen]:items-center [&:fullscreen]:justify-center [&:fullscreen]:w-screen [&:fullscreen]:h-screen [&:fullscreen]:bg-black"
-              >
-                <video
-                  ref={videoRef}
-                  src={VIDEO_URL}
-                  muted
-                  loop
-                  playsInline
-                  preload="auto"
-                  className={`w-full h-full object-cover ${isFullscreen ? 'max-h-screen max-w-screen' : ''}`}
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent z-10 pointer-events-none" />
+            <div className="flex flex-col gap-3">
+              {RECENT_MIXES.map((mix) => {
+                const active = currentSet === mix.id
+                const playing = active && isPlaying
+                const loading = isLoading && active
 
-                <div className="absolute top-3 right-3 z-20 flex gap-2 opacity-100 sm:opacity-0 sm:group-hover/player:opacity-100 focus-within:opacity-100 transition-opacity">
-                  <button
-                    type="button"
-                    onClick={toggleFullscreen}
-                    aria-label={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
-                    className="p-2 rounded-lg bg-black/60 backdrop-blur-sm border border-white/20 text-white hover:bg-black/80 transition-colors"
-                  >
-                    {isFullscreen ? (
-                      <ArrowsPointingInIcon className="w-5 h-5" />
-                    ) : (
-                      <ArrowsPointingOutIcon className="w-5 h-5" />
-                    )}
-                  </button>
-                </div>
-
-                {isFullscreen && (
-                  <div className="absolute bottom-0 inset-x-0 z-20 px-4 sm:px-6 py-4 bg-gradient-to-t from-black/90 to-transparent">
-                    <div className="flex items-center justify-between gap-4 mb-3">
-                      <div className="text-left">
-                        <p className="text-xs uppercase tracking-widest text-emerald-300/90 font-medium">
-                          Featured mix
-                        </p>
-                        <p className="text-lg font-semibold text-white">{MIX_TITLE}</p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={handlePlayToggle}
-                        disabled={isLoading}
-                        className="shrink-0 w-12 h-12 rounded-full flex items-center justify-center bg-white/15 border border-white/25 text-white hover:bg-white/25 transition-colors disabled:opacity-60"
-                      >
-                        {isLoading ? (
-                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white" />
-                        ) : isPlaying ? (
-                          <PauseIcon className="w-6 h-6" />
-                        ) : (
-                          <PlayIcon className="w-6 h-6 ml-0.5" />
-                        )}
-                      </button>
-                    </div>
-                    <div
-                      className="w-full h-1.5 bg-white/20 rounded-full cursor-pointer overflow-hidden mb-2"
-                      onClick={handleSeek}
-                    >
-                      <div
-                        className="h-full bg-gradient-to-r from-emerald-400 to-purple-400"
-                        style={{ width: `${duration > 0 ? (currentTime / duration) * 100 : 0}%` }}
-                      />
-                    </div>
-                    <div className="flex justify-between text-xs text-white/80">
-                      <span>{formatTime(currentTime)}</span>
-                      <span>{formatTime(duration)}</span>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <div className="relative z-20 px-5 sm:px-6 py-5 sm:py-6 border-t border-purple-500/20 bg-gradient-to-r from-gray-950/90 to-purple-950/80">
-                <div className="flex items-center justify-between gap-4 mb-4">
-                  <div className="text-left">
-                    <p className="text-xs uppercase tracking-widest text-emerald-300/90 font-medium mb-1">
-                      Featured mix
-                    </p>
-                    <h2 className="text-2xl sm:text-3xl font-bold text-white">{MIX_TITLE}</h2>
-                    <p className="text-sm text-purple-300/80 mt-1">Waterfall · ambient loop</p>
-                  </div>
-
+                return (
                   <motion.button
-                    whileHover={{ scale: 1.06 }}
-                    whileTap={{ scale: 0.94 }}
-                    onClick={handlePlayToggle}
-                    disabled={isLoading}
-                    className={`shrink-0 w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center shadow-lg transition-all duration-300 disabled:opacity-60 ${
-                      isPlaying
-                        ? 'bg-gradient-to-r from-red-500 to-orange-500 text-white'
-                        : 'bg-gradient-to-r from-purple-500 to-pink-500 text-white'
+                    key={mix.id}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => handleAudioToggle(mix.id)}
+                    disabled={loading}
+                    className={`w-full flex items-center justify-between gap-3 px-5 py-3.5 rounded-xl font-semibold transition-all duration-300 disabled:opacity-60 ${
+                      playing
+                        ? 'bg-gradient-to-r from-red-600/90 to-orange-600/90 text-white shadow-lg'
+                        : 'bg-white/10 backdrop-blur-sm text-purple-100 border border-purple-500/40 hover:border-purple-400/60 hover:bg-white/15'
                     }`}
                   >
-                    {isLoading ? (
-                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white" />
-                    ) : isPlaying ? (
-                      <PauseIcon className="w-7 h-7" />
-                    ) : (
-                      <PlayIcon className="w-7 h-7 ml-0.5" />
-                    )}
+                    <span className="flex items-center gap-3">
+                      {loading ? (
+                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white shrink-0" />
+                      ) : playing ? (
+                        <PauseIcon className="w-5 h-5 shrink-0" />
+                      ) : (
+                        <PlayIcon className="w-5 h-5 shrink-0 text-pink-300" />
+                      )}
+                      {mix.title}
+                    </span>
                   </motion.button>
-                </div>
+                )
+              })}
+            </div>
 
+            {showControls && currentMix && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mt-4 p-4 rounded-xl bg-black/30 backdrop-blur-sm border border-purple-500/30 text-left"
+              >
+                <p className="text-center text-purple-200 text-sm mb-3">{currentMix.title}</p>
                 <div
-                  className="w-full h-2 bg-gray-700/80 rounded-full cursor-pointer overflow-hidden mb-2"
+                  className="w-full h-2 bg-gray-700 rounded-full cursor-pointer overflow-hidden mb-2"
                   onClick={handleSeek}
                 >
                   <div
-                    className="h-full bg-gradient-to-r from-emerald-400 to-purple-400 transition-all duration-100"
+                    className="h-full bg-gradient-to-r from-purple-400 to-pink-400 transition-all duration-100"
                     style={{ width: `${duration > 0 ? (currentTime / duration) * 100 : 0}%` }}
                   />
                 </div>
-                <div className="flex justify-between text-xs text-purple-200/90">
+                <div className="flex justify-between text-xs text-purple-200">
                   <span>{formatTime(currentTime)}</span>
                   <span>{formatTime(duration)}</span>
                 </div>
+              </motion.div>
+            )}
 
-                {audioError && (
-                  <p className="text-red-400 text-sm mt-3 text-left">
-                    Audio temporarily unavailable. Please try again.
-                  </p>
-                )}
-
-                <button
-                  onClick={() => navigate('/mixes')}
-                  className="mt-4 inline-flex items-center gap-1.5 text-sm font-medium text-purple-300 hover:text-white transition-colors"
-                >
-                  Browse all mixes
-                  <ArrowRightIcon className="w-4 h-4" />
-                </button>
-              </div>
-            </motion.div>
+            {audioError && (
+              <p className="text-red-400 text-sm mt-3">
+                Audio temporarily unavailable. Please try again.
+              </p>
+            )}
           </motion.div>
 
           <motion.div
@@ -446,7 +345,7 @@ const Hero = () => {
                 key={i}
                 animate={isPlaying ? { height: [30, 80, 30] } : { height: 30 }}
                 transition={{ duration: 0.6, repeat: isPlaying ? Infinity : 0, delay: i * 0.1 }}
-                className="w-3 bg-gradient-to-t from-emerald-400 to-purple-400 rounded-full"
+                className="w-3 bg-gradient-to-t from-purple-400 to-pink-400 rounded-full"
                 style={{ height: '30px' }}
               />
             ))}
