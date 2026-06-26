@@ -12,6 +12,7 @@ import { useNavigate } from 'react-router-dom'
 import { config } from '../config'
 
 const RECENT_MIXES = [
+  { id: 'infinity', title: 'Infinity', url: config.AUDIO_FILES.INFINITY },
   { id: 'letsGetDown', title: "Let's Get Down", url: config.AUDIO_FILES.LETS_GET_DOWN },
   { id: 'echoes', title: 'Echoes', url: config.AUDIO_FILES.ECHOES },
   { id: 'recharge', title: 'Recharge', url: config.AUDIO_FILES.RECHARGE },

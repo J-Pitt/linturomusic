@@ -11,6 +11,7 @@ import {
 import { config } from '../config'
 
 const MIXES = [
+  { id: 'infinity', title: 'Infinity', url: config.AUDIO_FILES.INFINITY },
   { id: 'letsGetDown', title: "Let's Get Down", url: config.AUDIO_FILES.LETS_GET_DOWN },
   { id: 'echoes', title: 'Echoes', url: config.AUDIO_FILES.ECHOES },
   { id: 'summerHeat', title: 'Summer Heat', url: config.AUDIO_FILES.SUMMER_HEAT },
