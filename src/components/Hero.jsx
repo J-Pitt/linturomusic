@@ -230,7 +230,7 @@ const Hero = () => {
             transition={{ duration: 0.8, delay: 0.8 }}
             className="text-lg sm:text-xl text-purple-300 mb-8 sm:mb-10 max-w-xl mx-auto px-4"
           >
-            Just a music lover looking to connect with like minded individuals. If you like my style, drop me a line, looking to play venues in Brooklyn and Manhattan.
+            Just a music lover looking to connect with good people and explore life. If you like my style, drop me a line, looking to play venues in Brooklyn and Manhattan.
           </motion.p>
 
           <motion.div
