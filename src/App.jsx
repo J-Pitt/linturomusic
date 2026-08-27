@@ -3,7 +3,6 @@ import Hero from './components/Hero'
 import About from './components/About'
 import Contact from './components/Contact'
 import Clips from './components/Clips'
-import Mixes from './components/Mixes'
 import Footer from './components/Footer'
 import './App.css'
 
@@ -22,7 +21,6 @@ function App() {
             } />
             <Route path="/about" element={<About />} />
             <Route path="/contact" element={<Contact />} />
-            <Route path="/mixes" element={<Mixes />} />
             <Route path="/clips" element={<Clips />} />
           </Routes>
         </main>

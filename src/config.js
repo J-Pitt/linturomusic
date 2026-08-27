@@ -7,29 +7,14 @@ export const config = {
   
   // Audio file URLs (obfuscated in production)
   AUDIO_FILES: {
-    SET1: import.meta.env.VITE_AUDIO_SET1 || 'https://linturomusic.s3.us-west-2.amazonaws.com/jan26house.WAV',
-    SET2: import.meta.env.VITE_AUDIO_SET2 || 'https://linturomusic.s3.us-west-2.amazonaws.com/newnew.WAV',
-    SET3: import.meta.env.VITE_AUDIO_SET3 || 'https://linturomusic.s3.us-west-2.amazonaws.com/tech_house.WAV',
-    SET4: import.meta.env.VITE_AUDIO_SET4 || 'https://linturomusic.s3.us-west-2.amazonaws.com/deepHaus.WAV',
-    SET5: import.meta.env.VITE_AUDIO_SET5 || 'https://linturomusic.s3.us-west-2.amazonaws.com/minimalHaus.WAV',
-    SET6: import.meta.env.VITE_AUDIO_SET6 || 'https://linturomusic.s3.us-west-2.amazonaws.com/summerRays.WAV',
-    SET7: import.meta.env.VITE_AUDIO_SET7 || 'https://linturomusic.s3.us-west-2.amazonaws.com/springShowers.WAV',
-    COLORS: import.meta.env.VITE_AUDIO_COLORS || 'https://linturomusic.s3.us-west-2.amazonaws.com/colors.WAV',
-    TAKING_OFF: import.meta.env.VITE_AUDIO_TAKING_OFF || 'https://linturomusic.s3.us-west-2.amazonaws.com/takingOff.WAV',
-    REFLECTIONS: import.meta.env.VITE_AUDIO_REFLECTIONS || 'https://linturomusic.s3.us-west-2.amazonaws.com/reflections.WAV',
+    SHADOWS: import.meta.env.VITE_AUDIO_SHADOWS || 'https://linturomusic.s3.us-west-2.amazonaws.com/shadows.WAV',
+    DOWN_AGAIN: import.meta.env.VITE_AUDIO_DOWN_AGAIN || 'https://linturomusic.s3.us-west-2.amazonaws.com/downAgain.WAV',
+    ETERNITY: import.meta.env.VITE_AUDIO_ETERNITY || 'https://linturomusic.s3.us-west-2.amazonaws.com/eternity.WAV',
+    THE_LIGHT: import.meta.env.VITE_AUDIO_THE_LIGHT || 'https://linturomusic.s3.us-west-2.amazonaws.com/theLight.WAV',
+    PROUD: import.meta.env.VITE_AUDIO_PROUD || 'https://linturomusic.s3.us-west-2.amazonaws.com/proud.WAV',
+    THE_DEEPEST_HOUSE: import.meta.env.VITE_AUDIO_THE_DEEPEST_HOUSE || 'https://linturomusic.s3.us-west-2.amazonaws.com/theDeepestHouse.WAV',
     RECHARGE: import.meta.env.VITE_AUDIO_RECHARGE || 'https://linturomusic.s3.us-west-2.amazonaws.com/recharge.WAV',
-    ECHOES: import.meta.env.VITE_AUDIO_ECHOES || 'https://linturomusic.s3.us-west-2.amazonaws.com/echoes.WAV',
-    SUMMER_HEAT: import.meta.env.VITE_AUDIO_SUMMER_HEAT || 'https://linturomusic.s3.us-west-2.amazonaws.com/summerHeat.WAV',
-    LETS_GET_DOWN: import.meta.env.VITE_AUDIO_LETS_GET_DOWN || 'https://linturomusic.s3.us-west-2.amazonaws.com/letsGetDown.WAV',
-    INFINITY: import.meta.env.VITE_AUDIO_INFINITY || 'https://linturomusic.s3.us-west-2.amazonaws.com/infinity.WAV',
-  },
-  
-  // Featured homepage visual (loops while featured mix plays)
-  FEATURED: {
-    MIX_ID: 'echoes',
-    MIX_TITLE: 'Echoes',
-    MIX_URL: import.meta.env.VITE_AUDIO_ECHOES || 'https://linturomusic.s3.us-west-2.amazonaws.com/echoes.WAV',
-    VIDEO_URL: import.meta.env.VITE_FEATURED_VIDEO || 'https://linturomusic.s3.us-west-2.amazonaws.com/echoesNatureLoop.mp4',
+    REFLECTIONS: import.meta.env.VITE_AUDIO_REFLECTIONS || 'https://linturomusic.s3.us-west-2.amazonaws.com/reflections.WAV',
   },
 
   // Video file URLs (obfuscated in production)

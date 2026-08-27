@@ -3,7 +3,6 @@ import {
   ArrowDownIcon,
   Bars3Icon,
   FilmIcon,
-  MusicalNoteIcon,
   PauseIcon,
   PlayIcon,
 } from '@heroicons/react/24/outline'
@@ -12,9 +11,12 @@ import { useNavigate } from 'react-router-dom'
 import { config } from '../config'
 
 const RECENT_MIXES = [
-  { id: 'infinity', title: 'Infinity', url: config.AUDIO_FILES.INFINITY },
-  { id: 'letsGetDown', title: "Let's Get Down", url: config.AUDIO_FILES.LETS_GET_DOWN },
-  { id: 'echoes', title: 'Echoes', url: config.AUDIO_FILES.ECHOES },
+  { id: 'shadows', title: 'Shadows', url: config.AUDIO_FILES.SHADOWS },
+  { id: 'downAgain', title: 'Down Again', url: config.AUDIO_FILES.DOWN_AGAIN },
+  { id: 'eternity', title: 'Eternity', url: config.AUDIO_FILES.ETERNITY },
+  { id: 'theLight', title: 'The Light', url: config.AUDIO_FILES.THE_LIGHT },
+  { id: 'proud', title: 'Proud', url: config.AUDIO_FILES.PROUD },
+  { id: 'theDeepestHouse', title: 'The Deepest House', url: config.AUDIO_FILES.THE_DEEPEST_HOUSE },
   { id: 'recharge', title: 'Recharge', url: config.AUDIO_FILES.RECHARGE },
   { id: 'reflections', title: 'Reflections', url: config.AUDIO_FILES.REFLECTIONS },
 ]
@@ -167,12 +169,6 @@ const Hero = () => {
             className="absolute right-0 mt-2 w-48 bg-gray-900/95 backdrop-blur-md border border-purple-500/30 rounded-lg shadow-xl overflow-hidden"
           >
             <button
-              onClick={() => { navigate('/mixes'); setShowMenu(false) }}
-              className="w-full px-4 py-3 text-left text-purple-200 hover:bg-purple-600/20 hover:text-white transition-colors duration-200 border-b border-purple-500/20"
-            >
-              Mixes
-            </button>
-            <button
               onClick={() => { navigate('/clips'); setShowMenu(false) }}
               className="w-full px-4 py-3 text-left text-purple-200 hover:bg-purple-600/20 hover:text-white transition-colors duration-200"
             >
@@ -230,7 +226,7 @@ const Hero = () => {
             transition={{ duration: 0.8, delay: 0.8 }}
             className="text-lg sm:text-xl text-purple-300 mb-8 sm:mb-10 max-w-xl mx-auto px-4"
           >
-            Just a music lover looking to connect with good people and explore life. If you like my style, drop me a line, looking to play venues in Brooklyn and Manhattan.
+            I'm open to play at bars, clubs, or parties - really anywhere where music and people come together. If you like what you hear, don't hesitate to reach out!
           </motion.p>
 
           <motion.div
@@ -242,18 +238,8 @@ const Hero = () => {
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              onClick={() => navigate('/mixes')}
-              className="w-full sm:w-auto px-8 py-3.5 sm:py-4 font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white"
-            >
-              <MusicalNoteIcon className="w-5 h-5 sm:w-6 sm:h-6" />
-              Mixes
-            </motion.button>
-
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
               onClick={() => navigate('/clips')}
-              className="w-full sm:w-auto px-8 py-3.5 sm:py-4 font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center gap-2 bg-white/10 backdrop-blur-sm border-2 border-purple-400/60 text-purple-100 hover:bg-white/20 hover:border-pink-400/60"
+              className="w-full sm:w-auto px-8 py-3.5 sm:py-4 font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white"
             >
               <FilmIcon className="w-5 h-5 sm:w-6 sm:h-6" />
               Clips
@@ -264,13 +250,13 @@ const Hero = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 1.05 }}
-            className="mt-8 sm:mt-10 max-w-md mx-auto"
+            className="mt-8 sm:mt-10 max-w-2xl mx-auto"
           >
             <p className="text-sm uppercase tracking-widest text-purple-400/90 mb-4 font-medium">
               Recent Mixes
             </p>
 
-            <div className="flex flex-col gap-3">
+            <div className="grid grid-cols-2 gap-2 sm:gap-3">
               {RECENT_MIXES.map((mix) => {
                 const active = currentSet === mix.id
                 const playing = active && isPlaying
@@ -283,21 +269,21 @@ const Hero = () => {
                     whileTap={{ scale: 0.98 }}
                     onClick={() => handleAudioToggle(mix.id)}
                     disabled={loading}
-                    className={`w-full flex items-center justify-between gap-3 px-5 py-3.5 rounded-xl font-semibold transition-all duration-300 disabled:opacity-60 ${
+                    className={`w-full flex items-center justify-between gap-2 px-3 py-2.5 sm:px-5 sm:py-3.5 rounded-xl font-semibold transition-all duration-300 disabled:opacity-60 ${
                       playing
                         ? 'bg-gradient-to-r from-red-600/90 to-orange-600/90 text-white shadow-lg'
                         : 'bg-white/10 backdrop-blur-sm text-purple-100 border border-purple-500/40 hover:border-purple-400/60 hover:bg-white/15'
                     }`}
                   >
-                    <span className="flex items-center gap-3">
+                    <span className="flex items-center gap-2 sm:gap-3 min-w-0">
                       {loading ? (
-                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white shrink-0" />
+                        <div className="animate-spin rounded-full h-4 w-4 sm:h-5 sm:w-5 border-b-2 border-white shrink-0" />
                       ) : playing ? (
-                        <PauseIcon className="w-5 h-5 shrink-0" />
+                        <PauseIcon className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
                       ) : (
-                        <PlayIcon className="w-5 h-5 shrink-0 text-pink-300" />
+                        <PlayIcon className="w-4 h-4 sm:w-5 sm:h-5 shrink-0 text-pink-300" />
                       )}
-                      {mix.title}
+                      <span className="truncate text-sm sm:text-base">{mix.title}</span>
                     </span>
                   </motion.button>
                 )
