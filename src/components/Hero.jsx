@@ -2,7 +2,6 @@ import { motion } from 'framer-motion'
 import {
   ArrowDownIcon,
   Bars3Icon,
-  FilmIcon,
   PauseIcon,
   PlayIcon,
 } from '@heroicons/react/24/outline'
@@ -32,6 +31,7 @@ const Hero = () => {
   const [duration, setDuration] = useState(0)
   const [showControls, setShowControls] = useState(false)
   const audioRef = useRef(null)
+  const videoRef = useRef(null)
   const navigate = useNavigate()
 
   const audioUrls = Object.fromEntries(RECENT_MIXES.map((m) => [m.id, m.url]))
@@ -118,6 +118,7 @@ const Hero = () => {
       setIsPlaying(false)
       setShowControls(false)
     } else {
+      videoRef.current?.pause()
       try {
         setIsLoading(true)
         await audioRef.current.play()
@@ -139,6 +140,7 @@ const Hero = () => {
         audioRef.current.pause()
         audioRef.current = null
       }
+      videoRef.current?.pause()
     }
   }, [])
 
@@ -232,23 +234,6 @@ const Hero = () => {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 1.0 }}
-            className="flex flex-col sm:flex-row gap-4 justify-center items-center"
-          >
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => navigate('/clips')}
-              className="w-full sm:w-auto px-8 py-3.5 sm:py-4 font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white"
-            >
-              <FilmIcon className="w-5 h-5 sm:w-6 sm:h-6" />
-              Clips
-            </motion.button>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 1.05 }}
             className="mt-8 sm:mt-10 max-w-2xl mx-auto"
           >
@@ -318,6 +303,41 @@ const Hero = () => {
                 Audio temporarily unavailable. Please try again.
               </p>
             )}
+
+            <div className="mt-10 sm:mt-12">
+              <p className="text-sm uppercase tracking-[0.28em] text-purple-400/90 mb-4 font-medium">
+                Featured
+              </p>
+              <div className="relative rounded-2xl overflow-hidden border border-purple-400/25 bg-black/50 shadow-[0_24px_80px_rgba(76,29,149,0.35)] text-left">
+                <div className="aspect-video bg-black">
+                  <video
+                    ref={videoRef}
+                    controls
+                    playsInline
+                    preload="none"
+                    poster={config.VIDEO_FILES.ETERNAL_BEGINNING_POSTER}
+                    className="w-full h-full object-cover"
+                    onPlay={() => {
+                      if (audioRef.current) {
+                        audioRef.current.pause()
+                        setIsPlaying(false)
+                        setShowControls(false)
+                      }
+                    }}
+                  >
+                    <source src={config.VIDEO_FILES.ETERNAL_BEGINNING} type="video/mp4" />
+                  </video>
+                </div>
+                <div className="px-5 py-4 sm:px-6 border-t border-purple-500/20 bg-gradient-to-r from-purple-950/70 to-black/70">
+                  <p className="text-white text-lg sm:text-xl font-semibold tracking-wide">
+                    The Beginning
+                  </p>
+                  <p className="text-purple-300/80 text-sm mt-0.5">
+                    Visual mix · one hour
+                  </p>
+                </div>
+              </div>
+            </div>
           </motion.div>
 
           <motion.div
