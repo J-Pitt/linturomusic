@@ -26,6 +26,8 @@ export const config = {
     VIDEO6: import.meta.env.VITE_VIDEO_FILE_6 || 'https://linturomusic.s3.us-west-2.amazonaws.com/patternsVisualMix.mp4',
     ETERNAL_BEGINNING: import.meta.env.VITE_VIDEO_ETERNAL_BEGINNING || 'https://linturomusic.s3.us-west-2.amazonaws.com/eternal1-thsbeginning.mp4',
     ETERNAL_BEGINNING_POSTER: import.meta.env.VITE_VIDEO_ETERNAL_BEGINNING_POSTER || 'https://linturomusic.s3.us-west-2.amazonaws.com/eternal1-thsbeginning.jpg',
+    CITY_STREETS: import.meta.env.VITE_VIDEO_CITY_STREETS || 'https://linturomusic.s3.us-west-2.amazonaws.com/citystreets.mp4',
+    CITY_STREETS_POSTER: import.meta.env.VITE_VIDEO_CITY_STREETS_POSTER || 'https://linturomusic.s3.us-west-2.amazonaws.com/citystreets.jpg',
   },
   
   // App metadata

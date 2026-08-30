@@ -2,12 +2,15 @@ import { motion } from 'framer-motion'
 import {
   ArrowDownIcon,
   Bars3Icon,
+  HeartIcon,
   PauseIcon,
   PlayIcon,
 } from '@heroicons/react/24/outline'
+import { HeartIcon as HeartIconSolid } from '@heroicons/react/24/solid'
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { config } from '../config'
+import { formatCount, loadLikedIds, loadStats, recordPlay, toggleLike } from '../lib/stats'
 
 const RECENT_MIXES = [
   { id: 'shadows', title: 'Shadows', url: config.AUDIO_FILES.SHADOWS },
@@ -20,6 +23,23 @@ const RECENT_MIXES = [
   { id: 'reflections', title: 'Reflections', url: config.AUDIO_FILES.REFLECTIONS },
 ]
 
+const FEATURED_VIDEOS = [
+  {
+    id: 'beginning',
+    title: 'The Beginning',
+    subtitle: 'Visual mix · one hour',
+    src: config.VIDEO_FILES.ETERNAL_BEGINNING,
+    poster: config.VIDEO_FILES.ETERNAL_BEGINNING_POSTER,
+  },
+  {
+    id: 'cityStreets',
+    title: 'City Streets',
+    subtitle: 'Visual mix · one hour',
+    src: config.VIDEO_FILES.CITY_STREETS,
+    poster: config.VIDEO_FILES.CITY_STREETS_POSTER,
+  },
+]
+
 const Hero = () => {
   const [showImageModal, setShowImageModal] = useState(false)
   const [showMenu, setShowMenu] = useState(false)
@@ -30,9 +50,20 @@ const Hero = () => {
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
   const [showControls, setShowControls] = useState(false)
+  const [stats, setStats] = useState({})
+  const [likedIds, setLikedIds] = useState(() => new Set())
+  const [featuredVideoId, setFeaturedVideoId] = useState(FEATURED_VIDEOS[0].id)
   const audioRef = useRef(null)
   const videoRef = useRef(null)
+  const videoPlayCounted = useRef({})
   const navigate = useNavigate()
+  const featuredVideo = FEATURED_VIDEOS.find((v) => v.id === featuredVideoId) || FEATURED_VIDEOS[0]
+
+  const handleFeaturedTab = (id) => {
+    if (id === featuredVideoId) return
+    videoRef.current?.pause()
+    setFeaturedVideoId(id)
+  }
 
   const audioUrls = Object.fromEntries(RECENT_MIXES.map((m) => [m.id, m.url]))
 
@@ -57,7 +88,8 @@ const Hero = () => {
   }
 
   const handleAudioToggle = async (setType) => {
-    if (currentSet !== setType) {
+    const switching = currentSet !== setType
+    if (switching) {
       if (audioRef.current) {
         audioRef.current.pause()
         audioRef.current = null
@@ -113,7 +145,7 @@ const Hero = () => {
       }
     }
 
-    if (isPlaying) {
+    if (!switching && isPlaying) {
       audioRef.current.pause()
       setIsPlaying(false)
       setShowControls(false)
@@ -125,6 +157,13 @@ const Hero = () => {
         setIsPlaying(true)
         setShowControls(true)
         setIsLoading(false)
+        recordPlay(setType).then((plays) => {
+          if (plays == null) return
+          setStats((prev) => ({
+            ...prev,
+            [setType]: { plays, likes: prev[setType]?.likes || 0 },
+          }))
+        })
       } catch {
         setIsPlaying(false)
         setIsLoading(false)
@@ -135,6 +174,8 @@ const Hero = () => {
   }
 
   useEffect(() => {
+    setLikedIds(loadLikedIds())
+    loadStats().then(setStats).catch(() => {})
     return () => {
       if (audioRef.current) {
         audioRef.current.pause()
@@ -143,6 +184,34 @@ const Hero = () => {
       videoRef.current?.pause()
     }
   }, [])
+
+  const handleLike = async (id, event) => {
+    event?.stopPropagation()
+    const currentlyLiked = likedIds.has(id)
+    setLikedIds((prev) => {
+      const next = new Set(prev)
+      if (currentlyLiked) next.delete(id)
+      else next.add(id)
+      return next
+    })
+    setStats((prev) => ({
+      ...prev,
+      [id]: {
+        plays: prev[id]?.plays || 0,
+        likes: Math.max(0, (prev[id]?.likes || 0) + (currentlyLiked ? -1 : 1)),
+      },
+    }))
+    const result = await toggleLike(id, currentlyLiked)
+    if (result.likes != null) {
+      setStats((prev) => ({
+        ...prev,
+        [id]: { plays: prev[id]?.plays || 0, likes: result.likes },
+      }))
+    }
+    if (result.liked !== !currentlyLiked) {
+      setLikedIds(loadLikedIds())
+    }
+  }
 
   const currentMix = RECENT_MIXES.find((m) => m.id === currentSet)
 
@@ -246,31 +315,57 @@ const Hero = () => {
                 const active = currentSet === mix.id
                 const playing = active && isPlaying
                 const loading = isLoading && active
+                const liked = likedIds.has(mix.id)
+                const mixStats = stats[mix.id] || { plays: 0, likes: 0 }
 
                 return (
-                  <motion.button
+                  <div
                     key={mix.id}
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => handleAudioToggle(mix.id)}
-                    disabled={loading}
-                    className={`w-full flex items-center justify-between gap-2 px-3 py-2.5 sm:px-5 sm:py-3.5 rounded-xl font-semibold transition-all duration-300 disabled:opacity-60 ${
+                    className={`rounded-xl overflow-hidden transition-all duration-300 ${
                       playing
                         ? 'bg-gradient-to-r from-red-600/90 to-orange-600/90 text-white shadow-lg'
-                        : 'bg-white/10 backdrop-blur-sm text-purple-100 border border-purple-500/40 hover:border-purple-400/60 hover:bg-white/15'
+                        : 'bg-white/10 backdrop-blur-sm text-purple-100 border border-purple-500/40'
                     }`}
                   >
-                    <span className="flex items-center gap-2 sm:gap-3 min-w-0">
-                      {loading ? (
-                        <div className="animate-spin rounded-full h-4 w-4 sm:h-5 sm:w-5 border-b-2 border-white shrink-0" />
-                      ) : playing ? (
-                        <PauseIcon className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
-                      ) : (
-                        <PlayIcon className="w-4 h-4 sm:w-5 sm:h-5 shrink-0 text-pink-300" />
-                      )}
-                      <span className="truncate text-sm sm:text-base">{mix.title}</span>
-                    </span>
-                  </motion.button>
+                    <motion.button
+                      whileHover={{ scale: 1.01 }}
+                      whileTap={{ scale: 0.99 }}
+                      onClick={() => handleAudioToggle(mix.id)}
+                      disabled={loading}
+                      className="w-full flex items-center justify-between gap-2 px-3 pt-2.5 pb-1 sm:px-5 sm:pt-3.5 sm:pb-1.5 font-semibold disabled:opacity-60"
+                    >
+                      <span className="flex items-center gap-2 sm:gap-3 min-w-0">
+                        {loading ? (
+                          <div className="animate-spin rounded-full h-4 w-4 sm:h-5 sm:w-5 border-b-2 border-white shrink-0" />
+                        ) : playing ? (
+                          <PauseIcon className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
+                        ) : (
+                          <PlayIcon className="w-4 h-4 sm:w-5 sm:h-5 shrink-0 text-pink-300" />
+                        )}
+                        <span className="truncate text-sm sm:text-base">{mix.title}</span>
+                      </span>
+                    </motion.button>
+                    <div className="flex items-center justify-between px-3 pb-2 sm:px-5 sm:pb-2.5">
+                      <span className={`text-[11px] sm:text-xs tabular-nums ${playing ? 'text-white/80' : 'text-purple-200/70'}`}>
+                        {formatCount(mixStats.plays)} plays
+                      </span>
+                      <button
+                        type="button"
+                        onClick={(e) => handleLike(mix.id, e)}
+                        className={`inline-flex items-center gap-1 text-[11px] sm:text-xs tabular-nums transition-colors ${
+                          liked ? 'text-pink-300' : playing ? 'text-white/80 hover:text-white' : 'text-purple-200/80 hover:text-pink-300'
+                        }`}
+                        aria-label={liked ? `Unlike ${mix.title}` : `Like ${mix.title}`}
+                      >
+                        {liked ? (
+                          <HeartIconSolid className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                        ) : (
+                          <HeartIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                        )}
+                        {formatCount(mixStats.likes)}
+                      </button>
+                    </div>
+                  </div>
                 )
               })}
             </div>
@@ -308,14 +403,40 @@ const Hero = () => {
               <p className="text-sm uppercase tracking-[0.28em] text-purple-400/90 mb-4 font-medium">
                 Featured
               </p>
+              <div
+                role="tablist"
+                aria-label="Featured visual mixes"
+                className="mb-3 grid grid-cols-2 gap-2"
+              >
+                {FEATURED_VIDEOS.map((video) => {
+                  const selected = featuredVideoId === video.id
+                  return (
+                    <button
+                      key={video.id}
+                      type="button"
+                      role="tab"
+                      aria-selected={selected}
+                      onClick={() => handleFeaturedTab(video.id)}
+                      className={`rounded-xl px-3 py-2.5 sm:px-4 sm:py-3 text-sm sm:text-base font-semibold transition-all duration-200 ${
+                        selected
+                          ? 'bg-gradient-to-r from-purple-600/90 to-pink-600/90 text-white shadow-lg border border-transparent'
+                          : 'bg-white/10 backdrop-blur-sm text-purple-100 border border-purple-500/40 hover:bg-white/15'
+                      }`}
+                    >
+                      {video.title}
+                    </button>
+                  )
+                })}
+              </div>
               <div className="relative rounded-2xl overflow-hidden border border-purple-400/25 bg-black/50 shadow-[0_24px_80px_rgba(76,29,149,0.35)] text-left">
                 <div className="aspect-video bg-black">
                   <video
+                    key={featuredVideo.id}
                     ref={videoRef}
                     controls
                     playsInline
                     preload="none"
-                    poster={config.VIDEO_FILES.ETERNAL_BEGINNING_POSTER}
+                    poster={featuredVideo.poster}
                     className="w-full h-full object-cover"
                     onPlay={() => {
                       if (audioRef.current) {
@@ -323,18 +444,52 @@ const Hero = () => {
                         setIsPlaying(false)
                         setShowControls(false)
                       }
+                      if (videoPlayCounted.current[featuredVideo.id]) return
+                      videoPlayCounted.current[featuredVideo.id] = true
+                      recordPlay(featuredVideo.id).then((plays) => {
+                        if (plays == null) return
+                        setStats((prev) => ({
+                          ...prev,
+                          [featuredVideo.id]: { plays, likes: prev[featuredVideo.id]?.likes || 0 },
+                        }))
+                      })
+                    }}
+                    onEnded={() => {
+                      videoPlayCounted.current[featuredVideo.id] = false
                     }}
                   >
-                    <source src={config.VIDEO_FILES.ETERNAL_BEGINNING} type="video/mp4" />
+                    <source src={featuredVideo.src} type="video/mp4" />
                   </video>
                 </div>
-                <div className="px-5 py-4 sm:px-6 border-t border-purple-500/20 bg-gradient-to-r from-purple-950/70 to-black/70">
-                  <p className="text-white text-lg sm:text-xl font-semibold tracking-wide">
-                    The Beginning
-                  </p>
-                  <p className="text-purple-300/80 text-sm mt-0.5">
-                    Visual mix · one hour
-                  </p>
+                <div className="px-5 py-4 sm:px-6 border-t border-purple-500/20 bg-gradient-to-r from-purple-950/70 to-black/70 flex items-center justify-between gap-4">
+                  <div>
+                    <p className="text-white text-lg sm:text-xl font-semibold tracking-wide">
+                      {featuredVideo.title}
+                    </p>
+                    <p className="text-purple-300/80 text-sm mt-0.5">
+                      {featuredVideo.subtitle}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-4 shrink-0">
+                    <span className="text-xs sm:text-sm text-purple-200/80 tabular-nums">
+                      {formatCount(stats[featuredVideo.id]?.plays || 0)} plays
+                    </span>
+                    <button
+                      type="button"
+                      onClick={(e) => handleLike(featuredVideo.id, e)}
+                      className={`inline-flex items-center gap-1.5 text-xs sm:text-sm tabular-nums transition-colors ${
+                        likedIds.has(featuredVideo.id) ? 'text-pink-300' : 'text-purple-200/80 hover:text-pink-300'
+                      }`}
+                      aria-label={likedIds.has(featuredVideo.id) ? `Unlike ${featuredVideo.title}` : `Like ${featuredVideo.title}`}
+                    >
+                      {likedIds.has(featuredVideo.id) ? (
+                        <HeartIconSolid className="w-5 h-5" />
+                      ) : (
+                        <HeartIcon className="w-5 h-5" />
+                      )}
+                      {formatCount(stats[featuredVideo.id]?.likes || 0)}
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
