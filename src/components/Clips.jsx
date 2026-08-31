@@ -2,11 +2,13 @@ import { motion } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import {
   ArrowLeftIcon,
+  ArrowsPointingInIcon,
+  ArrowsPointingOutIcon,
   Bars3Icon,
   FilmIcon,
   PlayCircleIcon,
 } from '@heroicons/react/24/outline'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { config } from '../config'
 
 const CLIPS = [
@@ -42,10 +44,46 @@ const CLIPS = [
   },
 ]
 
+const toggleClipFullscreen = async (stage, video) => {
+  const current = document.fullscreenElement || document.webkitFullscreenElement
+  try {
+    if (current) {
+      if (document.exitFullscreen) await document.exitFullscreen()
+      else document.webkitExitFullscreen?.()
+      return
+    }
+    if (stage?.requestFullscreen) {
+      await stage.requestFullscreen()
+      return
+    }
+    if (stage?.webkitRequestFullscreen) {
+      stage.webkitRequestFullscreen()
+      return
+    }
+    video?.webkitEnterFullscreen?.()
+  } catch {
+    video?.webkitEnterFullscreen?.()
+  }
+}
+
 const Clips = () => {
   const [showMenu, setShowMenu] = useState(false)
   const [activeClip, setActiveClip] = useState(null)
+  const [fullscreenClip, setFullscreenClip] = useState(null)
   const navigate = useNavigate()
+
+  useEffect(() => {
+    const onChange = () => {
+      const el = document.fullscreenElement || document.webkitFullscreenElement
+      setFullscreenClip(el?.getAttribute?.('data-clip-id') || null)
+    }
+    document.addEventListener('fullscreenchange', onChange)
+    document.addEventListener('webkitfullscreenchange', onChange)
+    return () => {
+      document.removeEventListener('fullscreenchange', onChange)
+      document.removeEventListener('webkitfullscreenchange', onChange)
+    }
+  }, [])
 
   return (
     <section className="min-h-screen bg-gradient-to-br from-purple-950 via-black to-indigo-950 relative overflow-hidden px-4 sm:px-6 lg:px-8 pb-16">
@@ -184,7 +222,10 @@ const Clips = () => {
                   </span>
                 </motion.div>
 
-                <div className="aspect-video bg-black/80">
+                <div
+                  className={`video-stage relative bg-black/80 ${fullscreenClip === clip.id ? 'flex h-full w-full items-center justify-center' : 'aspect-video'}`}
+                  data-clip-id={clip.id}
+                >
                   <video
                     controls
                     playsInline
@@ -195,6 +236,22 @@ const Clips = () => {
                     <source src={clip.src} type="video/mp4" />
                     Your browser does not support the video tag.
                   </video>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      const stage = e.currentTarget.parentElement
+                      const video = stage?.querySelector('video')
+                      toggleClipFullscreen(stage, video)
+                    }}
+                    className="absolute top-3 right-3 z-20 rounded-lg bg-black/55 p-2 border border-white/15 text-white hover:bg-black/75"
+                    aria-label={fullscreenClip === clip.id ? 'Exit fullscreen' : 'Enter fullscreen'}
+                  >
+                    {fullscreenClip === clip.id ? (
+                      <ArrowsPointingInIcon className="h-5 w-5" />
+                    ) : (
+                      <ArrowsPointingOutIcon className="h-5 w-5" />
+                    )}
+                  </button>
                 </div>
 
                 <motion.div

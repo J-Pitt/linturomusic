@@ -15,6 +15,7 @@ export const config = {
     THE_DEEPEST_HOUSE: import.meta.env.VITE_AUDIO_THE_DEEPEST_HOUSE || 'https://linturomusic.s3.us-west-2.amazonaws.com/theDeepestHouse.WAV',
     RECHARGE: import.meta.env.VITE_AUDIO_RECHARGE || 'https://linturomusic.s3.us-west-2.amazonaws.com/recharge.WAV',
     REFLECTIONS: import.meta.env.VITE_AUDIO_REFLECTIONS || 'https://linturomusic.s3.us-west-2.amazonaws.com/reflections.WAV',
+    LONG_ROAD: import.meta.env.VITE_AUDIO_LONG_ROAD || 'https://linturomusic.s3.us-west-2.amazonaws.com/longroad-master.mp3',
   },
 
   // Video file URLs (obfuscated in production)
