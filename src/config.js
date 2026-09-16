@@ -29,6 +29,8 @@ export const config = {
     ETERNAL_BEGINNING_POSTER: import.meta.env.VITE_VIDEO_ETERNAL_BEGINNING_POSTER || 'https://linturomusic.s3.us-west-2.amazonaws.com/eternal1-thsbeginning.jpg',
     CITY_STREETS: import.meta.env.VITE_VIDEO_CITY_STREETS || 'https://linturomusic.s3.us-west-2.amazonaws.com/citystreets.mp4',
     CITY_STREETS_POSTER: import.meta.env.VITE_VIDEO_CITY_STREETS_POSTER || 'https://linturomusic.s3.us-west-2.amazonaws.com/citystreets.jpg',
+    ZOE: import.meta.env.VITE_VIDEO_ZOE || 'https://linturomusic.s3.us-west-2.amazonaws.com/zoe.mp4',
+    ZOE_POSTER: import.meta.env.VITE_VIDEO_ZOE_POSTER || 'https://linturomusic.s3.us-west-2.amazonaws.com/zoe.jpg',
   },
   
   // App metadata
