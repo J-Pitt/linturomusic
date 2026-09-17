@@ -41,7 +41,7 @@ const RECENT_MIXES = [
   { id: 'downAgain', title: 'Down Again', url: config.AUDIO_FILES.DOWN_AGAIN },
   { id: 'eternity', title: 'Eternity', url: config.AUDIO_FILES.ETERNITY },
   { id: 'theLight', title: 'The Light', url: config.AUDIO_FILES.THE_LIGHT },
-  { id: 'proud', title: 'Proud', url: config.AUDIO_FILES.PROUD },
+  { id: 'proud', title: 'Be proud of you', url: config.AUDIO_FILES.PROUD },
   { id: 'theDeepestHouse', title: 'The Deepest House', url: config.AUDIO_FILES.THE_DEEPEST_HOUSE },
   { id: 'recharge', title: 'Recharge', url: config.AUDIO_FILES.RECHARGE },
   { id: 'reflections', title: 'Reflections', url: config.AUDIO_FILES.REFLECTIONS },
@@ -73,7 +73,7 @@ const FEATURED_VIDEOS = [
   },
   {
     id: 'rec059',
-    title: 'REC059',
+    title: '5 am shit',
     subtitle: 'Smile Glitch · visual mix',
     src: config.VIDEO_FILES.REC059_SMILE_GLITCH,
     poster: config.VIDEO_FILES.REC059_SMILE_GLITCH_POSTER,
@@ -589,9 +589,9 @@ const Hero = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.8 }}
-            className="text-lg sm:text-xl text-purple-300 mb-8 sm:mb-10 max-w-xl mx-auto px-4"
+            className="text-lg sm:text-xl text-purple-300 mb-8 sm:mb-10 max-w-2xl mx-auto px-4"
           >
-            I'm open to play at bars, clubs, or parties - really anywhere where music and people come together. If you like what you hear, don't hesitate to reach out!
+            I'm open to play at bars, clubs, parties, parks, basements, my house, your house - really anywhere I can fit a deck and a speaker. I just like music, so hit me if you like my style. I'm new-ish to New York so still looking to meet people who can bring me deeper into the music scene here.
           </motion.p>
 
           <motion.div

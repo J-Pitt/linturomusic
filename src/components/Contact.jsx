@@ -398,8 +398,7 @@ const Contact = () => {
                 Let's have some fun!
               </h4>
               <p className="text-sm sm:text-base text-purple-100 mb-3 sm:mb-4">
-                I'm open to DJ at bars, clubs, or parties - really anywhere where music and dancing come together. 
-                Check out my youtube and mixcloud, if you like what you hear, don't hesitate to reach out, I'm sure we'll have a good time!
+                I'm open to play at bars, clubs, parties, parks, basements, my house, your house - really anywhere I can fit a deck and a speaker. I just like music, so hit me if you like my style. I'm new-ish to New York so still looking to meet people who can bring me deeper into the music scene here.
               </p>
               <div className="flex items-center">
                 <div className="w-2 h-2 sm:w-3 sm:h-3 bg-green-400 rounded-full mr-2 sm:mr-3 animate-pulse"></div>

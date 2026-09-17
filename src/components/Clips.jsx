@@ -5,7 +5,6 @@ import {
   ArrowsPointingInIcon,
   ArrowsPointingOutIcon,
   Bars3Icon,
-  FilmIcon,
   PlayCircleIcon,
 } from '@heroicons/react/24/outline'
 import { useEffect, useState } from 'react'
@@ -159,26 +158,12 @@ const Clips = () => {
         transition={{ duration: 0.7 }}
       >
         <div className="text-center mb-12 sm:mb-16">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.15 }}
-            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-purple-500/15 border border-purple-400/30 text-purple-300 text-sm font-medium mb-6"
-          >
-            <FilmIcon className="w-4 h-4" />
-            Performance clips
-          </motion.div>
-
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white mb-4 tracking-tight">
+            Selected clips and videos from{' '}
             <span className="bg-gradient-to-r from-purple-300 via-pink-300 to-purple-400 bg-clip-text text-transparent font-brand">
               linturo
             </span>
-            <span className="text-white/90"> clips</span>
           </h1>
-
-          <p className="text-lg sm:text-xl text-purple-300/90 max-w-xl mx-auto leading-relaxed">
-            Live sets, rooftop sessions, and moments from the booth.
-          </p>
         </div>
 
         <motion.div
