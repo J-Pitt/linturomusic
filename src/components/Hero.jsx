@@ -71,6 +71,13 @@ const FEATURED_VIDEOS = [
     mixUrl: config.AUDIO_FILES.LONG_ROAD,
     poster: 'https://linturomusic.s3.us-west-2.amazonaws.com/longroad-cover.png',
   },
+  {
+    id: 'rec059',
+    title: 'REC059',
+    subtitle: 'Smile Glitch · visual mix',
+    src: config.VIDEO_FILES.REC059_SMILE_GLITCH,
+    poster: config.VIDEO_FILES.REC059_SMILE_GLITCH_POSTER,
+  },
 ]
 
 const Hero = () => {

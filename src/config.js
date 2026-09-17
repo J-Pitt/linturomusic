@@ -16,6 +16,7 @@ export const config = {
     RECHARGE: import.meta.env.VITE_AUDIO_RECHARGE || 'https://linturomusic.s3.us-west-2.amazonaws.com/recharge.WAV',
     REFLECTIONS: import.meta.env.VITE_AUDIO_REFLECTIONS || 'https://linturomusic.s3.us-west-2.amazonaws.com/reflections.WAV',
     LONG_ROAD: import.meta.env.VITE_AUDIO_LONG_ROAD || 'https://linturomusic.s3.us-west-2.amazonaws.com/longroad-master.mp3',
+    REC059: import.meta.env.VITE_AUDIO_REC059 || 'https://linturomusic.s3.us-west-2.amazonaws.com/rec059-master.mp3',
   },
 
   // Video file URLs (obfuscated in production)
@@ -31,6 +32,8 @@ export const config = {
     CITY_STREETS_POSTER: import.meta.env.VITE_VIDEO_CITY_STREETS_POSTER || 'https://linturomusic.s3.us-west-2.amazonaws.com/citystreets.jpg',
     ZOE: import.meta.env.VITE_VIDEO_ZOE || 'https://linturomusic.s3.us-west-2.amazonaws.com/zoe.mp4',
     ZOE_POSTER: import.meta.env.VITE_VIDEO_ZOE_POSTER || 'https://linturomusic.s3.us-west-2.amazonaws.com/zoe.jpg',
+    REC059_SMILE_GLITCH: import.meta.env.VITE_VIDEO_REC059_SMILE_GLITCH || 'https://linturomusic.s3.us-west-2.amazonaws.com/rec059-smile-glitch.mp4',
+    REC059_SMILE_GLITCH_POSTER: import.meta.env.VITE_VIDEO_REC059_SMILE_GLITCH_POSTER || 'https://linturomusic.s3.us-west-2.amazonaws.com/rec059-smile-glitch.jpg',
   },
   
   // App metadata
