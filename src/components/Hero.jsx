@@ -111,13 +111,20 @@ const Hero = () => {
   const [showControls, setShowControls] = useState(false)
   const [stats, setStats] = useState({})
   const [likedIds, setLikedIds] = useState(() => new Set())
-  const [featuredVideoId, setFeaturedVideoId] = useState(FEATURED_VIDEOS[0].id)
+  const [featuredVideoId, setFeaturedVideoId] = useState(
+    () =>
+      (typeof window !== 'undefined' && featuredFromHash(window.location.hash)?.id) ||
+      FEATURED_VIDEOS[0].id
+  )
   const audioRef = useRef(null)
   const videoRef = useRef(null)
   const ytPlayerRef = useRef(null)
   const overlayAudioRef = useRef(null)
   const videoPlayCounted = useRef({})
   const featuredStageRef = useRef(null)
+  const pendingHashScroll = useRef(
+    typeof window !== 'undefined' && !!featuredFromHash(window.location.hash)
+  )
   const [ytPlaying, setYtPlaying] = useState(false)
   const [ytTime, setYtTime] = useState(0)
   const [ytReady, setYtReady] = useState(false)
@@ -137,30 +144,22 @@ const Hero = () => {
   }
 
   const handleFeaturedTab = (id, { syncHash = true } = {}) => {
-    if (id !== featuredVideoId) {
-      videoRef.current?.pause()
-      pauseYoutubeVisual()
-      setFeaturedVideoId(id)
-    }
+    setFeaturedVideoId((prev) => {
+      if (prev !== id) {
+        videoRef.current?.pause()
+        pauseYoutubeVisual()
+      }
+      return id
+    })
     if (syncHash) {
       const video = FEATURED_VIDEOS.find((v) => v.id === id)
       if (video && typeof window !== 'undefined') {
         const next = `#${video.slug}`
         if (window.location.hash !== next) {
-          window.history.replaceState(null, '', next)
+          window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}${next}`)
         }
       }
     }
-  }
-
-  const focusFeaturedFromHash = (hash, { syncHash = false } = {}) => {
-    const video = featuredFromHash(hash)
-    if (!video) return
-    handleFeaturedTab(video.id, { syncHash })
-    // Wait a tick so the featured node is in the DOM with the right id.
-    requestAnimationFrame(() => {
-      document.getElementById(video.slug)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-    })
   }
 
   const audioUrls = Object.fromEntries(RECENT_MIXES.map((m) => [m.id, m.url]))
@@ -294,16 +293,26 @@ const Hero = () => {
   }, [])
 
   useEffect(() => {
-    const apply = () => {
-      if (!featuredFromHash(window.location.hash)) return
-      focusFeaturedFromHash(window.location.hash)
+    const applyHash = () => {
+      const video = featuredFromHash(window.location.hash)
+      if (!video) return
+      pendingHashScroll.current = true
+      handleFeaturedTab(video.id, { syncHash: false })
     }
-    apply()
-    window.addEventListener('hashchange', apply)
-    return () => window.removeEventListener('hashchange', apply)
-    // Cold-start + hash changes only
+    applyHash()
+    window.addEventListener('hashchange', applyHash)
+    return () => window.removeEventListener('hashchange', applyHash)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  useEffect(() => {
+    if (!pendingHashScroll.current) return
+    pendingHashScroll.current = false
+    const t = window.setTimeout(() => {
+      document.getElementById('featured')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }, 50)
+    return () => window.clearTimeout(t)
+  }, [featuredVideoId])
 
   const clampHour = (t) => Math.max(0, Math.min(LONG_ROAD_END_SEC, t))
 
@@ -744,7 +753,7 @@ const Hero = () => {
               </p>
             )}
 
-            <div id="featured" className="mt-10 sm:mt-12 scroll-mt-24">
+            <div className="mt-10 sm:mt-12 scroll-mt-24">
               <p className="text-sm uppercase tracking-[0.28em] text-purple-400/90 mb-4 font-medium">
                 Featured
               </p>
@@ -776,9 +785,13 @@ const Hero = () => {
                 })}
               </div>
               <div
-                id={featuredVideo.slug}
+                id="featured"
                 className="relative scroll-mt-24 rounded-2xl overflow-hidden border border-purple-400/25 bg-black/50 shadow-[0_24px_80px_rgba(76,29,149,0.35)] text-left"
               >
+                {/* Stable anchors so hash links resolve even before the matching tab is selected */}
+                {FEATURED_VIDEOS.map((video) => (
+                  <span key={video.slug} id={video.slug} className="absolute top-0 left-0 h-0 w-0 overflow-hidden" aria-hidden="true" />
+                ))}
                 <div
                   ref={featuredStageRef}
                   className={`video-stage relative bg-black ${isFullscreen ? 'flex h-full w-full items-center justify-center' : 'aspect-video'}`}
