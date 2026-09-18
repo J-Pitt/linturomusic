@@ -15,6 +15,7 @@ export const STAT_IDS = [
   'cityStreets',
   'longRoad',
   'rec059',
+  'linturo',
 ]
 
 const LIKE_ADMIN_KEYS = {

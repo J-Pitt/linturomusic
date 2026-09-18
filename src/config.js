@@ -34,6 +34,8 @@ export const config = {
     ZOE_POSTER: import.meta.env.VITE_VIDEO_ZOE_POSTER || 'https://linturomusic.s3.us-west-2.amazonaws.com/zoe.jpg',
     REC059_SMILE_GLITCH: import.meta.env.VITE_VIDEO_REC059_SMILE_GLITCH || 'https://linturomusic.s3.us-west-2.amazonaws.com/rec059-smile-glitch.mp4',
     REC059_SMILE_GLITCH_POSTER: import.meta.env.VITE_VIDEO_REC059_SMILE_GLITCH_POSTER || 'https://linturomusic.s3.us-west-2.amazonaws.com/rec059-smile-glitch.jpg',
+    LINTURO_GLITCH: import.meta.env.VITE_VIDEO_LINTURO_GLITCH || 'https://linturomusic.s3.us-west-2.amazonaws.com/linturo-glitch.mp4',
+    LINTURO_GLITCH_POSTER: import.meta.env.VITE_VIDEO_LINTURO_GLITCH_POSTER || 'https://linturomusic.s3.us-west-2.amazonaws.com/linturo-glitch.jpg',
   },
   
   // App metadata

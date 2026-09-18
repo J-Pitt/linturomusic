@@ -116,3 +116,65 @@
   align-items: center;
   justify-content: center;
 }
+
+/* Slow breathe + slick trippy pulse for the Smile visual */
+@keyframes smile-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+    filter: saturate(1.05) contrast(1.02) hue-rotate(0deg) brightness(1);
+  }
+  35% {
+    transform: scale(1.06);
+    filter: saturate(1.22) contrast(1.08) hue-rotate(8deg) brightness(1.04);
+  }
+  65% {
+    transform: scale(1.1);
+    filter: saturate(1.35) contrast(1.12) hue-rotate(-10deg) brightness(1.06);
+  }
+}
+
+@keyframes smile-chroma {
+  0%,
+  100% {
+    opacity: 0.18;
+    transform: scale(1.02);
+    filter: hue-rotate(0deg);
+  }
+  50% {
+    opacity: 0.32;
+    transform: scale(1.12);
+    filter: hue-rotate(25deg);
+  }
+}
+
+.smile-stage {
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.smile-stage video {
+  transform-origin: center center;
+  will-change: transform, filter;
+  animation: smile-breathe 11s ease-in-out infinite;
+}
+
+.smile-stage::after {
+  content: '';
+  position: absolute;
+  inset: -8%;
+  pointer-events: none;
+  z-index: 4;
+  background:
+    radial-gradient(circle at 50% 42%, rgba(255, 80, 200, 0.16), transparent 55%),
+    radial-gradient(circle at 48% 48%, rgba(120, 80, 255, 0.12), transparent 60%);
+  mix-blend-mode: screen;
+  animation: smile-chroma 11s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .smile-stage video,
+  .smile-stage::after {
+    animation: none;
+  }
+}
