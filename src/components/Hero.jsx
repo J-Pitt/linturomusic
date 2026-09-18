@@ -50,6 +50,8 @@ const RECENT_MIXES = [
 const FEATURED_VIDEOS = [
   {
     id: 'beginning',
+    /** Shareable hash: linturomusic.com/#the-beginning */
+    slug: 'the-beginning',
     title: 'The Beginning',
     subtitle: 'Visual mix · one hour',
     src: config.VIDEO_FILES.ETERNAL_BEGINNING,
@@ -57,6 +59,7 @@ const FEATURED_VIDEOS = [
   },
   {
     id: 'cityStreets',
+    slug: 'city-streets',
     title: 'City Streets',
     subtitle: 'Visual mix · one hour',
     src: config.VIDEO_FILES.CITY_STREETS,
@@ -64,6 +67,7 @@ const FEATURED_VIDEOS = [
   },
   {
     id: 'longRoad',
+    slug: 'long-road',
     title: 'Long Road',
     subtitle: 'Long Road mix · one hour',
     type: 'youtube',
@@ -73,12 +77,27 @@ const FEATURED_VIDEOS = [
   },
   {
     id: 'rec059',
+    slug: '5-am-shit',
     title: '5 am shit',
     subtitle: 'Smile Glitch · visual mix',
     src: config.VIDEO_FILES.REC059_SMILE_GLITCH,
     poster: config.VIDEO_FILES.REC059_SMILE_GLITCH_POSTER,
   },
 ]
+
+function featuredFromHash(hash) {
+  const raw = (hash || '').replace(/^#/, '').trim().toLowerCase()
+  if (!raw) return null
+  if (raw === 'featured' || raw === 'videos') return FEATURED_VIDEOS[0]
+  return (
+    FEATURED_VIDEOS.find(
+      (v) =>
+        v.slug === raw ||
+        v.id.toLowerCase() === raw ||
+        v.title.toLowerCase().replace(/\s+/g, '-') === raw
+    ) || null
+  )
+}
 
 const Hero = () => {
   const [showImageModal, setShowImageModal] = useState(false)
@@ -117,11 +136,31 @@ const Hero = () => {
     setYtPlaying(false)
   }
 
-  const handleFeaturedTab = (id) => {
-    if (id === featuredVideoId) return
-    videoRef.current?.pause()
-    pauseYoutubeVisual()
-    setFeaturedVideoId(id)
+  const handleFeaturedTab = (id, { syncHash = true } = {}) => {
+    if (id !== featuredVideoId) {
+      videoRef.current?.pause()
+      pauseYoutubeVisual()
+      setFeaturedVideoId(id)
+    }
+    if (syncHash) {
+      const video = FEATURED_VIDEOS.find((v) => v.id === id)
+      if (video && typeof window !== 'undefined') {
+        const next = `#${video.slug}`
+        if (window.location.hash !== next) {
+          window.history.replaceState(null, '', next)
+        }
+      }
+    }
+  }
+
+  const focusFeaturedFromHash = (hash, { syncHash = false } = {}) => {
+    const video = featuredFromHash(hash)
+    if (!video) return
+    handleFeaturedTab(video.id, { syncHash })
+    // Wait a tick so the featured node is in the DOM with the right id.
+    requestAnimationFrame(() => {
+      document.getElementById(video.slug)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    })
   }
 
   const audioUrls = Object.fromEntries(RECENT_MIXES.map((m) => [m.id, m.url]))
@@ -252,6 +291,18 @@ const Hero = () => {
         // ignore
       }
     }
+  }, [])
+
+  useEffect(() => {
+    const apply = () => {
+      if (!featuredFromHash(window.location.hash)) return
+      focusFeaturedFromHash(window.location.hash)
+    }
+    apply()
+    window.addEventListener('hashchange', apply)
+    return () => window.removeEventListener('hashchange', apply)
+    // Cold-start + hash changes only
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const clampHour = (t) => Math.max(0, Math.min(LONG_ROAD_END_SEC, t))
@@ -693,7 +744,7 @@ const Hero = () => {
               </p>
             )}
 
-            <div className="mt-10 sm:mt-12">
+            <div id="featured" className="mt-10 sm:mt-12 scroll-mt-24">
               <p className="text-sm uppercase tracking-[0.28em] text-purple-400/90 mb-4 font-medium">
                 Featured
               </p>
@@ -707,9 +758,11 @@ const Hero = () => {
                   return (
                     <button
                       key={video.id}
+                      id={`tab-${video.slug}`}
                       type="button"
                       role="tab"
                       aria-selected={selected}
+                      aria-controls={video.slug}
                       onClick={() => handleFeaturedTab(video.id)}
                       className={`rounded-xl px-1.5 py-2.5 sm:px-4 sm:py-3 text-[11px] sm:text-base font-semibold leading-tight transition-all duration-200 ${
                         selected
@@ -722,7 +775,10 @@ const Hero = () => {
                   )
                 })}
               </div>
-              <div className="relative rounded-2xl overflow-hidden border border-purple-400/25 bg-black/50 shadow-[0_24px_80px_rgba(76,29,149,0.35)] text-left">
+              <div
+                id={featuredVideo.slug}
+                className="relative scroll-mt-24 rounded-2xl overflow-hidden border border-purple-400/25 bg-black/50 shadow-[0_24px_80px_rgba(76,29,149,0.35)] text-left"
+              >
                 <div
                   ref={featuredStageRef}
                   className={`video-stage relative bg-black ${isFullscreen ? 'flex h-full w-full items-center justify-center' : 'aspect-video'}`}
@@ -780,6 +836,7 @@ const Hero = () => {
                   <>
                   <video
                     key={featuredVideo.id}
+                    id={`player-${featuredVideo.slug}`}
                     ref={videoRef}
                     controls
                     playsInline

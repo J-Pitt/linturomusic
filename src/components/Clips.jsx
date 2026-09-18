@@ -84,6 +84,19 @@ const Clips = () => {
     }
   }, [])
 
+  useEffect(() => {
+    const apply = () => {
+      const id = window.location.hash.replace(/^#/, '')
+      if (!id || !CLIPS.some((c) => c.id === id)) return
+      requestAnimationFrame(() => {
+        document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      })
+    }
+    apply()
+    window.addEventListener('hashchange', apply)
+    return () => window.removeEventListener('hashchange', apply)
+  }, [])
+
   return (
     <section className="min-h-screen bg-gradient-to-br from-purple-950 via-black to-indigo-950 relative overflow-hidden px-4 sm:px-6 lg:px-8 pb-16">
       <motion.div
@@ -178,13 +191,14 @@ const Clips = () => {
           {CLIPS.map((clip, index) => (
             <motion.article
               key={clip.id}
+              id={clip.id}
               variants={{
                 hidden: { opacity: 0, y: 28 },
                 visible: { opacity: 1, y: 0 },
               }}
               onHoverStart={() => setActiveClip(clip.id)}
               onHoverEnd={() => setActiveClip(null)}
-              className="group relative"
+              className="group relative scroll-mt-24"
             >
               <motion.div
                 className="absolute -inset-px rounded-2xl bg-gradient-to-br from-purple-500/50 via-pink-500/30 to-blue-500/40 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-sm"
@@ -212,6 +226,7 @@ const Clips = () => {
                   data-clip-id={clip.id}
                 >
                   <video
+                    id={`player-${clip.id}`}
                     controls
                     playsInline
                     preload="metadata"

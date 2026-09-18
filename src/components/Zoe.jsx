@@ -97,6 +97,7 @@ const Zoe = () => {
             className={`video-stage relative bg-black ${isFullscreen ? 'flex h-full w-full items-center justify-center' : 'aspect-video'}`}
           >
             <video
+              id="zoe"
               ref={videoRef}
               controls
               playsInline
