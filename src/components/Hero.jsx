@@ -90,8 +90,6 @@ const FEATURED_VIDEOS = [
     subtitle: 'Handstyle Glitch · visual mix',
     src: config.VIDEO_FILES.LINTURO_GLITCH,
     poster: config.VIDEO_FILES.LINTURO_GLITCH_POSTER,
-    titleImage: '/linturo-tab-title.png',
-    titleImageLarge: '/linturo-title.png',
   },
 ]
 
@@ -771,7 +769,7 @@ const Hero = () => {
               <div
                 role="tablist"
                 aria-label="Featured visual mixes"
-                className="mb-3 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2"
+                className="mb-3 flex flex-wrap gap-2"
               >
                 {FEATURED_VIDEOS.map((video) => {
                   const selected = featuredVideoId === video.id
@@ -785,22 +783,15 @@ const Hero = () => {
                       aria-controls={video.slug}
                       aria-label={video.title}
                       onClick={() => handleFeaturedTab(video.id)}
-                      className={`rounded-xl px-1.5 py-2.5 sm:px-4 sm:py-3 text-[11px] sm:text-base font-semibold leading-tight transition-all duration-200 inline-flex items-center justify-center ${
+                      className={`rounded-xl px-3 py-2.5 sm:px-4 sm:py-3 text-sm sm:text-base font-semibold leading-tight whitespace-nowrap transition-all duration-200 ${
+                        video.id === 'linturo' ? 'font-brand text-base sm:text-lg tracking-wide' : ''
+                      } ${
                         selected
                           ? 'bg-gradient-to-r from-purple-600/90 to-pink-600/90 text-white shadow-lg border border-transparent'
                           : 'bg-white/10 backdrop-blur-sm text-purple-100 border border-purple-500/40 hover:bg-white/15'
                       }`}
                     >
-                      {video.titleImage ? (
-                        <img
-                          src={video.titleImage}
-                          alt=""
-                          className="h-5 sm:h-7 w-auto object-contain drop-shadow-[0_0_6px_rgba(0,0,0,0.55)]"
-                          draggable={false}
-                        />
-                      ) : (
-                        video.title
-                      )}
+                      {video.title}
                     </button>
                   )
                 })}
@@ -868,13 +859,14 @@ const Hero = () => {
                     </div>
                   ) : (
                   <>
+                  <div className={isSmileGlitch ? 'smile-fx w-full h-full' : 'w-full h-full'}>
                   <video
                     key={featuredVideo.id}
                     id={`player-${featuredVideo.slug}`}
                     ref={videoRef}
                     controls
                     playsInline
-                    preload="none"
+                    preload="metadata"
                     poster={featuredVideo.poster}
                     className="w-full h-full object-contain bg-black"
                     onPlay={() => {
@@ -900,6 +892,7 @@ const Hero = () => {
                   >
                     <source src={featuredVideo.src} type="video/mp4" />
                   </video>
+                  </div>
                   <button
                     type="button"
                     onClick={toggleFeaturedFullscreen}
@@ -917,18 +910,15 @@ const Hero = () => {
                 </div>
                 <div className="px-5 py-4 sm:px-6 border-t border-purple-500/20 bg-gradient-to-r from-purple-950/70 to-black/70 flex items-center justify-between gap-4">
                   <div>
-                    {featuredVideo.titleImageLarge || featuredVideo.titleImage ? (
-                      <img
-                        src={featuredVideo.titleImageLarge || featuredVideo.titleImage}
-                        alt={featuredVideo.title}
-                        className="h-8 sm:h-10 w-auto object-contain"
-                        draggable={false}
-                      />
-                    ) : (
-                      <p className="text-white text-lg sm:text-xl font-semibold tracking-wide">
-                        {featuredVideo.title}
-                      </p>
-                    )}
+                    <p
+                      className={`text-white tracking-wide ${
+                        featuredVideo.id === 'linturo'
+                          ? 'font-brand text-2xl sm:text-3xl'
+                          : 'text-lg sm:text-xl font-semibold'
+                      }`}
+                    >
+                      {featuredVideo.title}
+                    </p>
                     <p className="text-purple-300/80 text-sm mt-0.5">
                       {featuredVideo.subtitle}
                     </p>
