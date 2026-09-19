@@ -13,6 +13,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { config } from '../config'
 import { formatCount, loadLikedIds, loadStats, recordPlay, toggleLike } from '../lib/stats'
+import VolumeControl from './VolumeControl'
 
 const LONG_ROAD_END_SEC = 3662
 const YOUTUBE_PSYCHEDELIC_ID = 'STh_PJk7mpQ'
@@ -137,10 +138,46 @@ const Hero = () => {
   const [ytTime, setYtTime] = useState(0)
   const [ytReady, setYtReady] = useState(false)
   const [isFullscreen, setIsFullscreen] = useState(false)
+  const [volume, setVolume] = useState(1)
+  const [muted, setMuted] = useState(false)
+  const lastVolumeRef = useRef(1)
   const navigate = useNavigate()
   const featuredVideo = FEATURED_VIDEOS.find((v) => v.id === featuredVideoId) || FEATURED_VIDEOS[0]
   const isYoutubeFeatured = featuredVideo.type === 'youtube'
   const isSmileGlitch = featuredVideo.id === 'rec059'
+
+  const applyMediaVolume = (el, v = volume, m = muted) => {
+    if (!el) return
+    el.volume = Math.max(0, Math.min(1, v))
+    el.muted = m || v === 0
+  }
+
+  const syncAllVolumes = (v, m) => {
+    applyMediaVolume(videoRef.current, v, m)
+    applyMediaVolume(audioRef.current, v, m)
+    applyMediaVolume(overlayAudioRef.current, v, m)
+  }
+
+  const handleVolumeChange = (next) => {
+    const v = Math.max(0, Math.min(1, next))
+    if (v > 0) lastVolumeRef.current = v
+    setVolume(v)
+    setMuted(v === 0)
+    syncAllVolumes(v, v === 0)
+  }
+
+  const handleToggleMute = () => {
+    if (muted || volume === 0) {
+      const restore = lastVolumeRef.current > 0 ? lastVolumeRef.current : 1
+      setVolume(restore)
+      setMuted(false)
+      syncAllVolumes(restore, false)
+    } else {
+      lastVolumeRef.current = volume > 0 ? volume : 1
+      setMuted(true)
+      syncAllVolumes(volume, true)
+    }
+  }
 
   const pauseYoutubeVisual = () => {
     try {
@@ -247,6 +284,7 @@ const Hero = () => {
 
         audioRef.current.src = audioUrls[setType]
         await audioRef.current.load()
+        applyMediaVolume(audioRef.current, volume, muted)
       } catch {
         setIsLoading(false)
         setAudioError(true)
@@ -323,6 +361,10 @@ const Hero = () => {
     return () => window.clearTimeout(t)
   }, [featuredVideoId])
 
+  useEffect(() => {
+    applyMediaVolume(videoRef.current, volume, muted)
+  }, [featuredVideoId, volume, muted])
+
   const clampHour = (t) => Math.max(0, Math.min(LONG_ROAD_END_SEC, t))
 
   const ensureOverlayMix = () => {
@@ -344,6 +386,7 @@ const Hero = () => {
       setYtTime(0)
     })
     overlayAudioRef.current = mix
+    applyMediaVolume(mix, volume, muted)
     return mix
   }
 
@@ -749,8 +792,14 @@ const Hero = () => {
                     style={{ width: `${duration > 0 ? (currentTime / duration) * 100 : 0}%` }}
                   />
                 </div>
-                <div className="flex justify-between text-xs text-purple-200">
+                <div className="flex justify-between items-center gap-3 text-xs text-purple-200">
                   <span>{formatTime(currentTime)}</span>
+                  <VolumeControl
+                    volume={volume}
+                    muted={muted}
+                    onVolumeChange={handleVolumeChange}
+                    onToggleMute={handleToggleMute}
+                  />
                   <span>{formatTime(duration)}</span>
                 </div>
               </motion.div>
@@ -850,8 +899,14 @@ const Hero = () => {
                               style={{ width: `${(ytTime / LONG_ROAD_END_SEC) * 100}%` }}
                             />
                           </div>
-                          <div className="mt-1.5 flex justify-between text-[11px] text-purple-200">
+                          <div className="mt-1.5 flex items-center justify-between gap-3 text-[11px] text-purple-200">
                             <span>{formatTime(ytTime)}</span>
+                            <VolumeControl
+                              volume={volume}
+                              muted={muted}
+                              onVolumeChange={handleVolumeChange}
+                              onToggleMute={handleToggleMute}
+                            />
                             <span>{formatTime(LONG_ROAD_END_SEC)}</span>
                           </div>
                         </div>
@@ -869,6 +924,7 @@ const Hero = () => {
                     preload="metadata"
                     poster={featuredVideo.poster}
                     className="w-full h-full object-contain bg-black"
+                    onLoadedMetadata={(e) => applyMediaVolume(e.currentTarget, volume, muted)}
                     onPlay={() => {
                       if (audioRef.current) {
                         audioRef.current.pause()
@@ -923,7 +979,13 @@ const Hero = () => {
                       {featuredVideo.subtitle}
                     </p>
                   </div>
-                  <div className="flex items-center gap-4 shrink-0">
+                  <div className="flex items-center gap-3 sm:gap-4 shrink-0">
+                    <VolumeControl
+                      volume={volume}
+                      muted={muted}
+                      onVolumeChange={handleVolumeChange}
+                      onToggleMute={handleToggleMute}
+                    />
                     <button
                       type="button"
                       onClick={toggleFeaturedFullscreen}

@@ -7,12 +7,44 @@ import {
 } from '@heroicons/react/24/outline'
 import { useEffect, useRef, useState } from 'react'
 import { config } from '../config'
+import VolumeControl from './VolumeControl'
 
 const Zoe = () => {
   const navigate = useNavigate()
   const stageRef = useRef(null)
   const videoRef = useRef(null)
   const [isFullscreen, setIsFullscreen] = useState(false)
+  const [volume, setVolume] = useState(1)
+  const [muted, setMuted] = useState(false)
+  const lastVolumeRef = useRef(1)
+
+  const applyVolume = (v = volume, m = muted) => {
+    const el = videoRef.current
+    if (!el) return
+    el.volume = Math.max(0, Math.min(1, v))
+    el.muted = m || v === 0
+  }
+
+  const handleVolumeChange = (next) => {
+    const v = Math.max(0, Math.min(1, next))
+    if (v > 0) lastVolumeRef.current = v
+    setVolume(v)
+    setMuted(v === 0)
+    applyVolume(v, v === 0)
+  }
+
+  const handleToggleMute = () => {
+    if (muted || volume === 0) {
+      const restore = lastVolumeRef.current > 0 ? lastVolumeRef.current : 1
+      setVolume(restore)
+      setMuted(false)
+      applyVolume(restore, false)
+    } else {
+      lastVolumeRef.current = volume > 0 ? volume : 1
+      setMuted(true)
+      applyVolume(volume, true)
+    }
+  }
 
   useEffect(() => {
     const onChange = () => {
@@ -104,10 +136,22 @@ const Zoe = () => {
               preload="metadata"
               poster={config.VIDEO_FILES.ZOE_POSTER}
               className="w-full h-full object-contain"
+              onLoadedMetadata={(e) => {
+                e.currentTarget.volume = volume
+                e.currentTarget.muted = muted || volume === 0
+              }}
             >
               <source src={config.VIDEO_FILES.ZOE} type="video/mp4" />
               Your browser does not support the video tag.
             </video>
+            <div className="absolute bottom-3 left-3 z-20 rounded-lg bg-black/55 px-2 py-1.5 border border-white/15">
+              <VolumeControl
+                volume={volume}
+                muted={muted}
+                onVolumeChange={handleVolumeChange}
+                onToggleMute={handleToggleMute}
+              />
+            </div>
             <button
               type="button"
               onClick={toggleFullscreen}

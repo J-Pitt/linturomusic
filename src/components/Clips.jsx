@@ -7,8 +7,9 @@ import {
   Bars3Icon,
   PlayCircleIcon,
 } from '@heroicons/react/24/outline'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { config } from '../config'
+import VolumeControl from './VolumeControl'
 
 const CLIPS = [
   {
@@ -69,7 +70,38 @@ const Clips = () => {
   const [showMenu, setShowMenu] = useState(false)
   const [activeClip, setActiveClip] = useState(null)
   const [fullscreenClip, setFullscreenClip] = useState(null)
+  const [volume, setVolume] = useState(1)
+  const [muted, setMuted] = useState(false)
+  const lastVolumeRef = useRef(1)
   const navigate = useNavigate()
+
+  const applyVolumeToAll = (v = volume, m = muted) => {
+    document.querySelectorAll('[data-clip-id] video').forEach((el) => {
+      el.volume = Math.max(0, Math.min(1, v))
+      el.muted = m || v === 0
+    })
+  }
+
+  const handleVolumeChange = (next) => {
+    const v = Math.max(0, Math.min(1, next))
+    if (v > 0) lastVolumeRef.current = v
+    setVolume(v)
+    setMuted(v === 0)
+    applyVolumeToAll(v, v === 0)
+  }
+
+  const handleToggleMute = () => {
+    if (muted || volume === 0) {
+      const restore = lastVolumeRef.current > 0 ? lastVolumeRef.current : 1
+      setVolume(restore)
+      setMuted(false)
+      applyVolumeToAll(restore, false)
+    } else {
+      lastVolumeRef.current = volume > 0 ? volume : 1
+      setMuted(true)
+      applyVolumeToAll(volume, true)
+    }
+  }
 
   useEffect(() => {
     const onChange = () => {
@@ -232,10 +264,23 @@ const Clips = () => {
                     preload="metadata"
                     className="w-full h-full object-contain"
                     poster=""
+                    onLoadedMetadata={(e) => {
+                      e.currentTarget.volume = volume
+                      e.currentTarget.muted = muted || volume === 0
+                    }}
+                    onPlay={() => setActiveClip(clip.id)}
                   >
                     <source src={clip.src} type="video/mp4" />
                     Your browser does not support the video tag.
                   </video>
+                  <div className="absolute bottom-3 left-3 z-20 rounded-lg bg-black/55 px-2 py-1.5 border border-white/15">
+                    <VolumeControl
+                      volume={volume}
+                      muted={muted}
+                      onVolumeChange={handleVolumeChange}
+                      onToggleMute={handleToggleMute}
+                    />
+                  </div>
                   <button
                     type="button"
                     onClick={(e) => {
