@@ -43,9 +43,9 @@ const About = () => {
           <div>
             <p className="text-sm sm:text-base text-mute leading-relaxed mb-4">
               I&apos;ve been DJing for nearly a decade in San
-              Francisco and London. My sets sit mainly in house — organic, deep, minimal,
-              progressive — with room for trance, psytrance, trap, psybass, and deep dubstep when
-              the night calls for it.
+              Francisco and London. I mix mostly house — organic, deep, minimal, progressive —
+              but can cover trance, psytrance, trap, psybass, and deep dubstep when the night
+              calls for it.
             </p>
             <p className="text-sm sm:text-base text-mute leading-relaxed">
               I&apos;m based in Brooklyn and working on building my presence in New York&apos;s
