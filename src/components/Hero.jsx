@@ -128,6 +128,7 @@ const Hero = () => {
   const audioRef = useRef(null)
   const videoRef = useRef(null)
   const ytPlayerRef = useRef(null)
+  const ytHostRef = useRef(null)
   const overlayAudioRef = useRef(null)
   const videoPlayCounted = useRef({})
   const featuredStageRef = useRef(null)
@@ -487,14 +488,17 @@ const Hero = () => {
       pauseYoutubeVisual()
       setYtReady(false)
       setYtTime(0)
-      try {
-        ytPlayerRef.current?.destroy?.()
-      } catch {
-        // ignore
-      }
-      ytPlayerRef.current = null
       return undefined
     }
+
+    const host = ytHostRef.current
+    if (!host) return undefined
+
+    // YouTube replaces its mount node with an iframe. Keep that node outside React
+    // ownership so tab switches don't white-screen on removeChild.
+    const mount = document.createElement('div')
+    mount.className = 'h-full w-full'
+    host.replaceChildren(mount)
 
     let cancelled = false
     const watch = setInterval(() => {
@@ -508,8 +512,8 @@ const Hero = () => {
     }, 250)
 
     loadYouTubeApi().then((YT) => {
-      if (cancelled || !document.getElementById('linturo-yt-longroad')) return
-      ytPlayerRef.current = new YT.Player('linturo-yt-longroad', {
+      if (cancelled || !mount.isConnected) return
+      ytPlayerRef.current = new YT.Player(mount, {
         videoId: featuredVideo.youtubeId,
         width: '100%',
         height: '100%',
@@ -529,11 +533,13 @@ const Hero = () => {
         },
         events: {
           onReady: (event) => {
+            if (cancelled) return
             event.target.mute()
             event.target.seekTo(0, true)
             setYtReady(true)
           },
           onStateChange: (event) => {
+            if (cancelled) return
             const state = event.data
             if (state === YT.PlayerState.PLAYING) {
               event.target.mute()
@@ -588,6 +594,7 @@ const Hero = () => {
         // ignore
       }
       ytPlayerRef.current = null
+      host.replaceChildren()
     }
   }, [isYoutubeFeatured, featuredVideo.id, featuredVideo.youtubeId, featuredVideo.mixUrl])
 
@@ -860,8 +867,8 @@ const Hero = () => {
                   {isYoutubeFeatured ? (
                     <div className="relative h-full w-full bg-black">
                       <div
-                        id="linturo-yt-longroad"
-                        className="pointer-events-none h-full w-full [&>iframe]:h-full [&>iframe]:w-full"
+                        ref={ytHostRef}
+                        className="pointer-events-none h-full w-full [&>div]:h-full [&>div]:w-full [&_iframe]:h-full [&_iframe]:w-full"
                       />
                       <div className="absolute inset-0 flex flex-col justify-end bg-gradient-to-t from-black/70 via-transparent to-black/20">
                         <button
