@@ -1,7 +1,6 @@
 import { motion } from 'framer-motion'
 import {
   ArrowDownIcon,
-  Bars3Icon,
   HeartIcon,
   PauseIcon,
   PlayIcon,
@@ -10,13 +9,15 @@ import {
 } from '@heroicons/react/24/outline'
 import { HeartIcon as HeartIconSolid } from '@heroicons/react/24/solid'
 import { useState, useRef, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { config } from '../config'
 import { formatCount, loadLikedIds, loadStats, recordPlay, toggleLike } from '../lib/stats'
 import VolumeControl from './VolumeControl'
+import SiteNav from './SiteNav'
 
 const LONG_ROAD_END_SEC = 3662
 const YOUTUBE_PSYCHEDELIC_ID = 'STh_PJk7mpQ'
+/** Flip to true when play numbers are worth showing again. Logging still runs either way. */
+const SHOW_PLAY_COUNTS = false
 
 let youtubeApiPromise
 
@@ -97,7 +98,8 @@ const FEATURED_VIDEOS = [
 function featuredFromHash(hash) {
   const raw = (hash || '').replace(/^#/, '').trim().toLowerCase()
   if (!raw) return null
-  if (raw === 'featured' || raw === 'videos') return FEATURED_VIDEOS[0]
+  // `#videos` / `#mixes` are section anchors — do not treat them as featured tabs
+  if (raw === 'featured') return FEATURED_VIDEOS[0]
   return (
     FEATURED_VIDEOS.find(
       (v) =>
@@ -109,8 +111,6 @@ function featuredFromHash(hash) {
 }
 
 const Hero = () => {
-  const [showImageModal, setShowImageModal] = useState(false)
-  const [showMenu, setShowMenu] = useState(false)
   const [currentSet, setCurrentSet] = useState(null)
   const [isPlaying, setIsPlaying] = useState(false)
   const [audioError, setAudioError] = useState(false)
@@ -132,6 +132,7 @@ const Hero = () => {
   const overlayAudioRef = useRef(null)
   const videoPlayCounted = useRef({})
   const featuredStageRef = useRef(null)
+  const splashBgRef = useRef(null)
   const pendingHashScroll = useRef(
     typeof window !== 'undefined' && !!featuredFromHash(window.location.hash)
   )
@@ -142,7 +143,6 @@ const Hero = () => {
   const [volume, setVolume] = useState(1)
   const [muted, setMuted] = useState(false)
   const lastVolumeRef = useRef(1)
-  const navigate = useNavigate()
   const featuredVideo = FEATURED_VIDEOS.find((v) => v.id === featuredVideoId) || FEATURED_VIDEOS[0]
   const isYoutubeFeatured = featuredVideo.type === 'youtube'
   const isSmileGlitch = featuredVideo.id === 'rec059'
@@ -211,8 +211,8 @@ const Hero = () => {
 
   const audioUrls = Object.fromEntries(RECENT_MIXES.map((m) => [m.id, m.url]))
 
-  const scrollToAbout = () => {
-    document.getElementById('about')?.scrollIntoView({ behavior: 'smooth' })
+  const scrollToVideos = () => {
+    document.getElementById('videos')?.scrollIntoView({ behavior: 'smooth' })
   }
 
   const formatTime = (timeInSeconds) => {
@@ -357,7 +357,7 @@ const Hero = () => {
     if (!pendingHashScroll.current) return
     pendingHashScroll.current = false
     const t = window.setTimeout(() => {
-      document.getElementById('featured')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      document.getElementById('videos')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
     }, 50)
     return () => window.clearTimeout(t)
   }, [featuredVideoId])
@@ -365,6 +365,14 @@ const Hero = () => {
   useEffect(() => {
     applyMediaVolume(videoRef.current, volume, muted)
   }, [featuredVideoId, volume, muted])
+
+  useEffect(() => {
+    const bg = splashBgRef.current
+    if (!bg) return
+    bg.muted = true
+    bg.playsInline = true
+    bg.play().catch(() => {})
+  }, [])
 
   const clampHour = (t) => Math.max(0, Math.min(LONG_ROAD_END_SEC, t))
 
@@ -494,8 +502,6 @@ const Hero = () => {
     const host = ytHostRef.current
     if (!host) return undefined
 
-    // YouTube replaces its mount node with an iframe. Keep that node outside React
-    // ownership so tab switches don't white-screen on removeChild.
     const mount = document.createElement('div')
     mount.className = 'h-full w-full'
     host.replaceChildren(mount)
@@ -629,337 +635,212 @@ const Hero = () => {
   const currentMix = RECENT_MIXES.find((m) => m.id === currentSet)
 
   return (
-    <section className="min-h-screen bg-gradient-to-br from-purple-900 via-black to-blue-900 relative overflow-hidden px-4 sm:px-6 lg:px-8">
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <motion.div className="absolute -top-20 -right-20 w-40 h-40 sm:w-80 sm:h-80 bg-purple-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob" />
-        <motion.div className="absolute -bottom-20 -left-20 w-40 h-40 sm:w-80 sm:h-80 bg-blue-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob animation-delay-2000" />
-        <motion.div className="absolute top-20 left-20 w-40 h-40 sm:w-80 sm:h-80 bg-pink-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob animation-delay-4000" />
-      </div>
+    <>
+      {/* Splash */}
+      <section className="relative min-h-screen bg-ink overflow-hidden flex flex-col">
+        <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
+          <video
+            ref={splashBgRef}
+            className="splash-bg-video absolute inset-0 h-full w-full object-cover"
+            src={config.VIDEO_FILES.LINTURO_GLITCH}
+            poster={config.VIDEO_FILES.LINTURO_GLITCH_POSTER}
+            muted
+            loop
+            playsInline
+            autoPlay
+            preload="metadata"
+          />
+          <div className="splash-vignette absolute inset-0" />
+        </div>
 
-      <div className="absolute top-6 right-6 z-50">
-        <motion.button
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.9 }}
-          onClick={() => setShowMenu(!showMenu)}
-          className="p-2 rounded-lg bg-white/10 backdrop-blur-sm border border-purple-400/50 hover:bg-white/20 transition-all duration-200"
-        >
-          <Bars3Icon className="w-6 h-6 text-purple-200" />
-        </motion.button>
+        <SiteNav />
 
-        {showMenu && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
+        <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-4 pb-16 pt-4">
+          <motion.img
+            src="/linturo-tag.png"
+            alt="linturo"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.9 }}
+            className="w-[min(88vw,520px)] sm:w-[min(70vw,640px)] h-auto object-contain select-none"
+            draggable={false}
+          />
+          <motion.p
+            initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
-            className="absolute right-0 mt-2 w-48 bg-gray-900/95 backdrop-blur-md border border-purple-500/30 rounded-lg shadow-xl overflow-hidden"
+            transition={{ duration: 0.6, delay: 0.35 }}
+            className="mt-6 text-xs sm:text-sm uppercase tracking-[0.28em] text-mute"
           >
-            <button
-              onClick={() => { navigate('/clips'); setShowMenu(false) }}
-              className="w-full px-4 py-3 text-left text-purple-200 hover:bg-purple-600/20 hover:text-white transition-colors duration-200"
+            NYC/Brooklyn DJ
+          </motion.p>
+          <motion.button
+            type="button"
+            onClick={scrollToVideos}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1, y: [0, 8, 0] }}
+            transition={{
+              opacity: { duration: 0.6, delay: 0.7 },
+              y: { duration: 2, repeat: Infinity, ease: 'easeInOut' },
+            }}
+            className="mt-12 p-2 border border-hairline text-mute hover:text-paper hover:border-mute transition-colors"
+            aria-label="Scroll to videos"
+          >
+            <ArrowDownIcon className="h-5 w-5" />
+          </motion.button>
+        </div>
+      </section>
+
+      {/* Videos */}
+      <section id="videos" className="bg-ink border-t border-hairline scroll-mt-4">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-20">
+          <p className="text-xs uppercase tracking-[0.28em] text-mute mb-6">Videos</p>
+
+          <div
+            role="tablist"
+            aria-label="Featured visual mixes"
+            className="mb-6 flex flex-wrap gap-x-5 gap-y-2"
+          >
+            {FEATURED_VIDEOS.map((video) => {
+              const selected = featuredVideoId === video.id
+              return (
+                <button
+                  key={video.id}
+                  id={`tab-${video.slug}`}
+                  type="button"
+                  role="tab"
+                  aria-selected={selected}
+                  aria-controls={video.slug}
+                  aria-label={video.title}
+                  onClick={() => handleFeaturedTab(video.id)}
+                  className={`text-sm sm:text-base pb-1 transition-colors duration-200 ${
+                    selected
+                      ? 'text-paper border-b border-paper'
+                      : 'text-mute hover:text-paper border-b border-transparent'
+                  }`}
+                >
+                  {video.title}
+                </button>
+              )
+            })}
+          </div>
+
+          <div
+            id="featured"
+            className="relative scroll-mt-24 border border-hairline bg-black text-left"
+          >
+            {FEATURED_VIDEOS.map((video) => (
+              <span
+                key={video.slug}
+                id={video.slug}
+                className="absolute top-0 left-0 h-0 w-0 overflow-hidden"
+                aria-hidden="true"
+              />
+            ))}
+            <div
+              ref={featuredStageRef}
+              className={`video-stage relative bg-black ${
+                isFullscreen ? 'flex h-full w-full items-center justify-center' : 'aspect-video'
+              } ${isSmileGlitch ? 'smile-stage' : ''}`}
             >
-              Clips
-            </button>
-          </motion.div>
-        )}
-      </div>
-
-      <div className="relative z-10 max-w-4xl mx-auto text-center pt-8 sm:pt-12 lg:pt-16">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
-        >
-          <motion.h1
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.2 }}
-            className="text-6xl sm:text-8xl lg:text-9xl font-bold text-white mb-4 sm:mb-6"
-          >
-            <span className="bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent font-brand">
-              linturo
-            </span>
-          </motion.h1>
-
-          <motion.div
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.8, delay: 0.4 }}
-            className="mb-6 sm:mb-8"
-          >
-            <motion.img
-              src="https://linturomusic.s3.us-west-2.amazonaws.com/profile.jpg"
-              alt="Linturo DJ"
-              onClick={() => setShowImageModal(true)}
-              className="w-32 h-32 sm:w-40 sm:h-40 lg:w-48 lg:h-48 mx-auto rounded-full object-cover shadow-2xl border-4 border-purple-500/30 hover:border-purple-400/50 transition-all duration-300 hover:scale-105 cursor-pointer"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            />
-          </motion.div>
-
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.6 }}
-            className="text-xl sm:text-2xl lg:text-4xl text-purple-200 mb-6 sm:mb-8 max-w-2xl mx-auto"
-          >
-            Brooklyn based DJ
-          </motion.p>
-
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.8 }}
-            className="text-lg sm:text-xl text-purple-300 mb-8 sm:mb-10 max-w-2xl mx-auto px-4"
-          >
-            I'm open to play at bars, clubs, parties, parks, basements, my house, your house - really anywhere I can fit a deck and a speaker. I just like music, so hit me if you like my style. I'm new-ish to New York so still looking to meet people who can bring me deeper into the music scene here.
-          </motion.p>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 1.05 }}
-            className="mt-8 sm:mt-10 max-w-2xl mx-auto"
-          >
-            <p className="text-sm uppercase tracking-widest text-purple-400/90 mb-4 font-medium">
-              Recent Mixes
-            </p>
-
-            <div className="grid grid-cols-2 gap-2 sm:gap-3">
-              {RECENT_MIXES.map((mix) => {
-                const active = currentSet === mix.id
-                const playing = active && isPlaying
-                const loading = isLoading && active
-                const liked = likedIds.has(mix.id)
-                const mixStats = stats[mix.id] || { plays: 0, likes: 0 }
-
-                return (
+              {isYoutubeFeatured ? (
+                <div className="relative h-full w-full bg-black">
                   <div
-                    key={mix.id}
-                    className={`rounded-xl overflow-hidden transition-all duration-300 ${
-                      playing
-                        ? 'bg-gradient-to-r from-red-600/90 to-orange-600/90 text-white shadow-lg'
-                        : 'bg-white/10 backdrop-blur-sm text-purple-100 border border-purple-500/40'
-                    }`}
-                  >
-                    <motion.button
-                      whileHover={{ scale: 1.01 }}
-                      whileTap={{ scale: 0.99 }}
-                      onClick={() => handleAudioToggle(mix.id)}
-                      disabled={loading}
-                      className="w-full flex items-center justify-between gap-2 px-3 pt-2.5 pb-1 sm:px-5 sm:pt-3.5 sm:pb-1.5 font-semibold disabled:opacity-60"
-                    >
-                      <span className="flex items-center gap-2 sm:gap-3 min-w-0">
-                        {loading ? (
-                          <div className="animate-spin rounded-full h-4 w-4 sm:h-5 sm:w-5 border-b-2 border-white shrink-0" />
-                        ) : playing ? (
-                          <PauseIcon className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
-                        ) : (
-                          <PlayIcon className="w-4 h-4 sm:w-5 sm:h-5 shrink-0 text-pink-300" />
-                        )}
-                        <span className="truncate text-sm sm:text-base">{mix.title}</span>
-                      </span>
-                    </motion.button>
-                    <div className="flex items-center justify-between px-3 pb-2 sm:px-5 sm:pb-2.5">
-                      <span className={`text-[11px] sm:text-xs tabular-nums ${playing ? 'text-white/80' : 'text-purple-200/70'}`}>
-                        {formatCount(mixStats.plays)} plays
-                      </span>
-                      <button
-                        type="button"
-                        onClick={(e) => handleLike(mix.id, e)}
-                        className={`inline-flex items-center gap-1 text-[11px] sm:text-xs tabular-nums transition-colors ${
-                          liked ? 'text-pink-300' : playing ? 'text-white/80 hover:text-white' : 'text-purple-200/80 hover:text-pink-300'
-                        }`}
-                        aria-label={liked ? `Unlike ${mix.title}` : `Like ${mix.title}`}
-                      >
-                        {liked ? (
-                          <HeartIconSolid className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                        ) : (
-                          <HeartIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                        )}
-                        {formatCount(mixStats.likes)}
-                      </button>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-
-            {showControls && currentMix && (
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="mt-4 p-4 rounded-xl bg-black/30 backdrop-blur-sm border border-purple-500/30 text-left"
-              >
-                <p className="text-center text-purple-200 text-sm mb-3">{currentMix.title}</p>
-                <div
-                  className="w-full h-2 bg-gray-700 rounded-full cursor-pointer overflow-hidden mb-2"
-                  onClick={handleSeek}
-                >
-                  <div
-                    className="h-full bg-gradient-to-r from-purple-400 to-pink-400 transition-all duration-100"
-                    style={{ width: `${duration > 0 ? (currentTime / duration) * 100 : 0}%` }}
+                    ref={ytHostRef}
+                    className="pointer-events-none h-full w-full [&>div]:h-full [&>div]:w-full [&_iframe]:h-full [&_iframe]:w-full"
                   />
-                </div>
-                <div className="flex justify-between items-center gap-3 text-xs text-purple-200">
-                  <span>{formatTime(currentTime)}</span>
-                  <VolumeControl
-                    volume={volume}
-                    muted={muted}
-                    onVolumeChange={handleVolumeChange}
-                    onToggleMute={handleToggleMute}
-                  />
-                  <span>{formatTime(duration)}</span>
-                </div>
-              </motion.div>
-            )}
-
-            {audioError && (
-              <p className="text-red-400 text-sm mt-3">
-                Audio temporarily unavailable. Please try again.
-              </p>
-            )}
-
-            <div className="mt-10 sm:mt-12 scroll-mt-24">
-              <p className="text-sm uppercase tracking-[0.28em] text-purple-400/90 mb-4 font-medium">
-                Featured
-              </p>
-              <div
-                role="tablist"
-                aria-label="Featured visual mixes"
-                className="mb-3 flex flex-wrap gap-2"
-              >
-                {FEATURED_VIDEOS.map((video) => {
-                  const selected = featuredVideoId === video.id
-                  return (
+                  <div className="absolute inset-0 flex flex-col justify-end bg-gradient-to-t from-black/80 via-transparent to-black/30">
                     <button
-                      key={video.id}
-                      id={`tab-${video.slug}`}
                       type="button"
-                      role="tab"
-                      aria-selected={selected}
-                      aria-controls={video.slug}
-                      aria-label={video.title}
-                      onClick={() => handleFeaturedTab(video.id)}
-                      className={`rounded-xl px-3 py-2.5 sm:px-4 sm:py-3 text-sm sm:text-base font-semibold leading-tight whitespace-nowrap transition-all duration-200 ${
-                        video.id === 'linturo' ? 'font-brand text-lg sm:text-xl px-4 sm:px-5 py-3' : ''
-                      } ${
-                        selected
-                          ? 'bg-gradient-to-r from-purple-600/90 to-pink-600/90 text-white shadow-lg border border-transparent'
-                          : 'bg-white/10 backdrop-blur-sm text-purple-100 border border-purple-500/40 hover:bg-white/15'
-                      }`}
+                      onClick={toggleLongRoadPlay}
+                      disabled={!ytReady}
+                      className="absolute inset-x-0 top-0 bottom-14 flex items-center justify-center disabled:opacity-50"
+                      aria-label={ytPlaying ? 'Pause Long Road' : 'Play Long Road'}
                     >
-                      {video.title}
+                      {!ytPlaying && (
+                        <span className="rounded-full bg-black/70 p-4 border border-white/20">
+                          <PlayIcon className="h-10 w-10 text-white" />
+                        </span>
+                      )}
                     </button>
-                  )
-                })}
-              </div>
-              <div
-                id="featured"
-                className="relative scroll-mt-24 rounded-2xl overflow-hidden border border-purple-400/25 bg-black/50 shadow-[0_24px_80px_rgba(76,29,149,0.35)] text-left"
-              >
-                {/* Stable anchors so hash links resolve even before the matching tab is selected */}
-                {FEATURED_VIDEOS.map((video) => (
-                  <span key={video.slug} id={video.slug} className="absolute top-0 left-0 h-0 w-0 overflow-hidden" aria-hidden="true" />
-                ))}
-                <div
-                  ref={featuredStageRef}
-                  className={`video-stage relative bg-black ${isFullscreen ? 'flex h-full w-full items-center justify-center' : 'aspect-video'} ${isSmileGlitch ? 'smile-stage' : ''}`}
-                >
-                  {isYoutubeFeatured ? (
-                    <div className="relative h-full w-full bg-black">
+                    <button
+                      type="button"
+                      onClick={toggleFeaturedFullscreen}
+                      className="absolute top-3 right-3 z-20 rounded bg-black/60 p-2 border border-white/15 text-white hover:bg-black/80"
+                      aria-label={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
+                    >
+                      {isFullscreen ? (
+                        <ArrowsPointingInIcon className="h-5 w-5" />
+                      ) : (
+                        <ArrowsPointingOutIcon className="h-5 w-5" />
+                      )}
+                    </button>
+                    <div className="relative z-10 px-4 pb-3 pt-2">
                       <div
-                        ref={ytHostRef}
-                        className="pointer-events-none h-full w-full [&>div]:h-full [&>div]:w-full [&_iframe]:h-full [&_iframe]:w-full"
-                      />
-                      <div className="absolute inset-0 flex flex-col justify-end bg-gradient-to-t from-black/70 via-transparent to-black/20">
-                        <button
-                          type="button"
-                          onClick={toggleLongRoadPlay}
-                          disabled={!ytReady}
-                          className="absolute inset-x-0 top-0 bottom-14 flex items-center justify-center disabled:opacity-50"
-                          aria-label={ytPlaying ? 'Pause Long Road' : 'Play Long Road'}
-                        >
-                          {!ytPlaying && (
-                            <span className="rounded-full bg-black/55 p-4 border border-purple-400/40">
-                              <PlayIcon className="h-10 w-10 text-white" />
-                            </span>
-                          )}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={toggleFeaturedFullscreen}
-                          className="absolute top-3 right-3 z-20 rounded-lg bg-black/55 p-2 border border-white/15 text-white hover:bg-black/75"
-                          aria-label={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
-                        >
-                          {isFullscreen ? (
-                            <ArrowsPointingInIcon className="h-5 w-5" />
-                          ) : (
-                            <ArrowsPointingOutIcon className="h-5 w-5" />
-                          )}
-                        </button>
-                        <div className="relative z-10 px-4 pb-3 pt-2">
-                          <div
-                            className="h-1.5 w-full cursor-pointer overflow-hidden rounded-full bg-gray-700"
-                            onClick={handleLongRoadSeek}
-                          >
-                            <div
-                              className="h-full bg-gradient-to-r from-purple-400 to-pink-400"
-                              style={{ width: `${(ytTime / LONG_ROAD_END_SEC) * 100}%` }}
-                            />
-                          </div>
-                          <div className="mt-1.5 flex items-center justify-between gap-3 text-[11px] text-purple-200">
-                            <span>{formatTime(ytTime)}</span>
-                            <VolumeControl
-                              volume={volume}
-                              muted={muted}
-                              onVolumeChange={handleVolumeChange}
-                              onToggleMute={handleToggleMute}
-                            />
-                            <span>{formatTime(LONG_ROAD_END_SEC)}</span>
-                          </div>
-                        </div>
+                        className="h-1 w-full cursor-pointer overflow-hidden rounded-full bg-hairline"
+                        onClick={handleLongRoadSeek}
+                      >
+                        <div
+                          className="h-full bg-paper"
+                          style={{ width: `${(ytTime / LONG_ROAD_END_SEC) * 100}%` }}
+                        />
+                      </div>
+                      <div className="mt-1.5 flex items-center justify-between gap-3 text-[11px] text-mute">
+                        <span>{formatTime(ytTime)}</span>
+                        <VolumeControl
+                          volume={volume}
+                          muted={muted}
+                          onVolumeChange={handleVolumeChange}
+                          onToggleMute={handleToggleMute}
+                        />
+                        <span>{formatTime(LONG_ROAD_END_SEC)}</span>
                       </div>
                     </div>
-                  ) : (
-                  <>
+                  </div>
+                </div>
+              ) : (
+                <>
                   <div className={isSmileGlitch ? 'smile-fx w-full h-full' : 'w-full h-full'}>
-                  <video
-                    key={featuredVideo.id}
-                    id={`player-${featuredVideo.slug}`}
-                    ref={videoRef}
-                    controls
-                    playsInline
-                    preload="metadata"
-                    poster={featuredVideo.poster}
-                    className="w-full h-full object-contain bg-black"
-                    onLoadedMetadata={(e) => applyMediaVolume(e.currentTarget, volume, muted)}
-                    onPlay={() => {
-                      if (audioRef.current) {
-                        audioRef.current.pause()
-                        setIsPlaying(false)
-                        setShowControls(false)
-                      }
-                      pauseYoutubeVisual()
-                      if (videoPlayCounted.current[featuredVideo.id]) return
-                      videoPlayCounted.current[featuredVideo.id] = true
-                      recordPlay(featuredVideo.id).then((plays) => {
-                        if (plays == null) return
-                        setStats((prev) => ({
-                          ...prev,
-                          [featuredVideo.id]: { plays, likes: prev[featuredVideo.id]?.likes || 0 },
-                        }))
-                      })
-                    }}
-                    onEnded={() => {
-                      videoPlayCounted.current[featuredVideo.id] = false
-                    }}
-                  >
-                    <source src={featuredVideo.src} type="video/mp4" />
-                  </video>
+                    <video
+                      key={featuredVideo.id}
+                      id={`player-${featuredVideo.slug}`}
+                      ref={videoRef}
+                      controls
+                      playsInline
+                      preload="metadata"
+                      poster={featuredVideo.poster}
+                      className="w-full h-full object-contain bg-black"
+                      onLoadedMetadata={(e) => applyMediaVolume(e.currentTarget, volume, muted)}
+                      onPlay={() => {
+                        if (audioRef.current) {
+                          audioRef.current.pause()
+                          setIsPlaying(false)
+                          setShowControls(false)
+                        }
+                        pauseYoutubeVisual()
+                        if (videoPlayCounted.current[featuredVideo.id]) return
+                        videoPlayCounted.current[featuredVideo.id] = true
+                        recordPlay(featuredVideo.id).then((plays) => {
+                          if (plays == null) return
+                          setStats((prev) => ({
+                            ...prev,
+                            [featuredVideo.id]: {
+                              plays,
+                              likes: prev[featuredVideo.id]?.likes || 0,
+                            },
+                          }))
+                        })
+                      }}
+                      onEnded={() => {
+                        videoPlayCounted.current[featuredVideo.id] = false
+                      }}
+                    >
+                      <source src={featuredVideo.src} type="video/mp4" />
+                    </video>
                   </div>
                   <button
                     type="button"
                     onClick={toggleFeaturedFullscreen}
-                    className="absolute top-3 right-3 z-20 rounded-lg bg-black/55 p-2 border border-white/15 text-white hover:bg-black/75"
+                    className="absolute top-3 right-3 z-20 rounded bg-black/60 p-2 border border-white/15 text-white hover:bg-black/80"
                     aria-label={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
                   >
                     {isFullscreen ? (
@@ -968,134 +849,174 @@ const Hero = () => {
                       <ArrowsPointingOutIcon className="h-5 w-5" />
                     )}
                   </button>
-                  </>
+                </>
+              )}
+            </div>
+            <div className="px-5 py-4 sm:px-6 border-t border-hairline flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <p className="text-paper text-lg sm:text-xl font-medium tracking-wide">
+                  {featuredVideo.title}
+                </p>
+                <p className="text-mute text-sm mt-0.5">{featuredVideo.subtitle}</p>
+              </div>
+              <div className="flex items-center gap-3 sm:gap-4 shrink-0">
+                <VolumeControl
+                  volume={volume}
+                  muted={muted}
+                  onVolumeChange={handleVolumeChange}
+                  onToggleMute={handleToggleMute}
+                />
+                <button
+                  type="button"
+                  onClick={toggleFeaturedFullscreen}
+                  className="inline-flex items-center gap-1.5 text-xs sm:text-sm text-mute hover:text-paper transition-colors"
+                  aria-label={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
+                >
+                  {isFullscreen ? (
+                    <ArrowsPointingInIcon className="w-5 h-5" />
+                  ) : (
+                    <ArrowsPointingOutIcon className="w-5 h-5" />
                   )}
-                </div>
-                <div className="px-5 py-4 sm:px-6 border-t border-purple-500/20 bg-gradient-to-r from-purple-950/70 to-black/70 flex items-center justify-between gap-4">
-                  <div>
-                    <p
-                      className={`text-white tracking-wide ${
-                        featuredVideo.id === 'linturo'
-                          ? 'font-brand text-2xl sm:text-3xl'
-                          : 'text-lg sm:text-xl font-semibold'
-                      }`}
-                    >
-                      {featuredVideo.title}
-                    </p>
-                    <p className="text-purple-300/80 text-sm mt-0.5">
-                      {featuredVideo.subtitle}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-3 sm:gap-4 shrink-0">
-                    <VolumeControl
-                      volume={volume}
-                      muted={muted}
-                      onVolumeChange={handleVolumeChange}
-                      onToggleMute={handleToggleMute}
-                    />
-                    <button
-                      type="button"
-                      onClick={toggleFeaturedFullscreen}
-                      className="inline-flex items-center gap-1.5 text-xs sm:text-sm text-purple-200/80 hover:text-white transition-colors"
-                      aria-label={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
-                    >
-                      {isFullscreen ? (
-                        <ArrowsPointingInIcon className="w-5 h-5" />
-                      ) : (
-                        <ArrowsPointingOutIcon className="w-5 h-5" />
-                      )}
-                      <span className="hidden sm:inline">{isFullscreen ? 'Exit' : 'Full screen'}</span>
-                    </button>
-                    <span className="text-xs sm:text-sm text-purple-200/80 tabular-nums">
-                      {formatCount(stats[featuredVideo.id]?.plays || 0)} plays
-                    </span>
-                    <button
-                      type="button"
-                      onClick={(e) => handleLike(featuredVideo.id, e)}
-                      className={`inline-flex items-center gap-1.5 text-xs sm:text-sm tabular-nums transition-colors ${
-                        likedIds.has(featuredVideo.id) ? 'text-pink-300' : 'text-purple-200/80 hover:text-pink-300'
-                      }`}
-                      aria-label={likedIds.has(featuredVideo.id) ? `Unlike ${featuredVideo.title}` : `Like ${featuredVideo.title}`}
-                    >
-                      {likedIds.has(featuredVideo.id) ? (
-                        <HeartIconSolid className="w-5 h-5" />
-                      ) : (
-                        <HeartIcon className="w-5 h-5" />
-                      )}
-                      {formatCount(stats[featuredVideo.id]?.likes || 0)}
-                    </button>
-                  </div>
-                </div>
+                  <span className="hidden sm:inline">{isFullscreen ? 'Exit' : 'Full screen'}</span>
+                </button>
+                {SHOW_PLAY_COUNTS && (
+                  <span className="text-xs sm:text-sm text-mute tabular-nums">
+                    {formatCount(stats[featuredVideo.id]?.plays || 0)} plays
+                  </span>
+                )}
+                <button
+                  type="button"
+                  onClick={(e) => handleLike(featuredVideo.id, e)}
+                  className={`inline-flex items-center gap-1.5 text-xs sm:text-sm tabular-nums transition-colors ${
+                    likedIds.has(featuredVideo.id)
+                      ? 'text-paper'
+                      : 'text-mute hover:text-paper'
+                  }`}
+                  aria-label={
+                    likedIds.has(featuredVideo.id)
+                      ? `Unlike ${featuredVideo.title}`
+                      : `Like ${featuredVideo.title}`
+                  }
+                >
+                  {likedIds.has(featuredVideo.id) ? (
+                    <HeartIconSolid className="w-5 h-5" />
+                  ) : (
+                    <HeartIcon className="w-5 h-5" />
+                  )}
+                  {formatCount(stats[featuredVideo.id]?.likes || 0)}
+                </button>
               </div>
             </div>
-          </motion.div>
+          </div>
+        </div>
+      </section>
 
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 1.1 }}
-            className={`flex justify-center space-x-3 items-end ${isPlaying ? 'mt-6' : 'mt-10'}`}
-            style={{ height: '80px' }}
-          >
-            {[...Array(8)].map((_, i) => (
-              <motion.div
-                key={i}
-                animate={isPlaying ? { height: [30, 80, 30] } : { height: 30 }}
-                transition={{ duration: 0.6, repeat: isPlaying ? Infinity : 0, delay: i * 0.1 }}
-                className="w-3 bg-gradient-to-t from-purple-400 to-pink-400 rounded-full"
-                style={{ height: '30px' }}
-              />
-            ))}
-          </motion.div>
+      {/* Mixes */}
+      <section id="mixes" className="bg-ink border-t border-hairline scroll-mt-4">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-20">
+          <p className="text-xs uppercase tracking-[0.28em] text-mute mb-6">Mixes</p>
 
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 1, delay: 1.2 }}
-            className={`flex justify-center ${isPlaying ? 'mt-4' : 'mt-8'}`}
-          >
-            <motion.button
-              onClick={scrollToAbout}
-              animate={{ y: [0, 10, 0] }}
-              transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-              className="p-2 rounded-full bg-white/10 backdrop-blur-sm border border-purple-400"
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {RECENT_MIXES.map((mix) => {
+              const active = currentSet === mix.id
+              const playing = active && isPlaying
+              const loading = isLoading && active
+              const liked = likedIds.has(mix.id)
+              const mixStats = stats[mix.id] || { plays: 0, likes: 0 }
+
+              return (
+                <div
+                  key={mix.id}
+                  className={`flex items-center gap-3 px-3 py-3 border transition-colors ${
+                    playing
+                      ? 'border-paper bg-white/[0.04]'
+                      : 'border-hairline hover:border-mute/60'
+                  }`}
+                >
+                  <button
+                    type="button"
+                    onClick={() => handleAudioToggle(mix.id)}
+                    disabled={loading}
+                    className="flex items-center gap-3 min-w-0 flex-1 text-left disabled:opacity-60"
+                    aria-label={playing ? `Pause ${mix.title}` : `Play ${mix.title}`}
+                  >
+                    {loading ? (
+                      <div className="animate-spin rounded-full h-4 w-4 border-b border-paper shrink-0" />
+                    ) : playing ? (
+                      <PauseIcon className="w-4 h-4 shrink-0 text-paper" />
+                    ) : (
+                      <PlayIcon className="w-4 h-4 shrink-0 text-mute" />
+                    )}
+                    <span
+                      className={`truncate text-sm sm:text-base ${
+                        playing ? 'text-paper' : 'text-mute'
+                      }`}
+                    >
+                      {mix.title}
+                    </span>
+                  </button>
+                  {SHOW_PLAY_COUNTS && (
+                    <span className="text-[11px] sm:text-xs tabular-nums text-mute shrink-0">
+                      {formatCount(mixStats.plays)}
+                    </span>
+                  )}
+                  <button
+                    type="button"
+                    onClick={(e) => handleLike(mix.id, e)}
+                    className={`inline-flex items-center gap-1 text-[11px] sm:text-xs tabular-nums shrink-0 transition-colors ${
+                      liked ? 'text-paper' : 'text-mute hover:text-paper'
+                    }`}
+                    aria-label={liked ? `Unlike ${mix.title}` : `Like ${mix.title}`}
+                  >
+                    {liked ? (
+                      <HeartIconSolid className="w-3.5 h-3.5" />
+                    ) : (
+                      <HeartIcon className="w-3.5 h-3.5" />
+                    )}
+                    {formatCount(mixStats.likes)}
+                  </button>
+                </div>
+              )
+            })}
+          </div>
+
+          {showControls && currentMix && (
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mt-4 p-4 border border-hairline"
             >
-              <ArrowDownIcon className="h-5 w-5 sm:h-6 sm:w-6 text-purple-200" />
-            </motion.button>
-          </motion.div>
-        </motion.div>
-      </div>
+              <p className="text-center text-mute text-sm mb-3">{currentMix.title}</p>
+              <div
+                className="w-full h-1 bg-hairline rounded-full cursor-pointer overflow-hidden mb-2"
+                onClick={handleSeek}
+              >
+                <div
+                  className="h-full bg-paper transition-all duration-100"
+                  style={{ width: `${duration > 0 ? (currentTime / duration) * 100 : 0}%` }}
+                />
+              </div>
+              <div className="flex justify-between items-center gap-3 text-xs text-mute">
+                <span>{formatTime(currentTime)}</span>
+                <VolumeControl
+                  volume={volume}
+                  muted={muted}
+                  onVolumeChange={handleVolumeChange}
+                  onToggleMute={handleToggleMute}
+                />
+                <span>{formatTime(duration)}</span>
+              </div>
+            </motion.div>
+          )}
 
-      {showImageModal && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-          onClick={() => setShowImageModal(false)}
-        >
-          <motion.div
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            className="relative max-w-2xl w-full"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button
-              onClick={() => setShowImageModal(false)}
-              className="absolute -top-4 -right-4 z-10 w-10 h-10 bg-purple-600 hover:bg-purple-700 rounded-full flex items-center justify-center text-white shadow-lg"
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-            <img
-              src="https://linturomusic.s3.us-west-2.amazonaws.com/profile.jpg"
-              alt="Linturo DJ"
-              className="w-full h-auto rounded-lg shadow-2xl border-4 border-purple-500/30"
-            />
-          </motion.div>
-        </motion.div>
-      )}
-    </section>
+          {audioError && (
+            <p className="text-mute text-sm mt-3">
+              Audio temporarily unavailable. Please try again.
+            </p>
+          )}
+        </div>
+      </section>
+    </>
   )
 }
 

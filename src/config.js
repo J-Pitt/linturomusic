@@ -2,8 +2,7 @@
 // Uses environment variables for production builds to obfuscate sensitive information
 
 export const config = {
-  // Contact information (obfuscated in production)
-  CONTACT_EMAIL: import.meta.env.VITE_CONTACT_EMAIL || 'linturomusic@gmail.com',
+  // Contact is form-only (Formspree) — no public email on the client
   
   // Audio file URLs (obfuscated in production)
   AUDIO_FILES: {

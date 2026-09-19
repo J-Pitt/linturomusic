@@ -2,13 +2,12 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Custom styles */
 @layer base {
   html {
     scroll-behavior: smooth;
     overflow-x: hidden;
   }
-  
+
   body {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
       'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
@@ -17,93 +16,45 @@
     -moz-osx-font-smoothing: grayscale;
     overflow-x: hidden;
     width: 100%;
+    background-color: #000000;
+    color: #f5f5f5;
   }
 }
 
 @layer components {
-  /* Custom animations */
-  @keyframes blob {
-    0% {
-      transform: translate(0px, 0px) scale(1);
-    }
-    33% {
-      transform: translate(30px, -50px) scale(1.1);
-    }
-    66% {
-      transform: translate(-20px, 20px) scale(0.9);
-    }
-    100% {
-      transform: translate(0px, 0px) scale(1);
-    }
-  }
-  
-  .animate-blob {
-    animation: blob 7s infinite;
-  }
-  
-  .animation-delay-2000 {
-    animation-delay: 2s;
-  }
-  
-  .animation-delay-4000 {
-    animation-delay: 4s;
-  }
-  
-  /* Line clamp utility */
   .line-clamp-3 {
     display: -webkit-box;
     -webkit-line-clamp: 3;
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
-  
-  /* Custom scrollbar */
+
   ::-webkit-scrollbar {
     width: 8px;
   }
-  
+
   ::-webkit-scrollbar-track {
-    background: #f1f5f9;
+    background: #000000;
   }
-  
+
   ::-webkit-scrollbar-thumb {
-    background: #cbd5e1;
+    background: #27272a;
     border-radius: 4px;
   }
-  
+
   ::-webkit-scrollbar-thumb:hover {
-    background: #94a3b8;
-  }
-  
-  /* Dark mode scrollbar */
-  .dark ::-webkit-scrollbar-track {
-    background: #1e293b;
-  }
-  
-  .dark ::-webkit-scrollbar-thumb {
-    background: #475569;
-  }
-  
-  .dark ::-webkit-scrollbar-thumb:hover {
-    background: #64748b;
+    background: #3f3f46;
   }
 }
 
 @layer utilities {
-  /* Custom gradients */
-  .bg-gradient-radial {
-    background: radial-gradient(ellipse at center, var(--tw-gradient-stops));
-  }
-  
-  /* Text selection */
   ::selection {
-    background-color: #3b82f6;
-    color: white;
+    background-color: #f5f5f5;
+    color: #000000;
   }
-  
-  /* Focus styles */
+
   .focus-ring {
-    @apply focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900;
+    @apply focus:outline-none focus:ring-1 focus:ring-white focus:ring-offset-1 focus:ring-offset-black;
   }
 }
 
@@ -117,34 +68,16 @@
   justify-content: center;
 }
 
-/* Slow breathe + slick trippy pulse for the Smile visual */
+/* Slow breathe for Smile visual — monochrome */
 @keyframes smile-breathe {
   0%,
   100% {
     transform: scale(1);
-    filter: saturate(1.05) contrast(1.02) hue-rotate(0deg) brightness(1);
-  }
-  35% {
-    transform: scale(1.06);
-    filter: saturate(1.22) contrast(1.08) hue-rotate(8deg) brightness(1.04);
-  }
-  65% {
-    transform: scale(1.1);
-    filter: saturate(1.35) contrast(1.12) hue-rotate(-10deg) brightness(1.06);
-  }
-}
-
-@keyframes smile-chroma {
-  0%,
-  100% {
-    opacity: 0.18;
-    transform: scale(1.02);
-    filter: hue-rotate(0deg);
+    filter: saturate(0.2) contrast(1.05) brightness(0.95);
   }
   50% {
-    opacity: 0.32;
-    transform: scale(1.12);
-    filter: hue-rotate(25deg);
+    transform: scale(1.04);
+    filter: saturate(0.25) contrast(1.1) brightness(1);
   }
 }
 
@@ -167,25 +100,32 @@
   inset: -8%;
   pointer-events: none;
   z-index: 4;
-  background:
-    radial-gradient(circle at 50% 42%, rgba(255, 80, 200, 0.16), transparent 55%),
-    radial-gradient(circle at 48% 48%, rgba(120, 80, 255, 0.12), transparent 60%);
+  background: radial-gradient(circle at 50% 42%, rgba(255, 255, 255, 0.06), transparent 55%);
   mix-blend-mode: screen;
-  animation: smile-chroma 11s ease-in-out infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .smile-fx,
-  .smile-stage::after {
+  .smile-fx {
     animation: none;
   }
 }
 
-/* Volume slider */
+/* Splash background video — desaturated + darkened (intensity ~4) */
+.splash-bg-video {
+  filter: grayscale(1) brightness(0.35) contrast(1.05);
+}
+
+.splash-vignette {
+  background:
+    radial-gradient(ellipse at center, transparent 20%, rgba(0, 0, 0, 0.55) 70%, rgba(0, 0, 0, 0.9) 100%),
+    linear-gradient(to bottom, rgba(0, 0, 0, 0.35) 0%, transparent 30%, transparent 70%, rgba(0, 0, 0, 0.85) 100%);
+}
+
+/* Volume slider — white/gray */
 .volume-slider {
   -webkit-appearance: none;
   appearance: none;
-  background: rgba(168, 85, 247, 0.35);
+  background: rgba(255, 255, 255, 0.25);
   border-radius: 9999px;
 }
 .volume-slider::-webkit-slider-thumb {
@@ -194,7 +134,7 @@
   width: 12px;
   height: 12px;
   border-radius: 9999px;
-  background: #f472b6;
+  background: #f5f5f5;
   cursor: pointer;
 }
 .volume-slider::-moz-range-thumb {
@@ -202,6 +142,6 @@
   height: 12px;
   border: none;
   border-radius: 9999px;
-  background: #f472b6;
+  background: #f5f5f5;
   cursor: pointer;
 }

@@ -21,7 +21,7 @@ export default function VolumeControl({
       <button
         type="button"
         onClick={onToggleMute}
-        className="rounded-md p-1 text-purple-200/90 hover:text-white transition-colors"
+        className="rounded-md p-1 text-mute hover:text-paper transition-colors"
         aria-label={muted || volume === 0 ? 'Unmute' : 'Mute'}
       >
         {muted || volume === 0 ? (
@@ -37,7 +37,7 @@ export default function VolumeControl({
         step={0.01}
         value={level}
         onChange={(e) => onVolumeChange(Number(e.target.value))}
-        className="volume-slider w-16 sm:w-24 h-1.5 cursor-pointer accent-pink-400"
+        className="volume-slider w-16 sm:w-24 h-1.5 cursor-pointer accent-white"
         aria-label="Volume"
       />
     </div>

@@ -5,6 +5,7 @@ import Contact from './components/Contact'
 import Clips from './components/Clips'
 import Zoe from './components/Zoe'
 import Footer from './components/Footer'
+import SiteNav from './components/SiteNav'
 import './App.css'
 
 function App() {
@@ -13,15 +14,34 @@ function App() {
       <div className="App">
         <main>
           <Routes>
-            <Route path="/" element={
-              <>
-                <Hero />
-                <About />
-                <Contact />
-              </>
-            } />
-            <Route path="/about" element={<About />} />
-            <Route path="/contact" element={<Contact />} />
+            <Route
+              path="/"
+              element={
+                <>
+                  <Hero />
+                  <About />
+                  <Contact />
+                </>
+              }
+            />
+            <Route
+              path="/about"
+              element={
+                <>
+                  <SiteNav />
+                  <About />
+                </>
+              }
+            />
+            <Route
+              path="/contact"
+              element={
+                <>
+                  <SiteNav />
+                  <Contact />
+                </>
+              }
+            />
             <Route path="/clips" element={<Clips />} />
             <Route path="/zoe" element={<Zoe />} />
           </Routes>
