@@ -784,7 +784,7 @@ const Hero = () => {
                       aria-label={video.title}
                       onClick={() => handleFeaturedTab(video.id)}
                       className={`rounded-xl px-3 py-2.5 sm:px-4 sm:py-3 text-sm sm:text-base font-semibold leading-tight whitespace-nowrap transition-all duration-200 ${
-                        video.id === 'linturo' ? 'font-brand text-base sm:text-lg tracking-wide' : ''
+                        video.id === 'linturo' ? 'font-brand text-lg sm:text-xl px-4 sm:px-5 py-3' : ''
                       } ${
                         selected
                           ? 'bg-gradient-to-r from-purple-600/90 to-pink-600/90 text-white shadow-lg border border-transparent'
