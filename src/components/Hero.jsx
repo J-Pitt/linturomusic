@@ -655,7 +655,7 @@ const Hero = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.9 }}
-            className="splash-logo w-[min(88vw,520px)] sm:w-[min(70vw,640px)]"
+            className="splash-logo w-[min(96vw,1040px)] sm:w-[min(96vw,1280px)]"
             role="img"
             aria-label="linturo"
           >
