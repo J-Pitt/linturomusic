@@ -110,20 +110,36 @@
   }
 }
 
-/* Splash logo — muted looping glitch, no player chrome */
+/* Splash logo — decorative page mark, not a media player */
+.splash-logo {
+  line-height: 0;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
 .splash-logo-video {
   pointer-events: none;
   background: transparent;
   object-fit: contain;
+  border: 0;
+  outline: none;
+  box-shadow: none;
+  -webkit-appearance: none;
+  appearance: none;
   -webkit-mask-image: -webkit-radial-gradient(white, black);
 }
 
-.splash-logo-video::-webkit-media-controls {
+.splash-logo-video::-webkit-media-controls,
+.splash-logo-video::-webkit-media-controls-enclosure,
+.splash-logo-video::-webkit-media-controls-panel,
+.splash-logo-video::-webkit-media-controls-start-playback-button,
+.splash-logo-video::-webkit-media-controls-overlay-play-button {
   display: none !important;
-}
-
-.splash-logo-video::-webkit-media-controls-enclosure {
-  display: none !important;
+  -webkit-appearance: none !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  width: 0 !important;
+  height: 0 !important;
 }
 
 /* Volume slider — white/gray */

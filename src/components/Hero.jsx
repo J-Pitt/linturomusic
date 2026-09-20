@@ -372,9 +372,12 @@ const Hero = () => {
     logo.muted = true
     logo.defaultMuted = true
     logo.volume = 0
+    logo.controls = false
     logo.playsInline = true
     logo.setAttribute('playsinline', '')
     logo.setAttribute('webkit-playsinline', '')
+    logo.setAttribute('disablepictureinpicture', '')
+    logo.removeAttribute('controls')
     const play = () => logo.play().catch(() => {})
     play()
     logo.addEventListener('canplay', play)
@@ -652,7 +655,9 @@ const Hero = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.9 }}
-            className="w-[min(88vw,520px)] sm:w-[min(70vw,640px)]"
+            className="splash-logo w-[min(88vw,520px)] sm:w-[min(70vw,640px)]"
+            role="img"
+            aria-label="linturo"
           >
             <video
               ref={splashLogoRef}
@@ -666,8 +671,11 @@ const Hero = () => {
               preload="auto"
               controls={false}
               disablePictureInPicture
+              disableRemotePlayback
               controlsList="nodownload nofullscreen noremoteplayback"
-              aria-label="linturo"
+              tabIndex={-1}
+              aria-hidden="true"
+              onContextMenu={(e) => e.preventDefault()}
             />
           </motion.div>
           <motion.p
