@@ -132,7 +132,7 @@ const Hero = () => {
   const overlayAudioRef = useRef(null)
   const videoPlayCounted = useRef({})
   const featuredStageRef = useRef(null)
-  const splashBgRef = useRef(null)
+  const splashLogoRef = useRef(null)
   const pendingHashScroll = useRef(
     typeof window !== 'undefined' && !!featuredFromHash(window.location.hash)
   )
@@ -367,11 +367,18 @@ const Hero = () => {
   }, [featuredVideoId, volume, muted])
 
   useEffect(() => {
-    const bg = splashBgRef.current
-    if (!bg) return
-    bg.muted = true
-    bg.playsInline = true
-    bg.play().catch(() => {})
+    const logo = splashLogoRef.current
+    if (!logo) return
+    logo.muted = true
+    logo.defaultMuted = true
+    logo.volume = 0
+    logo.playsInline = true
+    logo.setAttribute('playsinline', '')
+    logo.setAttribute('webkit-playsinline', '')
+    const play = () => logo.play().catch(() => {})
+    play()
+    logo.addEventListener('canplay', play)
+    return () => logo.removeEventListener('canplay', play)
   }, [])
 
   const clampHour = (t) => Math.max(0, Math.min(LONG_ROAD_END_SEC, t))
@@ -638,33 +645,31 @@ const Hero = () => {
     <>
       {/* Splash */}
       <section className="relative min-h-screen bg-ink overflow-hidden flex flex-col">
-        <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
-          <video
-            ref={splashBgRef}
-            className="splash-bg-video absolute inset-0 h-full w-full object-cover"
-            src={config.VIDEO_FILES.LINTURO_GLITCH}
-            poster={config.VIDEO_FILES.LINTURO_GLITCH_POSTER}
-            muted
-            loop
-            playsInline
-            autoPlay
-            preload="metadata"
-          />
-          <div className="splash-vignette absolute inset-0" />
-        </div>
-
         <SiteNav />
 
         <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-4 pb-16 pt-4">
-          <motion.img
-            src="/linturo-tag.png"
-            alt="linturo"
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.9 }}
-            className="w-[min(88vw,520px)] sm:w-[min(70vw,640px)] h-auto object-contain select-none"
-            draggable={false}
-          />
+            className="w-[min(88vw,520px)] sm:w-[min(70vw,640px)]"
+          >
+            <video
+              ref={splashLogoRef}
+              className="splash-logo-video w-full h-auto block select-none"
+              src={config.VIDEO_FILES.LINTURO_GLITCH}
+              poster={config.VIDEO_FILES.LINTURO_GLITCH_POSTER}
+              muted
+              loop
+              playsInline
+              autoPlay
+              preload="auto"
+              controls={false}
+              disablePictureInPicture
+              controlsList="nodownload nofullscreen noremoteplayback"
+              aria-label="linturo"
+            />
+          </motion.div>
           <motion.p
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
