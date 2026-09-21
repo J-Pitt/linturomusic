@@ -13,6 +13,13 @@ import {
 import { DEFAULT_EFFECTS, LIVE_HOST_KEY, LIVE_PEER_ID, LIVE_PEER_OPTIONS, createHandshakeStream } from '../lib/liveConfig'
 import { drawPsychedelicFrame, fitCanvasToVideo } from '../lib/liveEffects'
 import { createLiveRecorder, publishLiveVideo, uploadRecordingBlob } from '../lib/liveRecord'
+import {
+  defaultGuestName,
+  makeChatMessage,
+  parseLivePayload,
+  saveGuestName,
+} from '../lib/liveChat'
+import LiveChat from './LiveChat'
 
 const fieldClass =
   'w-full accent-paper h-1.5 bg-hairline rounded-full appearance-none cursor-pointer'
@@ -80,6 +87,11 @@ export default function Live() {
   const [publishState, setPublishState] = useState('idle') // idle | uploading | publishing | done | error
   const [publishDetail, setPublishDetail] = useState('')
   const [uploadProgress, setUploadProgress] = useState(0)
+  const [chatMessages, setChatMessages] = useState([])
+  const [chatName, setChatName] = useState(() =>
+    typeof window !== 'undefined' ? defaultGuestName() : 'Guest'
+  )
+  const [chatConnected, setChatConnected] = useState(false)
   const hostKeyRef = useRef('')
 
   const viewerVideoRef = useRef(null)
@@ -89,6 +101,9 @@ export default function Live() {
   const outboundStreamRef = useRef(null)
   const peerRef = useRef(null)
   const callsRef = useRef(new Map())
+  const dataConnsRef = useRef(new Map())
+  const viewerDataConnRef = useRef(null)
+  const chatHistoryRef = useRef([])
   const rafRef = useRef(0)
   const effectsRef = useRef(effects)
   const startTimeRef = useRef(0)
@@ -256,7 +271,18 @@ export default function Live() {
       }
     })
     callsRef.current.clear()
+    dataConnsRef.current.forEach((conn) => {
+      try {
+        conn.close()
+      } catch {
+        /* ignore */
+      }
+    })
+    dataConnsRef.current.clear()
     setViewerCount(0)
+    setChatMessages([])
+    chatHistoryRef.current = []
+    setChatConnected(false)
     peerRef.current?.destroy()
     peerRef.current = null
     stopTracks(localStreamRef.current)
@@ -277,6 +303,13 @@ export default function Live() {
       }
     })
     callsRef.current.clear()
+    try {
+      viewerDataConnRef.current?.close()
+    } catch {
+      /* ignore */
+    }
+    viewerDataConnRef.current = null
+    setChatConnected(false)
     peerRef.current?.destroy()
     peerRef.current = null
     handshakeRef.current?.dispose?.()
@@ -319,6 +352,51 @@ export default function Live() {
       /* ignore */
     }
   }, [])
+
+  const appendChat = useCallback((msg) => {
+    if (!msg?.id) return
+    setChatMessages((prev) => {
+      if (prev.some((m) => m.id === msg.id)) return prev
+      const next = [...prev, msg].slice(-200)
+      chatHistoryRef.current = next
+      return next
+    })
+  }, [])
+
+  const broadcastData = useCallback((payload) => {
+    const raw = JSON.stringify(payload)
+    dataConnsRef.current.forEach((conn) => {
+      try {
+        if (conn.open) conn.send(raw)
+      } catch {
+        /* ignore */
+      }
+    })
+  }, [])
+
+  const syncViewerCount = useCallback(() => {
+    const count = callsRef.current.size
+    setViewerCount(count)
+    broadcastData({ type: 'viewers', count })
+  }, [broadcastData])
+
+  const sendHostChat = (text) => {
+    const msg = makeChatMessage({ name: 'linturo', text, role: 'host' })
+    if (!msg.text) return
+    appendChat(msg)
+    broadcastData(msg)
+  }
+
+  const sendViewerChat = (text) => {
+    const msg = makeChatMessage({ name: chatName, text, role: 'viewer' })
+    if (!msg.text) return
+    appendChat(msg)
+    try {
+      viewerDataConnRef.current?.send(JSON.stringify(msg))
+    } catch {
+      /* ignore */
+    }
+  }
 
   const clearReview = () => {
     if (review?.url) URL.revokeObjectURL(review.url)
@@ -557,14 +635,47 @@ export default function Live() {
         }
         call.answer(stream)
         callsRef.current.set(call.peer, call)
-        setViewerCount(callsRef.current.size)
+        syncViewerCount()
         call.on('close', () => {
           callsRef.current.delete(call.peer)
-          setViewerCount(callsRef.current.size)
+          syncViewerCount()
         })
         call.on('error', () => {
           callsRef.current.delete(call.peer)
-          setViewerCount(callsRef.current.size)
+          syncViewerCount()
+        })
+      })
+
+      peer.on('connection', (conn) => {
+        dataConnsRef.current.set(conn.peer, conn)
+        conn.on('open', () => {
+          setChatConnected(true)
+          try {
+            conn.send(
+              JSON.stringify({
+                type: 'history',
+                messages: chatHistoryRef.current.slice(-40),
+              })
+            )
+            conn.send(JSON.stringify({ type: 'viewers', count: callsRef.current.size }))
+          } catch {
+            /* ignore */
+          }
+        })
+        conn.on('data', (raw) => {
+          const msg = parseLivePayload(raw)
+          if (!msg) return
+          if (msg.type === 'chat') {
+            appendChat(msg)
+            broadcastData(msg)
+          }
+        })
+        conn.on('close', () => {
+          dataConnsRef.current.delete(conn.peer)
+          if (dataConnsRef.current.size === 0) setChatConnected(false)
+        })
+        conn.on('error', () => {
+          dataConnsRef.current.delete(conn.peer)
         })
       })
 
@@ -575,6 +686,7 @@ export default function Live() {
 
       setStatus('live')
       setStatusDetail('You are live. Switch USB camera anytime from the list.')
+      setChatConnected(true)
     } catch (err) {
       console.error(err)
       teardownBroadcast()
@@ -652,6 +764,31 @@ export default function Live() {
 
       callsRef.current.set('host', call)
 
+      const dataConn = peer.connect(LIVE_PEER_ID, { reliable: true })
+      viewerDataConnRef.current = dataConn
+      dataConn.on('open', () => {
+        if (!stillCurrent()) return
+        setChatConnected(true)
+      })
+      dataConn.on('data', (raw) => {
+        if (!stillCurrent()) return
+        const msg = parseLivePayload(raw)
+        if (!msg) return
+        if (msg.type === 'viewers') setViewerCount(msg.count)
+        if (msg.type === 'chat') appendChat(msg)
+        if (msg.type === 'history') {
+          msg.messages.forEach((m) => appendChat(m))
+        }
+      })
+      dataConn.on('close', () => {
+        if (!stillCurrent()) return
+        setChatConnected(false)
+      })
+      dataConn.on('error', () => {
+        if (!stillCurrent()) return
+        setChatConnected(false)
+      })
+
       const timeout = setTimeout(() => {
         if (!stillCurrent()) return
         setStatus('offline')
@@ -719,7 +856,7 @@ export default function Live() {
       setStatusDetail('linturo is not live right now.')
       scheduleReconnect()
     }
-  }, [teardownViewer])
+  }, [teardownViewer, appendChat])
 
   useEffect(() => {
     if (mode !== 'viewer') {
@@ -768,17 +905,19 @@ export default function Live() {
           />
           <h1 className="text-sm sm:text-base font-medium tracking-wide uppercase">Live</h1>
         </div>
-        <div className="text-xs text-mute tabular-nums min-w-[4.5rem] text-right">
-          {mode === 'host' && status === 'live' ? `${viewerCount} watching` : status}
+        <div className="text-xs text-mute tabular-nums min-w-[5.5rem] text-right">
+          {status === 'live' || viewerCount > 0
+            ? `${viewerCount} watching`
+            : status}
         </div>
       </header>
 
       {mode === 'viewer' ? (
         <div className="relative flex-1 flex flex-col min-h-0">
-          <div className="relative flex-1 bg-black flex items-center justify-center min-h-[50dvh]">
+          <div className="relative flex-1 bg-black flex items-center justify-center min-h-[40dvh]">
             <video
               ref={viewerVideoRef}
-              className="w-full h-full max-h-[100dvh] object-contain bg-black"
+              className="w-full h-full max-h-[70dvh] object-contain bg-black"
               playsInline
               autoPlay
               muted={muted}
@@ -812,7 +951,17 @@ export default function Live() {
               </button>
             )}
           </div>
-          <div className="px-4 sm:px-6 py-4 border-t border-hairline flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="px-4 sm:px-6 py-3 border-t border-hairline">
+            <LiveChat
+              messages={chatMessages}
+              onSend={sendViewerChat}
+              name={chatName}
+              onNameChange={(n) => setChatName(saveGuestName(n))}
+              disabled={status !== 'live' || !chatConnected}
+              placeholder="Chat with the room…"
+            />
+          </div>
+          <div className="px-4 sm:px-6 py-3 border-t border-hairline flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <p className="text-xs sm:text-sm text-mute">Watch the set in your browser.</p>
             <button
               type="button"
@@ -821,6 +970,7 @@ export default function Live() {
                 setMode('gate')
                 setStatus('idle')
                 setStatusDetail('')
+                setChatMessages([])
               }}
               className="text-xs uppercase tracking-[0.2em] text-mute hover:text-paper transition-colors self-start sm:self-auto"
             >
@@ -1084,6 +1234,22 @@ export default function Live() {
                   </div>
                 </div>
               )}
+
+              <div className="space-y-3 pt-2 border-t border-hairline">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-xs uppercase tracking-[0.24em] text-mute">Room</p>
+                  <p className="text-xs text-mute tabular-nums">{viewerCount} watching</p>
+                </div>
+                <LiveChat
+                  messages={chatMessages}
+                  onSend={sendHostChat}
+                  name="linturo"
+                  nameReadOnly
+                  disabled={status !== 'live'}
+                  compact
+                  placeholder="Reply to the room…"
+                />
+              </div>
 
               <div className="space-y-3 pt-2 border-t border-hairline">
                 <p className="text-xs uppercase tracking-[0.24em] text-mute">Psychedelic FX</p>
