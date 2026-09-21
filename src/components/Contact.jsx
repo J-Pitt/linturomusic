@@ -20,7 +20,7 @@ const Contact = () => {
     eventType: '',
     eventDate: '',
     honeypot: '',
-    captcha: '',
+    humanCheck: false,
   })
 
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -28,16 +28,11 @@ const Contact = () => {
   const [modalType, setModalType] = useState('success')
   const [modalMessage, setModalMessage] = useState('')
 
-  const [captchaQuestion] = useState(() => {
-    const num1 = Math.floor(Math.random() * 10) + 1
-    const num2 = Math.floor(Math.random() * 10) + 1
-    return { num1, num2, answer: num1 + num2 }
-  })
-
   const handleChange = (e) => {
+    const { name, type, checked, value } = e.target
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value,
+      [name]: type === 'checkbox' ? checked : value,
     })
   }
 
@@ -48,9 +43,9 @@ const Contact = () => {
       return
     }
 
-    if (parseInt(formData.captcha) !== captchaQuestion.answer) {
+    if (!formData.humanCheck) {
       setModalType('error')
-      setModalMessage('Incorrect answer to the math question. Please try again.')
+      setModalMessage('Please confirm you are human.')
       setShowModal(true)
       return
     }
@@ -88,7 +83,7 @@ const Contact = () => {
           eventType: '',
           eventDate: '',
           honeypot: '',
-          captcha: '',
+          humanCheck: false,
         })
         setIsSubmitting(false)
         setModalType('success')
@@ -260,19 +255,21 @@ const Contact = () => {
               </div>
 
               <div>
-                <label htmlFor="captcha" className="block text-sm text-mute mb-2">
-                  Human check: What is {captchaQuestion.num1} + {captchaQuestion.num2}?
+                <label
+                  htmlFor="humanCheck"
+                  className="flex items-center gap-3 text-sm text-mute cursor-pointer select-none"
+                >
+                  <input
+                    type="checkbox"
+                    id="humanCheck"
+                    name="humanCheck"
+                    checked={formData.humanCheck}
+                    onChange={handleChange}
+                    required
+                    className="h-4 w-4 shrink-0 border border-hairline bg-black accent-paper cursor-pointer"
+                  />
+                  I am human
                 </label>
-                <input
-                  type="number"
-                  id="captcha"
-                  name="captcha"
-                  value={formData.captcha}
-                  onChange={handleChange}
-                  required
-                  className={fieldClass}
-                  placeholder="Enter the answer"
-                />
               </div>
 
               <button
