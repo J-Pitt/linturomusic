@@ -107,6 +107,7 @@ export default function Live() {
   const [viewerWantsJoin, setViewerWantsJoin] = useState(false)
   const [audioLevel, setAudioLevel] = useState(0)
   const [audioBroadcasting, setAudioBroadcasting] = useState(false)
+  const [inputGain, setInputGain] = useState(1.4)
   const hostKeyRef = useRef('')
 
   const viewerVideoRef = useRef(null)
@@ -132,18 +133,33 @@ export default function Live() {
   const hostPeerIdRef = useRef('')
   const audioMeterRef = useRef(null)
   const audioMeterRafRef = useRef(0)
+  const inputGainRef = useRef(1.4)
+  const gainNodeRef = useRef(null)
 
   useEffect(() => {
     effectsRef.current = effects
   }, [effects])
 
+  useEffect(() => {
+    inputGainRef.current = inputGain
+    if (gainNodeRef.current) {
+      gainNodeRef.current.gain.value = inputGain
+    }
+  }, [inputGain])
+
   const stopTracks = (stream) => {
     stream?.getTracks?.().forEach((t) => t.stop())
   }
 
-  const stopAudioMeter = useCallback(() => {
+  const stopBroadcastAudio = useCallback(() => {
     cancelAnimationFrame(audioMeterRafRef.current)
     audioMeterRafRef.current = 0
+    gainNodeRef.current = null
+    try {
+      audioMeterRef.current?.rawTracks?.forEach((t) => t.stop())
+    } catch {
+      /* ignore */
+    }
     try {
       audioMeterRef.current?.ctx?.close?.()
     } catch {
@@ -154,45 +170,63 @@ export default function Live() {
     setAudioBroadcasting(false)
   }, [])
 
-  const startAudioMeter = useCallback(
-    (stream) => {
-      stopAudioMeter()
-      const track = stream?.getAudioTracks?.()?.[0]
-      if (!track || track.readyState !== 'live') {
+  /** Route mic/XDJ through gain + meter, return processed track for WebRTC. */
+  const setupBroadcastAudio = useCallback(
+    async (rawTrack) => {
+      stopBroadcastAudio()
+      if (!rawTrack || rawTrack.readyState !== 'live') {
         setAudioBroadcasting(false)
-        return
+        return null
+      }
+
+      const AudioCtx = window.AudioContext || window.webkitAudioContext
+      const ctx = new AudioCtx()
+      try {
+        await ctx.resume()
+      } catch {
+        /* ignore */
+      }
+
+      const source = ctx.createMediaStreamSource(new MediaStream([rawTrack]))
+      const gain = ctx.createGain()
+      gain.gain.value = inputGainRef.current
+      const analyser = ctx.createAnalyser()
+      analyser.fftSize = 1024
+      analyser.smoothingTimeConstant = 0.5
+      const dest = ctx.createMediaStreamDestination()
+
+      source.connect(gain)
+      gain.connect(analyser)
+      gain.connect(dest)
+
+      gainNodeRef.current = gain
+      audioMeterRef.current = { ctx, analyser, rawTracks: [rawTrack] }
+
+      const freq = new Uint8Array(analyser.frequencyBinCount)
+      const tick = () => {
+        analyser.getByteFrequencyData(freq)
+        let sum = 0
+        for (let i = 0; i < freq.length; i += 1) sum += freq[i]
+        const avg = sum / (freq.length * 255)
+        setAudioLevel(Math.min(1, avg * 2.2))
+        setAudioBroadcasting(rawTrack.readyState === 'live' && rawTrack.enabled)
+        audioMeterRafRef.current = requestAnimationFrame(tick)
+      }
+      tick()
+
+      const processed = dest.stream.getAudioTracks()[0]
+      if (processed) {
+        processed.enabled = true
+        try {
+          processed.contentHint = 'music'
+        } catch {
+          /* ignore */
+        }
       }
       setAudioBroadcasting(true)
-      try {
-        const AudioCtx = window.AudioContext || window.webkitAudioContext
-        const ctx = new AudioCtx()
-        const source = ctx.createMediaStreamSource(new MediaStream([track]))
-        const analyser = ctx.createAnalyser()
-        analyser.fftSize = 256
-        analyser.smoothingTimeConstant = 0.7
-        source.connect(analyser)
-        const data = new Uint8Array(analyser.fftSize)
-        audioMeterRef.current = { ctx, analyser }
-
-        const tick = () => {
-          analyser.getByteTimeDomainData(data)
-          let sum = 0
-          for (let i = 0; i < data.length; i += 1) {
-            const v = (data[i] - 128) / 128
-            sum += v * v
-          }
-          const rms = Math.sqrt(sum / data.length)
-          setAudioLevel(Math.min(1, rms * 4))
-          setAudioBroadcasting(track.readyState === 'live' && track.enabled)
-          audioMeterRafRef.current = requestAnimationFrame(tick)
-        }
-        tick()
-      } catch (err) {
-        console.error(err)
-        setAudioBroadcasting(Boolean(track))
-      }
+      return processed || null
     },
-    [stopAudioMeter]
+    [stopBroadcastAudio]
   )
 
   const refreshDevices = useCallback(async ({ preferNewUsb = false } = {}) => {
@@ -367,8 +401,8 @@ export default function Live() {
     localStreamRef.current = null
     outboundStreamRef.current = null
     if (previewVideoRef.current) previewVideoRef.current.srcObject = null
-    stopAudioMeter()
-  }, [stopAudioMeter])
+    stopBroadcastAudio()
+  }, [stopBroadcastAudio])
 
   const teardownViewer = useCallback(() => {
     clearTimeout(reconnectTimerRef.current)
@@ -654,14 +688,21 @@ export default function Live() {
       }
 
       const audioTrack = audioStream.getAudioTracks()[0]
+      if (!audioTrack) throw new Error('No audio input — pick the XDJ-AZ and try again.')
+      audioTrack.enabled = true
+
       const local = localStreamRef.current
-      if (local && audioTrack) {
+      if (local) {
         local.getAudioTracks().forEach((t) => {
           local.removeTrack(t)
-          t.stop()
+          // don't stop yet — setupBroadcastAudio owns the raw track lifecycle
         })
-        local.addTrack(audioTrack)
       }
+
+      const processedAudio = await setupBroadcastAudio(audioTrack)
+      if (!processedAudio) throw new Error('Could not open audio input for broadcast.')
+
+      if (local) local.addTrack(audioTrack)
 
       await refreshDevices()
 
@@ -693,9 +734,7 @@ export default function Live() {
           /* ignore */
         }
       }
-      const outboundAudio = localStreamRef.current?.getAudioTracks()[0]
-      if (outboundAudio) outboundAudio.enabled = true
-      const outbound = new MediaStream([videoTrack, outboundAudio].filter(Boolean))
+      const outbound = new MediaStream([videoTrack, processedAudio].filter(Boolean))
       outboundStreamRef.current = outbound
 
       setStatusDetail('Opening live room…')
@@ -784,9 +823,8 @@ export default function Live() {
       })
 
       setStatus('live')
-      setStatusDetail('You are live. Switch USB camera anytime from the list.')
+      setStatusDetail('You are live. Watch the input meter — turn up Input gain if it’s quiet.')
       setChatConnected(true)
-      startAudioMeter(outbound)
     } catch (err) {
       console.error(err)
       teardownBroadcast()
@@ -1213,15 +1251,31 @@ export default function Live() {
                     )}
                   </select>
                   <p className="text-[11px] text-mute leading-relaxed">
-                    Choose the XDJ-AZ (or USB audio). Processing is off so the mixer master stays
-                    clean.
+                    Choose the XDJ-AZ master/USB out. Echo cancel and AGC are off.
                   </p>
-                  <div className="space-y-1.5 pt-1">
+                  <div className="space-y-2 pt-1">
+                    <label className="block space-y-1.5">
+                      <div className="flex justify-between text-[11px] text-mute">
+                        <span>Input gain</span>
+                        <span className="tabular-nums text-paper/70">
+                          {Math.round(inputGain * 100)}%
+                        </span>
+                      </div>
+                      <input
+                        type="range"
+                        min={0}
+                        max={2.5}
+                        step={0.05}
+                        value={inputGain}
+                        onChange={(e) => setInputGain(Number(e.target.value))}
+                        className={fieldClass}
+                      />
+                    </label>
                     <div className="flex items-center justify-between text-[11px]">
                       <span className="text-mute">Input level</span>
                       <span
                         className={
-                          audioBroadcasting && audioLevel > 0.02
+                          audioBroadcasting && audioLevel > 0.03
                             ? 'text-paper'
                             : 'text-mute'
                         }
@@ -1230,17 +1284,17 @@ export default function Live() {
                           ? status === 'live'
                             ? 'No audio track'
                             : 'Go live to meter'
-                          : audioLevel > 0.02
+                          : audioLevel > 0.03
                             ? 'Signal in'
-                            : 'Silent'}
+                            : 'Silent — raise gain / XDJ master'}
                       </span>
                     </div>
-                    <div className="h-2 w-full bg-hairline overflow-hidden">
+                    <div className="h-2.5 w-full bg-hairline overflow-hidden border border-hairline">
                       <div
                         className={`h-full transition-[width] duration-75 ${
-                          audioLevel > 0.75 ? 'bg-paper' : 'bg-mute'
+                          audioLevel > 0.85 ? 'bg-paper' : 'bg-mute'
                         }`}
-                        style={{ width: `${Math.round(audioLevel * 100)}%` }}
+                        style={{ width: `${Math.max(2, Math.round(audioLevel * 100))}%` }}
                       />
                     </div>
                   </div>
