@@ -13,6 +13,7 @@ const s3 = new S3Client({
 const BUCKET = process.env.LIVE_BUCKET || 'linturomusic'
 const HOST_KEY = process.env.LIVE_HOST_KEY || 'linturo'
 const MANIFEST_KEY = 'live-videos.json'
+const PRESENCE_KEY = 'live-presence.json'
 const PUBLIC_BASE = `https://${BUCKET}.s3.us-west-2.amazonaws.com`
 
 const corsHeaders = {
@@ -131,6 +132,30 @@ exports.handler = async (event) => {
 
       await writeManifest(manifest)
       return json(200, { ok: true, video: entry, videos: manifest.videos })
+    }
+
+    if (action === 'presence-set') {
+      assertHost(body)
+      const live = Boolean(body.live)
+      const peerId = live ? String(body.peerId || '').slice(0, 64) : ''
+      if (live && !peerId) {
+        return json(400, { error: 'peerId required when live' })
+      }
+      const presence = {
+        live,
+        peerId: live ? peerId : '',
+        updatedAt: new Date().toISOString(),
+      }
+      await s3.send(
+        new PutObjectCommand({
+          Bucket: BUCKET,
+          Key: PRESENCE_KEY,
+          Body: JSON.stringify(presence),
+          ContentType: 'application/json',
+          CacheControl: 'public, max-age=5',
+        })
+      )
+      return json(200, { ok: true, presence })
     }
 
     if (action === 'list') {

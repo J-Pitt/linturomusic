@@ -1,6 +1,3 @@
-/** Shared PeerJS room id — viewers call this peer when you are live. */
-export const LIVE_PEER_ID = 'linturo-music-live'
-
 /** Unlock host/broadcast controls. Override with VITE_LIVE_HOST_KEY. */
 export const LIVE_HOST_KEY =
   import.meta.env.VITE_LIVE_HOST_KEY || 'linturo'
@@ -15,6 +12,11 @@ export const LIVE_VIDEOS_MANIFEST_URL =
   import.meta.env.VITE_LIVE_VIDEOS_MANIFEST_URL ||
   'https://linturomusic.s3.us-west-2.amazonaws.com/live-videos.json'
 
+/** Public live presence (peer id while host is broadcasting). */
+export const LIVE_PRESENCE_URL =
+  import.meta.env.VITE_LIVE_PRESENCE_URL ||
+  'https://linturomusic.s3.us-west-2.amazonaws.com/live-presence.json'
+
 /** STUN + public TURN so phone (cellular) can reach laptop (Wi‑Fi). */
 export const LIVE_PEER_OPTIONS = {
   debug: 1,
@@ -22,51 +24,62 @@ export const LIVE_PEER_OPTIONS = {
     iceServers: [
       { urls: 'stun:stun.l.google.com:19302' },
       { urls: 'stun:stun1.l.google.com:19302' },
+      { urls: 'stun:stun.cloudflare.com:3478' },
       {
-        urls: 'turn:openrelay.metered.ca:80',
-        username: 'openrelayproject',
-        credential: 'openrelayproject',
-      },
-      {
-        urls: 'turn:openrelay.metered.ca:443',
-        username: 'openrelayproject',
-        credential: 'openrelayproject',
-      },
-      {
-        urls: 'turn:openrelay.metered.ca:443?transport=tcp',
+        urls: [
+          'turn:openrelay.metered.ca:80',
+          'turn:openrelay.metered.ca:80?transport=tcp',
+          'turn:openrelay.metered.ca:443',
+          'turn:openrelay.metered.ca:443?transport=tcp',
+        ],
         username: 'openrelayproject',
         credential: 'openrelayproject',
       },
     ],
+    iceTransportPolicy: 'all',
     sdpSemantics: 'unified-plan',
   },
 }
 
-/** Quiet outbound track so PeerJS calls aren't empty (empty streams drop on mobile). */
+/** Tiny canvas video track — works on iOS (no AudioContext needed). */
 export function createHandshakeStream() {
-  const AudioCtx = window.AudioContext || window.webkitAudioContext
-  if (!AudioCtx) return { stream: new MediaStream(), dispose: () => {} }
+  const canvas = document.createElement('canvas')
+  canvas.width = 16
+  canvas.height = 16
+  const ctx = canvas.getContext('2d')
+  let raf = 0
+  let alive = true
 
-  const ctx = new AudioCtx()
-  const oscillator = ctx.createOscillator()
-  const gain = ctx.createGain()
-  gain.gain.value = 0.0001
-  const dest = ctx.createMediaStreamDestination()
-  oscillator.connect(gain)
-  gain.connect(dest)
-  oscillator.start()
+  const paint = () => {
+    if (!alive || !ctx) return
+    ctx.fillStyle = '#000'
+    ctx.fillRect(0, 0, 16, 16)
+    raf = requestAnimationFrame(paint)
+  }
+  paint()
+
+  const stream = canvas.captureStream(5)
+  stream.getVideoTracks().forEach((t) => {
+    t.enabled = true
+    try {
+      t.contentHint = 'motion'
+    } catch {
+      /* ignore */
+    }
+  })
 
   return {
-    stream: dest.stream,
+    stream,
     dispose: () => {
-      try {
-        oscillator.stop()
-      } catch {
-        /* ignore */
-      }
-      ctx.close().catch(() => {})
+      alive = false
+      cancelAnimationFrame(raf)
+      stream.getTracks().forEach((t) => t.stop())
     },
   }
+}
+
+export function makeHostPeerId() {
+  return `linturo-${Math.random().toString(36).slice(2, 10)}`
 }
 
 export const DEFAULT_EFFECTS = {

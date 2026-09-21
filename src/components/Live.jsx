@@ -10,9 +10,21 @@ import {
   VideoCameraIcon,
   StopIcon,
 } from '@heroicons/react/24/outline'
-import { DEFAULT_EFFECTS, LIVE_HOST_KEY, LIVE_PEER_ID, LIVE_PEER_OPTIONS, createHandshakeStream } from '../lib/liveConfig'
+import {
+  DEFAULT_EFFECTS,
+  LIVE_HOST_KEY,
+  LIVE_PEER_OPTIONS,
+  createHandshakeStream,
+  makeHostPeerId,
+} from '../lib/liveConfig'
 import { drawPsychedelicFrame, fitCanvasToVideo } from '../lib/liveEffects'
-import { createLiveRecorder, publishLiveVideo, uploadRecordingBlob } from '../lib/liveRecord'
+import {
+  createLiveRecorder,
+  fetchLivePresence,
+  publishLiveVideo,
+  setLivePresence,
+  uploadRecordingBlob,
+} from '../lib/liveRecord'
 import {
   defaultGuestName,
   makeChatMessage,
@@ -113,6 +125,9 @@ export default function Live() {
   const handshakeRef = useRef(null)
   const hadRemoteStreamRef = useRef(false)
   const reconnectTimerRef = useRef(null)
+  const presenceTimerRef = useRef(null)
+  const hostPeerIdRef = useRef('')
+  const [viewerWantsJoin, setViewerWantsJoin] = useState(false)
 
   useEffect(() => {
     effectsRef.current = effects
@@ -263,6 +278,10 @@ export default function Live() {
   }
   const teardownBroadcast = useCallback(() => {
     cancelAnimationFrame(rafRef.current)
+    clearInterval(presenceTimerRef.current)
+    const hostKey = hostKeyRef.current || LIVE_HOST_KEY
+    setLivePresence({ hostKey, live: false }).catch(() => {})
+    hostPeerIdRef.current = ''
     callsRef.current.forEach((call) => {
       try {
         call.close()
@@ -607,33 +626,54 @@ export default function Live() {
 
       const canvasStream = canvas.captureStream(30)
       const videoTrack = canvasStream.getVideoTracks()[0]
-      const outbound = new MediaStream(
-        [videoTrack, localStreamRef.current?.getAudioTracks()[0]].filter(Boolean)
-      )
+      if (videoTrack) {
+        videoTrack.enabled = true
+        try {
+          videoTrack.contentHint = 'motion'
+        } catch {
+          /* ignore */
+        }
+      }
+      const outboundAudio = localStreamRef.current?.getAudioTracks()[0]
+      if (outboundAudio) outboundAudio.enabled = true
+      const outbound = new MediaStream([videoTrack, outboundAudio].filter(Boolean))
       outboundStreamRef.current = outbound
 
       setStatusDetail('Opening live room…')
-      const peer = new Peer(LIVE_PEER_ID, LIVE_PEER_OPTIONS)
+      const peerId = makeHostPeerId()
+      hostPeerIdRef.current = peerId
+      const peer = new Peer(peerId, LIVE_PEER_OPTIONS)
       peerRef.current = peer
 
       await new Promise((resolve, reject) => {
         peer.on('open', resolve)
         peer.on('error', (err) => {
           if (err?.type === 'unavailable-id') {
-            reject(new Error('Live room is busy — stop the other host session first.'))
+            reject(new Error('Could not claim live room — try Go live again.'))
           } else {
             reject(err)
           }
         })
       })
 
+      const hostKey = hostKeyRef.current || LIVE_HOST_KEY
+      await setLivePresence({ hostKey, live: true, peerId })
+      clearInterval(presenceTimerRef.current)
+      presenceTimerRef.current = setInterval(() => {
+        setLivePresence({ hostKey, live: true, peerId }).catch(() => {})
+      }, 20000)
+
       peer.on('call', (call) => {
         const stream = outboundStreamRef.current
-        if (!stream) {
+        if (!stream?.getTracks?.().length) {
           call.close()
           return
         }
-        call.answer(stream)
+        // Fresh clone helps some mobile WebRTC stacks
+        const answerStream = new MediaStream(
+          stream.getTracks().map((t) => (t.clone ? t.clone() : t))
+        )
+        call.answer(answerStream)
         callsRef.current.set(call.peer, call)
         syncViewerCount()
         call.on('close', () => {
@@ -710,17 +750,27 @@ export default function Live() {
     setStatus('connecting')
     setStatusDetail('Looking for the live set…')
     setNeedsGesture(false)
+    setChatMessages([])
 
     const stillCurrent = () => session === viewerSessionRef.current
 
     const scheduleReconnect = () => {
       clearTimeout(reconnectTimerRef.current)
       reconnectTimerRef.current = setTimeout(() => {
-        connectAsViewer()
-      }, 4000)
+        if (viewerWantsJoin) connectAsViewer()
+      }, 5000)
     }
 
     try {
+      const presence = await fetchLivePresence()
+      if (!stillCurrent()) return
+      if (!presence.live || !presence.peerId) {
+        setStatus('offline')
+        setStatusDetail('linturo is not live right now.')
+        scheduleReconnect()
+        return
+      }
+
       const peer = new Peer(LIVE_PEER_OPTIONS)
       if (!stillCurrent()) {
         peer.destroy()
@@ -748,56 +798,59 @@ export default function Live() {
       const handshake = createHandshakeStream()
       handshakeRef.current = handshake
 
-      // Resume audio context on mobile after user gesture if needed later;
-      // handshake keeps the PeerJS call from being an empty MediaStream.
-      try {
-        const tracks = handshake.stream.getAudioTracks()
-        tracks.forEach((t) => {
-          t.enabled = true
-        })
-      } catch {
-        /* ignore */
-      }
-
-      const call = peer.call(LIVE_PEER_ID, handshake.stream)
-      if (!call) throw new Error('Could not reach host')
-
-      callsRef.current.set('host', call)
-
-      const dataConn = peer.connect(LIVE_PEER_ID, { reliable: true })
+      // Data channel first — confirms host is reachable
+      const dataConn = peer.connect(presence.peerId, { reliable: true })
       viewerDataConnRef.current = dataConn
-      dataConn.on('open', () => {
-        if (!stillCurrent()) return
-        setChatConnected(true)
+
+      await new Promise((resolve, reject) => {
+        const t = setTimeout(() => reject(new Error('Chat channel timeout')), 10000)
+        dataConn.on('open', () => {
+          clearTimeout(t)
+          resolve()
+        })
+        dataConn.on('error', (err) => {
+          clearTimeout(t)
+          reject(err)
+        })
+        peer.on('error', (err) => {
+          if (err?.type === 'peer-unavailable') {
+            clearTimeout(t)
+            reject(err)
+          }
+        })
       })
+
+      if (!stillCurrent()) return
+      setChatConnected(true)
+
       dataConn.on('data', (raw) => {
         if (!stillCurrent()) return
         const msg = parseLivePayload(raw)
         if (!msg) return
         if (msg.type === 'viewers') setViewerCount(msg.count)
         if (msg.type === 'chat') appendChat(msg)
-        if (msg.type === 'history') {
-          msg.messages.forEach((m) => appendChat(m))
-        }
+        if (msg.type === 'history') msg.messages.forEach((m) => appendChat(m))
       })
       dataConn.on('close', () => {
         if (!stillCurrent()) return
         setChatConnected(false)
       })
-      dataConn.on('error', () => {
-        if (!stillCurrent()) return
-        setChatConnected(false)
-      })
+
+      const call = peer.call(presence.peerId, handshake.stream)
+      if (!call) throw new Error('Could not reach host')
+      callsRef.current.set('host', call)
 
       const timeout = setTimeout(() => {
         if (!stillCurrent()) return
         setStatus('offline')
-        setStatusDetail('linturo is not live right now.')
+        setStatusDetail('Connected to room but no video yet — retrying…')
         scheduleReconnect()
-      }, 15000)
+      }, 20000)
 
       call.on('stream', async (remote) => {
         if (!stillCurrent()) return
+        const tracks = remote?.getTracks?.() || []
+        if (!tracks.length) return
         clearTimeout(timeout)
         hadRemoteStreamRef.current = true
         const el = viewerVideoRef.current
@@ -805,6 +858,7 @@ export default function Live() {
         el.srcObject = remote
         el.muted = true
         el.setAttribute('playsinline', '')
+        el.setAttribute('webkit-playsinline', '')
         el.playsInline = true
         setMuted(true)
         try {
@@ -815,7 +869,7 @@ export default function Live() {
         } catch {
           setStatus('live')
           setNeedsGesture(true)
-          setStatusDetail('Tap to start audio')
+          setStatusDetail('Tap for sound')
         }
       })
 
@@ -827,7 +881,7 @@ export default function Live() {
         if (viewerVideoRef.current) viewerVideoRef.current.srcObject = null
         setStatus('offline')
         setStatusDetail(
-          wasLive ? 'Stream ended — reconnecting…' : 'Could not connect — retrying…'
+          wasLive ? 'Connection dropped — retrying…' : 'Could not start video — retrying…'
         )
         scheduleReconnect()
       })
@@ -839,38 +893,33 @@ export default function Live() {
         setStatusDetail('Connection issue — retrying…')
         scheduleReconnect()
       })
-
-      peer.on('error', (err) => {
-        if (!stillCurrent()) return
-        if (err?.type === 'peer-unavailable') {
-          clearTimeout(timeout)
-          setStatus('offline')
-          setStatusDetail('linturo is not live right now.')
-          scheduleReconnect()
-        }
-      })
     } catch (err) {
       console.error(err)
       if (!stillCurrent()) return
       setStatus('offline')
-      setStatusDetail('linturo is not live right now.')
+      setStatusDetail(
+        err?.type === 'peer-unavailable'
+          ? 'linturo is not live right now.'
+          : 'Could not connect — retrying…'
+      )
       scheduleReconnect()
     }
-  }, [teardownViewer, appendChat])
+  }, [teardownViewer, appendChat, viewerWantsJoin])
 
   useEffect(() => {
     if (mode !== 'viewer') {
       clearTimeout(reconnectTimerRef.current)
+      setViewerWantsJoin(false)
       return undefined
     }
-    connectAsViewer()
+    // Wait for explicit tap on phones — autoplay + WebRTC need a gesture
+    setStatus('idle')
+    setStatusDetail('Tap Join live when the set is going.')
     return () => {
       clearTimeout(reconnectTimerRef.current)
       teardownViewer()
     }
-    // Only (re)connect when entering viewer mode — avoid StrictMode churn loops
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode])
+  }, [mode, teardownViewer])
 
   const unmuteViewer = async () => {
     const el = viewerVideoRef.current
@@ -923,15 +972,22 @@ export default function Live() {
               muted={muted}
             />
             {status !== 'live' && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-6 text-center pointer-events-none">
-                <p className="text-sm sm:text-base text-mute">{statusDetail || 'Connecting…'}</p>
-                {status === 'offline' && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-6 text-center">
+                <p className="text-sm sm:text-base text-mute pointer-events-none">
+                  {statusDetail || 'Ready when you are.'}
+                </p>
+                {status === 'connecting' ? (
+                  <p className="text-xs text-mute pointer-events-none">Connecting…</p>
+                ) : (
                   <button
                     type="button"
-                    onClick={connectAsViewer}
-                    className="pointer-events-auto mt-2 px-4 py-2 border border-hairline text-sm text-paper hover:border-paper transition-colors"
+                    onClick={() => {
+                      setViewerWantsJoin(true)
+                      connectAsViewer()
+                    }}
+                    className="px-5 py-3 bg-paper text-ink text-sm font-medium"
                   >
-                    Retry
+                    {status === 'offline' ? 'Retry join' : 'Join live'}
                   </button>
                 )}
               </div>

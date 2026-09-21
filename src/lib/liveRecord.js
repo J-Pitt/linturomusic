@@ -1,4 +1,4 @@
-import { LIVE_API_URL, LIVE_VIDEOS_MANIFEST_URL } from './liveConfig'
+import { LIVE_API_URL, LIVE_PRESENCE_URL, LIVE_VIDEOS_MANIFEST_URL } from './liveConfig'
 
 function pickRecorderMime() {
   const candidates = [
@@ -74,6 +74,24 @@ export async function presignLiveUpload({ hostKey, id, ext }) {
 
 export async function publishLiveVideo({ hostKey, id, key, title, subtitle }) {
   return api({ action: 'publish', hostKey, id, key, title, subtitle })
+}
+
+export async function setLivePresence({ hostKey, live, peerId = '' }) {
+  return api({ action: 'presence-set', hostKey, live, peerId })
+}
+
+export async function fetchLivePresence() {
+  try {
+    const res = await fetch(`${LIVE_PRESENCE_URL}?t=${Date.now()}`, { cache: 'no-store' })
+    if (!res.ok) return { live: false, peerId: '' }
+    const data = await res.json()
+    const updatedAt = data?.updatedAt ? Date.parse(data.updatedAt) : 0
+    const stale = updatedAt && Date.now() - updatedAt > 90_000
+    if (!data?.live || !data?.peerId || stale) return { live: false, peerId: '' }
+    return { live: true, peerId: String(data.peerId) }
+  } catch {
+    return { live: false, peerId: '' }
+  }
 }
 
 export async function uploadRecordingBlob(blob, { hostKey, id, onProgress }) {
