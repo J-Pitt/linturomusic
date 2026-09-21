@@ -27,7 +27,7 @@ export default function SiteNav({ className = '' }) {
         <img
           src="/linturo-tag.png"
           alt="linturo"
-          className="h-7 sm:h-8 w-auto object-contain"
+          className="h-14 sm:h-16 w-auto object-contain"
         />
       </Link>
       <div className="flex items-center justify-end gap-3 sm:gap-5 min-w-0">
