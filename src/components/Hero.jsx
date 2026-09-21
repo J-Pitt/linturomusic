@@ -78,14 +78,6 @@ const FEATURED_VIDEOS = [
     poster: 'https://linturomusic.s3.us-west-2.amazonaws.com/longroad-cover.png',
   },
   {
-    id: 'rec059',
-    slug: '5-am-shit',
-    title: '5 am shit',
-    subtitle: 'Smile Glitch · visual mix',
-    src: config.VIDEO_FILES.REC059_SMILE_GLITCH,
-    poster: config.VIDEO_FILES.REC059_SMILE_GLITCH_POSTER,
-  },
-  {
     id: 'linturo',
     slug: 'linturo',
     title: 'Linturo',
