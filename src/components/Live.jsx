@@ -1,0 +1,862 @@
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
+import Peer from 'peerjs'
+import {
+  ArrowLeftIcon,
+  MicrophoneIcon,
+  SignalIcon,
+  SpeakerWaveIcon,
+  SpeakerXMarkIcon,
+  VideoCameraIcon,
+} from '@heroicons/react/24/outline'
+import { DEFAULT_EFFECTS, LIVE_HOST_KEY, LIVE_PEER_ID } from '../lib/liveConfig'
+import { drawPsychedelicFrame, fitCanvasToVideo } from '../lib/liveEffects'
+
+const fieldClass =
+  'w-full accent-paper h-1.5 bg-hairline rounded-full appearance-none cursor-pointer'
+
+const BUILTIN_CAM_RE = /facetime|built-?in|macbook|integrated|default|iphone|continuity/i
+const USB_CAM_RE = /usb|logitech|elgato|capture|cam link|obsbot|insta360|brio|c920|c922|c930|external|hd webcam|webcam/i
+
+function isExternalCamera(device) {
+  const label = device?.label || ''
+  if (!label) return false
+  if (BUILTIN_CAM_RE.test(label)) return false
+  return USB_CAM_RE.test(label) || !/face|built/i.test(label)
+}
+
+function cameraLabel(device, index) {
+  const label = device.label || `Camera ${index + 1}`
+  if (!device.label) return label
+  if (isExternalCamera(device)) return `${label} · USB`
+  return label
+}
+
+function pickPreferredCamera(videoDevices, prevId) {
+  if (prevId && videoDevices.some((d) => d.deviceId === prevId)) return prevId
+  const usb = videoDevices.find((d) => isExternalCamera(d))
+  return usb?.deviceId || videoDevices[0]?.deviceId || ''
+}
+
+function EffectSlider({ label, value, onChange, min = 0, max = 1, step = 0.01 }) {
+  return (
+    <label className="block space-y-1.5">
+      <div className="flex justify-between text-xs text-mute">
+        <span>{label}</span>
+        <span className="tabular-nums text-paper/70">{Math.round(value * 100)}</span>
+      </div>
+      <input
+        type="range"
+        min={min}
+        max={max}
+        step={step}
+        value={value}
+        onChange={(e) => onChange(Number(e.target.value))}
+        className={fieldClass}
+      />
+    </label>
+  )
+}
+
+export default function Live() {
+  const [mode, setMode] = useState('viewer') // viewer | host
+  const [hostKeyInput, setHostKeyInput] = useState('')
+  const [hostError, setHostError] = useState('')
+  const [status, setStatus] = useState('idle')
+  const [statusDetail, setStatusDetail] = useState('')
+  const [viewerCount, setViewerCount] = useState(0)
+  const [devices, setDevices] = useState({ video: [], audio: [] })
+  const [videoDeviceId, setVideoDeviceId] = useState('')
+  const [audioDeviceId, setAudioDeviceId] = useState('')
+  const [effects, setEffects] = useState(DEFAULT_EFFECTS)
+  const [muted, setMuted] = useState(true)
+  const [needsGesture, setNeedsGesture] = useState(false)
+
+  const viewerVideoRef = useRef(null)
+  const previewVideoRef = useRef(null)
+  const canvasRef = useRef(null)
+  const localStreamRef = useRef(null)
+  const outboundStreamRef = useRef(null)
+  const peerRef = useRef(null)
+  const callsRef = useRef(new Map())
+  const rafRef = useRef(0)
+  const effectsRef = useRef(effects)
+  const startTimeRef = useRef(0)
+
+  useEffect(() => {
+    effectsRef.current = effects
+  }, [effects])
+
+  const stopTracks = (stream) => {
+    stream?.getTracks?.().forEach((t) => t.stop())
+  }
+
+  const refreshDevices = useCallback(async ({ preferNewUsb = false } = {}) => {
+    try {
+      if (!navigator.mediaDevices?.enumerateDevices) return
+      const list = await navigator.mediaDevices.enumerateDevices()
+      const video = list.filter((d) => d.kind === 'videoinput')
+      const audio = list.filter((d) => d.kind === 'audioinput')
+      setDevices({ video, audio })
+
+      setAudioDeviceId((prev) => {
+        if (prev && audio.some((d) => d.deviceId === prev)) return prev
+        const xdj =
+          audio.find((d) => /xdj|pioneer|az|dj|usb|line/i.test(d.label)) ||
+          audio.find((d) => !/macbook|built-in|default|communications/i.test(d.label))
+        return xdj?.deviceId || audio[0]?.deviceId || ''
+      })
+      setVideoDeviceId((prev) => {
+        if (!preferNewUsb && prev && video.some((d) => d.deviceId === prev)) return prev
+        if (preferNewUsb) {
+          const external = video.filter((d) => isExternalCamera(d))
+          const newlyPreferred = external.find((d) => d.deviceId !== prev)
+          if (newlyPreferred) return newlyPreferred.deviceId
+        }
+        return pickPreferredCamera(video, preferNewUsb ? '' : prev)
+      })
+    } catch (err) {
+      console.error(err)
+    }
+  }, [])
+
+  const requestDeviceAccess = useCallback(async () => {
+    // Permission prompt so USB camera labels appear in the list
+    const warm = await navigator.mediaDevices.getUserMedia({
+      video: true,
+      audio: true,
+    })
+    warm.getTracks().forEach((t) => t.stop())
+    await refreshDevices({ preferNewUsb: true })
+  }, [refreshDevices])
+
+  useEffect(() => {
+    if (mode !== 'host') return undefined
+    refreshDevices()
+    const onDeviceChange = () => {
+      refreshDevices({ preferNewUsb: true })
+    }
+    navigator.mediaDevices?.addEventListener?.('devicechange', onDeviceChange)
+    return () => {
+      navigator.mediaDevices?.removeEventListener?.('devicechange', onDeviceChange)
+    }
+  }, [mode, refreshDevices])
+
+  const applyCameraStream = useCallback(async (deviceId) => {
+    if (!deviceId) throw new Error('No camera selected')
+
+    const videoConstraints = {
+      deviceId: { exact: deviceId },
+      width: { ideal: 1920 },
+      height: { ideal: 1080 },
+      frameRate: { ideal: 30 },
+    }
+
+    let videoOnly
+    try {
+      videoOnly = await navigator.mediaDevices.getUserMedia({
+        video: videoConstraints,
+        audio: false,
+      })
+    } catch {
+      // Fall back if exact id fails (some USB cams renegotiate slowly)
+      videoOnly = await navigator.mediaDevices.getUserMedia({
+        video: {
+          deviceId: { ideal: deviceId },
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+        },
+        audio: false,
+      })
+    }
+
+    const newTrack = videoOnly.getVideoTracks()[0]
+    const local = localStreamRef.current
+    if (local) {
+      local.getVideoTracks().forEach((t) => {
+        local.removeTrack(t)
+        t.stop()
+      })
+      local.addTrack(newTrack)
+    } else {
+      localStreamRef.current = new MediaStream([newTrack])
+    }
+
+    if (previewVideoRef.current) {
+      previewVideoRef.current.srcObject = localStreamRef.current
+      await previewVideoRef.current.play().catch(() => {})
+    }
+
+    return newTrack
+  }, [])
+
+  const openCameraPreview = useCallback(async () => {
+    try {
+      setStatus('connecting')
+      setStatusDetail('Opening camera…')
+      await requestDeviceAccess()
+      const id =
+        videoDeviceId ||
+        pickPreferredCamera(
+          (await navigator.mediaDevices.enumerateDevices()).filter((d) => d.kind === 'videoinput'),
+          ''
+        )
+      if (!id) throw new Error('No camera found — plug in the USB cam and hit Refresh.')
+      setVideoDeviceId(id)
+      await applyCameraStream(id)
+      startEffectLoop()
+      setStatus('preview')
+      setStatusDetail('USB / laptop camera preview. Pick the right cam, then Go live.')
+    } catch (err) {
+      console.error(err)
+      setStatus('error')
+      setStatusDetail(err?.message || 'Could not open camera')
+    }
+  }, [applyCameraStream, requestDeviceAccess, videoDeviceId])
+
+  const onCameraChange = async (deviceId) => {
+    setVideoDeviceId(deviceId)
+    if (status !== 'live' && status !== 'preview' && status !== 'connecting') return
+    try {
+      setStatusDetail('Switching camera…')
+      await applyCameraStream(deviceId)
+      setStatusDetail(
+        status === 'live'
+          ? 'Camera switched — viewers see the USB feed.'
+          : 'Preview updated.'
+      )
+    } catch (err) {
+      console.error(err)
+      setStatusDetail(err?.message || 'Could not switch camera')
+    }
+  }
+  const teardownBroadcast = useCallback(() => {
+    cancelAnimationFrame(rafRef.current)
+    callsRef.current.forEach((call) => {
+      try {
+        call.close()
+      } catch {
+        /* ignore */
+      }
+    })
+    callsRef.current.clear()
+    setViewerCount(0)
+    peerRef.current?.destroy()
+    peerRef.current = null
+    stopTracks(localStreamRef.current)
+    stopTracks(outboundStreamRef.current)
+    localStreamRef.current = null
+    outboundStreamRef.current = null
+    if (previewVideoRef.current) previewVideoRef.current.srcObject = null
+  }, [])
+
+  const teardownViewer = useCallback(() => {
+    callsRef.current.forEach((call) => {
+      try {
+        call.close()
+      } catch {
+        /* ignore */
+      }
+    })
+    callsRef.current.clear()
+    peerRef.current?.destroy()
+    peerRef.current = null
+    if (viewerVideoRef.current) viewerVideoRef.current.srcObject = null
+  }, [])
+
+  useEffect(() => {
+    return () => {
+      teardownBroadcast()
+      teardownViewer()
+    }
+  }, [teardownBroadcast, teardownViewer])
+
+  const unlockHost = (e) => {
+    e.preventDefault()
+    if (hostKeyInput.trim() !== LIVE_HOST_KEY) {
+      setHostError('Wrong key')
+      return
+    }
+    setHostError('')
+    setMode('host')
+    setStatus('idle')
+    setStatusDetail('Plug in your USB camera, pick it in the list, then Go live.')
+    refreshDevices({ preferNewUsb: true })
+  }
+
+  const startEffectLoop = () => {
+    startTimeRef.current = performance.now()
+    const tick = () => {
+      const video = previewVideoRef.current
+      const canvas = canvasRef.current
+      if (video && canvas && video.readyState >= 2) {
+        fitCanvasToVideo(canvas, video)
+        const ctx = canvas.getContext('2d', { alpha: false })
+        if (ctx) {
+          const t = (performance.now() - startTimeRef.current) / 1000
+          drawPsychedelicFrame(ctx, video, effectsRef.current, t)
+        }
+      }
+      rafRef.current = requestAnimationFrame(tick)
+    }
+    cancelAnimationFrame(rafRef.current)
+    rafRef.current = requestAnimationFrame(tick)
+  }
+
+  const goLive = async () => {
+    callsRef.current.forEach((call) => {
+      try {
+        call.close()
+      } catch {
+        /* ignore */
+      }
+    })
+    callsRef.current.clear()
+    peerRef.current?.destroy()
+    peerRef.current = null
+    stopTracks(outboundStreamRef.current)
+    outboundStreamRef.current = null
+
+    setStatus('connecting')
+    setStatusDetail('Requesting camera + audio…')
+
+    try {
+      await requestDeviceAccess()
+
+      const camId =
+        videoDeviceId ||
+        pickPreferredCamera(
+          (await navigator.mediaDevices.enumerateDevices()).filter((d) => d.kind === 'videoinput'),
+          ''
+        )
+      if (!camId) throw new Error('No camera found — connect the USB camera and Refresh.')
+      setVideoDeviceId(camId)
+
+      // Prefer the selected USB/external camera exactly
+      await applyCameraStream(camId)
+
+      const audioConstraints = {
+        echoCancellation: false,
+        noiseSuppression: false,
+        autoGainControl: false,
+        channelCount: 2,
+      }
+      if (audioDeviceId) {
+        audioConstraints.deviceId = { exact: audioDeviceId }
+      }
+
+      let audioStream
+      try {
+        audioStream = await navigator.mediaDevices.getUserMedia({
+          video: false,
+          audio: audioConstraints,
+        })
+      } catch {
+        audioStream = await navigator.mediaDevices.getUserMedia({
+          video: false,
+          audio: {
+            ...audioConstraints,
+            deviceId: audioDeviceId ? { ideal: audioDeviceId } : undefined,
+          },
+        })
+      }
+
+      const audioTrack = audioStream.getAudioTracks()[0]
+      const local = localStreamRef.current
+      if (local && audioTrack) {
+        local.getAudioTracks().forEach((t) => {
+          local.removeTrack(t)
+          t.stop()
+        })
+        local.addTrack(audioTrack)
+      }
+
+      await refreshDevices()
+
+      if (previewVideoRef.current) {
+        previewVideoRef.current.srcObject = localStreamRef.current
+        await previewVideoRef.current.play().catch(() => {})
+      }
+
+      await new Promise((resolve) => {
+        const v = previewVideoRef.current
+        if (!v) return resolve()
+        if (v.videoWidth) return resolve()
+        v.onloadedmetadata = () => resolve()
+        setTimeout(resolve, 1500)
+      })
+
+      const canvas = canvasRef.current
+      if (!canvas) throw new Error('Missing canvas')
+      fitCanvasToVideo(canvas, previewVideoRef.current)
+      startEffectLoop()
+
+      const canvasStream = canvas.captureStream(30)
+      const videoTrack = canvasStream.getVideoTracks()[0]
+      const outbound = new MediaStream(
+        [videoTrack, localStreamRef.current?.getAudioTracks()[0]].filter(Boolean)
+      )
+      outboundStreamRef.current = outbound
+
+      setStatusDetail('Opening live room…')
+      const peer = new Peer(LIVE_PEER_ID, {
+        debug: 1,
+      })
+      peerRef.current = peer
+
+      await new Promise((resolve, reject) => {
+        peer.on('open', resolve)
+        peer.on('error', (err) => {
+          if (err?.type === 'unavailable-id') {
+            reject(new Error('Live room is busy — stop the other host session first.'))
+          } else {
+            reject(err)
+          }
+        })
+      })
+
+      peer.on('call', (call) => {
+        call.answer(outboundStreamRef.current)
+        callsRef.current.set(call.peer, call)
+        setViewerCount(callsRef.current.size)
+        call.on('close', () => {
+          callsRef.current.delete(call.peer)
+          setViewerCount(callsRef.current.size)
+        })
+        call.on('error', () => {
+          callsRef.current.delete(call.peer)
+          setViewerCount(callsRef.current.size)
+        })
+      })
+
+      peer.on('disconnected', () => {
+        setStatusDetail('Signal disconnected — reconnecting…')
+        peer.reconnect()
+      })
+
+      setStatus('live')
+      setStatusDetail('You are live. Switch USB camera anytime from the list.')
+    } catch (err) {
+      console.error(err)
+      teardownBroadcast()
+      setStatus('error')
+      setStatusDetail(err?.message || 'Could not start broadcast')
+    }
+  }
+
+  const endLive = () => {
+    teardownBroadcast()
+    setStatus('idle')
+    setStatusDetail('Broadcast ended.')
+  }
+
+  const connectAsViewer = useCallback(async () => {
+    teardownViewer()
+    setStatus('connecting')
+    setStatusDetail('Looking for the live set…')
+    setNeedsGesture(false)
+
+    try {
+      const peer = new Peer({ debug: 0 })
+      peerRef.current = peer
+
+      await new Promise((resolve, reject) => {
+        peer.on('open', resolve)
+        peer.on('error', reject)
+      })
+
+      const empty = new MediaStream()
+      const call = peer.call(LIVE_PEER_ID, empty)
+      if (!call) throw new Error('Could not reach host')
+
+      callsRef.current.set('host', call)
+
+      const timeout = setTimeout(() => {
+        setStatus('offline')
+        setStatusDetail('linturo is not live right now.')
+        teardownViewer()
+      }, 12000)
+
+      call.on('stream', async (remote) => {
+        clearTimeout(timeout)
+        const el = viewerVideoRef.current
+        if (!el) return
+        el.srcObject = remote
+        el.muted = true
+        setMuted(true)
+        try {
+          await el.play()
+          setStatus('live')
+          setStatusDetail('Connected')
+          setNeedsGesture(true)
+        } catch {
+          setStatus('live')
+          setNeedsGesture(true)
+          setStatusDetail('Tap to start audio')
+        }
+      })
+
+      call.on('close', () => {
+        clearTimeout(timeout)
+        setStatus('offline')
+        setStatusDetail('Stream ended.')
+        if (viewerVideoRef.current) viewerVideoRef.current.srcObject = null
+      })
+
+      call.on('error', () => {
+        clearTimeout(timeout)
+        setStatus('offline')
+        setStatusDetail('linturo is not live right now.')
+      })
+
+      peer.on('error', (err) => {
+        if (err?.type === 'peer-unavailable') {
+          clearTimeout(timeout)
+          setStatus('offline')
+          setStatusDetail('linturo is not live right now.')
+        }
+      })
+    } catch (err) {
+      console.error(err)
+      setStatus('offline')
+      setStatusDetail('linturo is not live right now.')
+    }
+  }, [teardownViewer])
+
+  useEffect(() => {
+    if (mode !== 'viewer') return undefined
+    connectAsViewer()
+    return undefined
+  }, [mode, connectAsViewer])
+
+  const unmuteViewer = async () => {
+    const el = viewerVideoRef.current
+    if (!el) return
+    el.muted = false
+    setMuted(false)
+    setNeedsGesture(false)
+    try {
+      await el.play()
+    } catch {
+      /* ignore */
+    }
+  }
+
+  const setEffect = (key, value) => {
+    setEffects((prev) => ({ ...prev, [key]: value }))
+  }
+
+  return (
+    <div className="min-h-[100dvh] bg-ink text-paper flex flex-col">
+      <header className="relative z-40 flex items-center justify-between gap-3 px-4 sm:px-6 lg:px-8 py-4 border-b border-hairline">
+        <Link
+          to="/"
+          className="inline-flex items-center gap-2 text-sm text-mute hover:text-paper transition-colors"
+        >
+          <ArrowLeftIcon className="h-4 w-4" />
+          <span className="hidden xs:inline sm:inline">Back</span>
+        </Link>
+        <div className="flex items-center gap-2">
+          <SignalIcon
+            className={`h-4 w-4 ${status === 'live' ? 'text-paper animate-pulse' : 'text-mute'}`}
+          />
+          <h1 className="text-sm sm:text-base font-medium tracking-wide uppercase">Live</h1>
+        </div>
+        <div className="text-xs text-mute tabular-nums min-w-[4.5rem] text-right">
+          {mode === 'host' && status === 'live' ? `${viewerCount} watching` : status}
+        </div>
+      </header>
+
+      {mode === 'viewer' ? (
+        <div className="relative flex-1 flex flex-col min-h-0">
+          <div className="relative flex-1 bg-black flex items-center justify-center min-h-[50dvh]">
+            <video
+              ref={viewerVideoRef}
+              className="w-full h-full max-h-[100dvh] object-contain bg-black"
+              playsInline
+              autoPlay
+              muted={muted}
+            />
+            {status !== 'live' && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-6 text-center pointer-events-none">
+                <p className="text-sm sm:text-base text-mute">{statusDetail || 'Connecting…'}</p>
+                {status === 'offline' && (
+                  <button
+                    type="button"
+                    onClick={connectAsViewer}
+                    className="pointer-events-auto mt-2 px-4 py-2 border border-hairline text-sm text-paper hover:border-paper transition-colors"
+                  >
+                    Retry
+                  </button>
+                )}
+              </div>
+            )}
+            {(needsGesture || muted) && status === 'live' && (
+              <button
+                type="button"
+                onClick={unmuteViewer}
+                className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-2 px-4 py-3 bg-paper text-ink text-sm font-medium"
+              >
+                {muted ? (
+                  <SpeakerXMarkIcon className="h-5 w-5" />
+                ) : (
+                  <SpeakerWaveIcon className="h-5 w-5" />
+                )}
+                Tap for sound
+              </button>
+            )}
+          </div>
+          <div className="px-4 sm:px-6 py-4 border-t border-hairline flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <p className="text-xs sm:text-sm text-mute">Watch the set in your browser.</p>
+            <button
+              type="button"
+              onClick={() => {
+                teardownViewer()
+                setMode('gate')
+                setStatus('idle')
+                setStatusDetail('')
+              }}
+              className="text-xs uppercase tracking-[0.2em] text-mute hover:text-paper transition-colors self-start sm:self-auto"
+            >
+              Host controls
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      {mode === 'gate' ? (
+        <div className="flex-1 flex items-center justify-center px-4 py-16">
+          <form
+            onSubmit={unlockHost}
+            className="w-full max-w-sm border border-hairline p-6 space-y-4"
+          >
+            <h2 className="text-lg font-medium">Host unlock</h2>
+            <p className="text-sm text-mute">
+              Broadcast from this browser with your camera and XDJ-AZ as the audio input.
+            </p>
+            <input
+              type="password"
+              value={hostKeyInput}
+              onChange={(e) => setHostKeyInput(e.target.value)}
+              placeholder="Host key"
+              className="w-full px-3 py-2.5 border border-hairline bg-black text-paper text-sm focus:outline-none focus:border-paper"
+              autoComplete="current-password"
+            />
+            {hostError ? <p className="text-sm text-mute">{hostError}</p> : null}
+            <div className="flex gap-3">
+              <button
+                type="submit"
+                className="flex-1 px-4 py-2.5 bg-paper text-ink text-sm font-medium"
+              >
+                Enter
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setMode('viewer')
+                }}
+                className="px-4 py-2.5 border border-hairline text-sm text-mute hover:text-paper"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
+      ) : null}
+
+      {mode === 'host' ? (
+        <div className="flex-1 flex flex-col lg:flex-row min-h-0">
+          <div className="relative flex-1 bg-black min-h-[42dvh] lg:min-h-0 flex items-center justify-center">
+            <video
+              ref={previewVideoRef}
+              className="absolute opacity-0 pointer-events-none w-px h-px"
+              playsInline
+              muted
+              autoPlay
+            />
+            <canvas
+              ref={canvasRef}
+              className="w-full h-full max-h-[70dvh] lg:max-h-none object-contain"
+            />
+            {status !== 'live' && status !== 'preview' && (
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <p className="text-sm text-mute px-6 text-center">{statusDetail}</p>
+              </div>
+            )}
+          </div>
+
+          <aside className="w-full lg:w-[22rem] xl:w-96 shrink-0 border-t lg:border-t-0 lg:border-l border-hairline overflow-y-auto max-h-[58dvh] lg:max-h-none">
+            <div className="p-4 sm:p-5 space-y-5">
+              <div>
+                <p className="text-xs uppercase tracking-[0.24em] text-mute mb-2">Master</p>
+                <p className="text-sm text-mute">{statusDetail}</p>
+              </div>
+
+              <div className="space-y-3">
+                <label className="block space-y-1.5">
+                  <span className="flex items-center gap-2 text-xs text-mute">
+                    <VideoCameraIcon className="h-4 w-4" />
+                    Camera (USB / laptop)
+                  </span>
+                  <select
+                    value={videoDeviceId}
+                    onChange={(e) => onCameraChange(e.target.value)}
+                    className="w-full px-3 py-2 border border-hairline bg-black text-paper text-sm"
+                  >
+                    {devices.video.length === 0 ? (
+                      <option value="">Enable camera to list devices</option>
+                    ) : (
+                      devices.video.map((d, i) => (
+                        <option key={d.deviceId} value={d.deviceId}>
+                          {cameraLabel(d, i)}
+                        </option>
+                      ))
+                    )}
+                  </select>
+                  <p className="text-[11px] text-mute leading-relaxed">
+                    Plug in your USB camera, then Refresh — external cams are marked USB and
+                    preferred automatically. You can switch cameras while live.
+                  </p>
+                </label>
+
+                <label className="block space-y-1.5">
+                  <span className="flex items-center gap-2 text-xs text-mute">
+                    <MicrophoneIcon className="h-4 w-4" />
+                    Audio (XDJ-AZ)
+                  </span>
+                  <select
+                    value={audioDeviceId}
+                    onChange={(e) => setAudioDeviceId(e.target.value)}
+                    className="w-full px-3 py-2 border border-hairline bg-black text-paper text-sm"
+                    disabled={status === 'live'}
+                  >
+                    {devices.audio.length === 0 ? (
+                      <option value="">Allow mic to list devices</option>
+                    ) : (
+                      devices.audio.map((d) => (
+                        <option key={d.deviceId} value={d.deviceId}>
+                          {d.label || 'Audio input'}
+                        </option>
+                      ))
+                    )}
+                  </select>
+                  <p className="text-[11px] text-mute leading-relaxed">
+                    Choose the XDJ-AZ (or USB audio). Processing is off so the mixer master stays
+                    clean.
+                  </p>
+                </label>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                {status === 'live' ? (
+                  <button
+                    type="button"
+                    onClick={endLive}
+                    className="flex-1 min-w-[8rem] px-4 py-2.5 border border-paper text-paper text-sm font-medium hover:bg-paper hover:text-ink transition-colors"
+                  >
+                    End live
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      onClick={openCameraPreview}
+                      disabled={status === 'connecting'}
+                      className="px-4 py-2.5 border border-hairline text-sm text-mute hover:text-paper disabled:opacity-50"
+                    >
+                      Open camera
+                    </button>
+                    <button
+                      type="button"
+                      onClick={goLive}
+                      disabled={status === 'connecting'}
+                      className="flex-1 min-w-[8rem] px-4 py-2.5 bg-paper text-ink text-sm font-medium disabled:opacity-50"
+                    >
+                      {status === 'connecting' ? 'Starting…' : 'Go live'}
+                    </button>
+                  </>
+                )}
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      await requestDeviceAccess()
+                      setStatusDetail('Device list refreshed. Pick your USB camera.')
+                    } catch (err) {
+                      setStatusDetail(err?.message || 'Permission needed to list cameras')
+                    }
+                  }}
+                  className="px-3 py-2.5 border border-hairline text-xs text-mute hover:text-paper"
+                >
+                  Refresh
+                </button>
+              </div>
+
+              <div className="space-y-3 pt-2 border-t border-hairline">
+                <p className="text-xs uppercase tracking-[0.24em] text-mute">Psychedelic FX</p>
+                <EffectSlider
+                  label="Master intensity"
+                  value={effects.intensity}
+                  onChange={(v) => setEffect('intensity', v)}
+                />
+                <EffectSlider
+                  label="Hue drift"
+                  value={effects.hueSpeed}
+                  onChange={(v) => setEffect('hueSpeed', v)}
+                />
+                <EffectSlider
+                  label="RGB split"
+                  value={effects.rgbSplit}
+                  onChange={(v) => setEffect('rgbSplit', v)}
+                />
+                <EffectSlider
+                  label="Trails"
+                  value={effects.trails}
+                  onChange={(v) => setEffect('trails', v)}
+                />
+                <EffectSlider
+                  label="Warp"
+                  value={effects.warp}
+                  onChange={(v) => setEffect('warp', v)}
+                />
+                <EffectSlider
+                  label="Glitch"
+                  value={effects.glitch}
+                  onChange={(v) => setEffect('glitch', v)}
+                />
+                <EffectSlider
+                  label="Pulse"
+                  value={effects.pulse}
+                  onChange={(v) => setEffect('pulse', v)}
+                />
+                <EffectSlider
+                  label="Mirror / kaleidoscope"
+                  value={effects.mirror}
+                  onChange={(v) => setEffect('mirror', v)}
+                />
+                <button
+                  type="button"
+                  onClick={() => setEffects(DEFAULT_EFFECTS)}
+                  className="text-xs text-mute hover:text-paper"
+                >
+                  Reset FX
+                </button>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  endLive()
+                  setMode('viewer')
+                }}
+                className="text-xs text-mute hover:text-paper"
+              >
+                Back to viewer
+              </button>
+            </div>
+          </aside>
+        </div>
+      ) : null}
+    </div>
+  )
+}
