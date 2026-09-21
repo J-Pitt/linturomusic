@@ -16,17 +16,14 @@ const MANIFEST_KEY = 'live-videos.json'
 const PRESENCE_KEY = 'live-presence.json'
 const PUBLIC_BASE = `https://${BUCKET}.s3.us-west-2.amazonaws.com`
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'Content-Type',
-  'Access-Control-Allow-Methods': 'POST,OPTIONS',
+const responseHeaders = {
   'Content-Type': 'application/json',
 }
 
 function json(statusCode, body) {
   return {
     statusCode,
-    headers: corsHeaders,
+    headers: responseHeaders,
     body: JSON.stringify(body),
   }
 }
@@ -77,7 +74,7 @@ async function writeManifest(manifest) {
 
 exports.handler = async (event) => {
   if (event.requestContext?.http?.method === 'OPTIONS' || event.httpMethod === 'OPTIONS') {
-    return { statusCode: 204, headers: corsHeaders, body: '' }
+    return { statusCode: 204, headers: responseHeaders, body: '' }
   }
 
   try {

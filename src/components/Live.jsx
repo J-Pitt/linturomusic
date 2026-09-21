@@ -744,22 +744,38 @@ export default function Live() {
       peerRef.current = peer
 
       await new Promise((resolve, reject) => {
-        peer.on('open', resolve)
+        const timer = setTimeout(() => {
+          reject(new Error('Signaling timed out — check network and try again.'))
+        }, 15000)
+        peer.on('open', (id) => {
+          clearTimeout(timer)
+          resolve(id)
+        })
         peer.on('error', (err) => {
+          clearTimeout(timer)
           if (err?.type === 'unavailable-id') {
             reject(new Error('Could not claim live room — try Go live again.'))
+          } else if (err?.type === 'network' || /fetch|network/i.test(String(err?.message || err))) {
+            reject(new Error('Could not reach live signaling server. Retry Go live.'))
           } else {
-            reject(err)
+            reject(new Error(err?.message || String(err) || 'Live peer error'))
           }
         })
       })
 
       const hostKey = hostKeyRef.current || LIVE_HOST_KEY
-      await setLivePresence({ hostKey, live: true, peerId })
-      clearInterval(presenceTimerRef.current)
-      presenceTimerRef.current = setInterval(() => {
-        setLivePresence({ hostKey, live: true, peerId }).catch(() => {})
-      }, 20000)
+      try {
+        await setLivePresence({ hostKey, live: true, peerId })
+        clearInterval(presenceTimerRef.current)
+        presenceTimerRef.current = setInterval(() => {
+          setLivePresence({ hostKey, live: true, peerId }).catch(() => {})
+        }, 20000)
+      } catch (presenceErr) {
+        console.error('presence publish failed', presenceErr)
+        setStatusDetail(
+          'Live room is up, but presence sync failed — viewers may need a moment / retry Join.'
+        )
+      }
 
       peer.on('call', (call) => {
         const stream = outboundStreamRef.current

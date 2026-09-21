@@ -20,6 +20,10 @@ export const LIVE_PRESENCE_URL =
 /** STUN + public TURN so phone (cellular) can reach laptop (Wi‑Fi). */
 export const LIVE_PEER_OPTIONS = {
   debug: 1,
+  host: '0.peerjs.com',
+  port: 443,
+  path: '/',
+  secure: true,
   config: {
     iceServers: [
       { urls: 'stun:stun.l.google.com:19302' },
