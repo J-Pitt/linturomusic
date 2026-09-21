@@ -24,4 +24,9 @@ export const DEFAULT_EFFECTS = {
   glitch: 0.12,
   mirror: 0,
   pulse: 0.35,
+  swirl: 0.2,
+  ripple: 0.15,
+  barrel: 0,
+  tunnel: 0.1,
+  pixelate: 0,
 }

@@ -1032,9 +1032,34 @@ export default function Live() {
                   onChange={(v) => setEffect('trails', v)}
                 />
                 <EffectSlider
-                  label="Warp"
+                  label="Warp slices"
                   value={effects.warp}
                   onChange={(v) => setEffect('warp', v)}
+                />
+                <EffectSlider
+                  label="Swirl"
+                  value={effects.swirl ?? 0}
+                  onChange={(v) => setEffect('swirl', v)}
+                />
+                <EffectSlider
+                  label="Ripple"
+                  value={effects.ripple ?? 0}
+                  onChange={(v) => setEffect('ripple', v)}
+                />
+                <EffectSlider
+                  label="Barrel / fish-eye"
+                  value={effects.barrel ?? 0}
+                  onChange={(v) => setEffect('barrel', v)}
+                />
+                <EffectSlider
+                  label="Tunnel zoom"
+                  value={effects.tunnel ?? 0}
+                  onChange={(v) => setEffect('tunnel', v)}
+                />
+                <EffectSlider
+                  label="Pixelate"
+                  value={effects.pixelate ?? 0}
+                  onChange={(v) => setEffect('pixelate', v)}
                 />
                 <EffectSlider
                   label="Glitch"
