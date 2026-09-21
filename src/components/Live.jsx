@@ -170,13 +170,29 @@ export default function Live() {
     setAudioBroadcasting(false)
   }, [])
 
-  /** Route mic/XDJ through gain + meter, return processed track for WebRTC. */
+  /** Meter via Web Audio; broadcast the raw XDJ/mic track (WebRTC-safe on phones). */
   const setupBroadcastAudio = useCallback(
     async (rawTrack) => {
       stopBroadcastAudio()
       if (!rawTrack || rawTrack.readyState !== 'live') {
         setAudioBroadcasting(false)
         return null
+      }
+
+      rawTrack.enabled = true
+      try {
+        rawTrack.contentHint = 'music'
+      } catch {
+        /* ignore */
+      }
+
+      // Clone ONLY for metering — never send createMediaStreamDestination tracks over
+      // WebRTC (those often arrive silent on mobile).
+      let meterClone = null
+      try {
+        meterClone = rawTrack.clone()
+      } catch {
+        meterClone = null
       }
 
       const AudioCtx = window.AudioContext || window.webkitAudioContext
@@ -187,44 +203,48 @@ export default function Live() {
         /* ignore */
       }
 
-      const source = ctx.createMediaStreamSource(new MediaStream([rawTrack]))
-      const gain = ctx.createGain()
-      gain.gain.value = inputGainRef.current
-      const analyser = ctx.createAnalyser()
-      analyser.fftSize = 1024
-      analyser.smoothingTimeConstant = 0.5
-      const dest = ctx.createMediaStreamDestination()
+      // Never feed the outbound raw track into Web Audio — that can mute WebRTC.
+      if (meterClone) {
+        const source = ctx.createMediaStreamSource(new MediaStream([meterClone]))
+        const gain = ctx.createGain()
+        gain.gain.value = inputGainRef.current
+        const analyser = ctx.createAnalyser()
+        analyser.fftSize = 1024
+        analyser.smoothingTimeConstant = 0.5
+        source.connect(gain)
+        gain.connect(analyser)
 
-      source.connect(gain)
-      gain.connect(analyser)
-      gain.connect(dest)
+        gainNodeRef.current = gain
+        audioMeterRef.current = {
+          ctx,
+          analyser,
+          rawTracks: [meterClone],
+        }
 
-      gainNodeRef.current = gain
-      audioMeterRef.current = { ctx, analyser, rawTracks: [rawTrack] }
-
-      const freq = new Uint8Array(analyser.frequencyBinCount)
-      const tick = () => {
-        analyser.getByteFrequencyData(freq)
-        let sum = 0
-        for (let i = 0; i < freq.length; i += 1) sum += freq[i]
-        const avg = sum / (freq.length * 255)
-        setAudioLevel(Math.min(1, avg * 2.2))
-        setAudioBroadcasting(rawTrack.readyState === 'live' && rawTrack.enabled)
-        audioMeterRafRef.current = requestAnimationFrame(tick)
-      }
-      tick()
-
-      const processed = dest.stream.getAudioTracks()[0]
-      if (processed) {
-        processed.enabled = true
+        const freq = new Uint8Array(analyser.frequencyBinCount)
+        const tick = () => {
+          analyser.getByteFrequencyData(freq)
+          let sum = 0
+          for (let i = 0; i < freq.length; i += 1) sum += freq[i]
+          const avg = sum / (freq.length * 255)
+          const boosted = avg * (0.8 + inputGainRef.current * 0.6)
+          setAudioLevel(Math.min(1, boosted * 2.2))
+          setAudioBroadcasting(rawTrack.readyState === 'live' && rawTrack.enabled)
+          audioMeterRafRef.current = requestAnimationFrame(tick)
+        }
+        tick()
+      } else {
         try {
-          processed.contentHint = 'music'
+          ctx.close()
         } catch {
           /* ignore */
         }
+        audioMeterRef.current = { rawTracks: [] }
+        setAudioLevel(0)
       }
+
       setAudioBroadcasting(true)
-      return processed || null
+      return rawTrack
     },
     [stopBroadcastAudio]
   )
@@ -699,8 +719,8 @@ export default function Live() {
         })
       }
 
-      const processedAudio = await setupBroadcastAudio(audioTrack)
-      if (!processedAudio) throw new Error('Could not open audio input for broadcast.')
+      const broadcastAudio = await setupBroadcastAudio(audioTrack)
+      if (!broadcastAudio) throw new Error('Could not open audio input for broadcast.')
 
       if (local) local.addTrack(audioTrack)
 
@@ -734,7 +754,7 @@ export default function Live() {
           /* ignore */
         }
       }
-      const outbound = new MediaStream([videoTrack, processedAudio].filter(Boolean))
+      const outbound = new MediaStream([videoTrack, broadcastAudio].filter(Boolean))
       outboundStreamRef.current = outbound
 
       setStatusDetail('Opening live room…')
@@ -783,11 +803,11 @@ export default function Live() {
           call.close()
           return
         }
-        // Fresh clone helps some mobile WebRTC stacks
-        const answerStream = new MediaStream(
-          stream.getTracks().map((t) => (t.clone ? t.clone() : t))
-        )
-        call.answer(answerStream)
+        // Do NOT clone WebRTC tracks — cloned canvas/audio tracks often go silent on mobile.
+        stream.getAudioTracks().forEach((t) => {
+          t.enabled = true
+        })
+        call.answer(stream)
         callsRef.current.set(call.peer, call)
         syncViewerCount()
         call.on('close', () => {
@@ -839,7 +859,7 @@ export default function Live() {
       })
 
       setStatus('live')
-      setStatusDetail('You are live. Watch the input meter — turn up Input gain if it’s quiet.')
+      setStatusDetail('You are live. Meter moving = XDJ is reaching the host. Viewers: tap Tap for sound if silent.')
       setChatConnected(true)
     } catch (err) {
       console.error(err)
@@ -967,20 +987,40 @@ export default function Live() {
         if (!tracks.length) return
         clearTimeout(timeout)
         hadRemoteStreamRef.current = true
+
+        const audioTracks = remote.getAudioTracks?.() || []
+        audioTracks.forEach((t) => {
+          t.enabled = true
+        })
+
         const el = viewerVideoRef.current
         if (!el) return
         el.srcObject = remote
-        el.muted = true
         el.setAttribute('playsinline', '')
         el.setAttribute('webkit-playsinline', '')
         el.playsInline = true
-        setMuted(true)
+
+        // Try unmuted first — Join tap counts as a gesture on many phones
+        el.volume = 1
+        el.removeAttribute('muted')
+        el.muted = false
+        setMuted(false)
         try {
           await el.play()
           setStatus('live')
-          setStatusDetail('Connected')
-          setNeedsGesture(true)
+          setStatusDetail(
+            audioTracks.length ? 'Connected' : 'Connected — no audio track from host'
+          )
+          setNeedsGesture(false)
         } catch {
+          el.muted = true
+          el.setAttribute('muted', '')
+          setMuted(true)
+          try {
+            await el.play()
+          } catch {
+            /* ignore */
+          }
           setStatus('live')
           setNeedsGesture(true)
           setStatusDetail('Tap for sound')
@@ -1038,13 +1078,22 @@ export default function Live() {
   const unmuteViewer = async () => {
     const el = viewerVideoRef.current
     if (!el) return
+    const remote = el.srcObject
+    remote?.getAudioTracks?.()?.forEach((t) => {
+      t.enabled = true
+    })
+    el.volume = 1
+    el.removeAttribute('muted')
     el.muted = false
     setMuted(false)
     setNeedsGesture(false)
     try {
       await el.play()
-    } catch {
-      /* ignore */
+      setStatusDetail('Sound on')
+    } catch (err) {
+      console.error(err)
+      setStatusDetail('Could not unmute — check phone silent switch')
+      setNeedsGesture(true)
     }
   }
 
@@ -1272,7 +1321,7 @@ export default function Live() {
                   <div className="space-y-2 pt-1">
                     <label className="block space-y-1.5">
                       <div className="flex justify-between text-[11px] text-mute">
-                        <span>Input gain</span>
+                        <span>Meter gain</span>
                         <span className="tabular-nums text-paper/70">
                           {Math.round(inputGain * 100)}%
                         </span>

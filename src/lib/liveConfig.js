@@ -45,19 +45,20 @@ export const LIVE_PEER_OPTIONS = {
   },
 }
 
-/** Tiny canvas video track — works on iOS (no AudioContext needed). */
+/** Tiny canvas + silent audio — audio m-line required so host audio negotiates on mobile. */
 export function createHandshakeStream() {
   const canvas = document.createElement('canvas')
   canvas.width = 16
   canvas.height = 16
-  const ctx = canvas.getContext('2d')
+  const canvasCtx = canvas.getContext('2d')
   let raf = 0
   let alive = true
+  let audioCtx = null
 
   const paint = () => {
-    if (!alive || !ctx) return
-    ctx.fillStyle = '#000'
-    ctx.fillRect(0, 0, 16, 16)
+    if (!alive || !canvasCtx) return
+    canvasCtx.fillStyle = '#000'
+    canvasCtx.fillRect(0, 0, 16, 16)
     raf = requestAnimationFrame(paint)
   }
   paint()
@@ -72,12 +73,41 @@ export function createHandshakeStream() {
     }
   })
 
+  try {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext
+    audioCtx = new AudioCtx()
+    const dest = audioCtx.createMediaStreamDestination()
+    const osc = audioCtx.createOscillator()
+    const gain = audioCtx.createGain()
+    gain.gain.value = 0
+    osc.connect(gain)
+    gain.connect(dest)
+    osc.start()
+    dest.stream.getAudioTracks().forEach((t) => {
+      t.enabled = true
+      try {
+        t.contentHint = 'music'
+      } catch {
+        /* ignore */
+      }
+      stream.addTrack(t)
+    })
+    audioCtx.resume?.().catch(() => {})
+  } catch {
+    /* Viewer may still get video; audio negotiation can fail without this track. */
+  }
+
   return {
     stream,
     dispose: () => {
       alive = false
       cancelAnimationFrame(raf)
       stream.getTracks().forEach((t) => t.stop())
+      try {
+        audioCtx?.close?.()
+      } catch {
+        /* ignore */
+      }
     },
   }
 }
