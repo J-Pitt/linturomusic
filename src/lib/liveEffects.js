@@ -36,11 +36,11 @@ function drawBaseVideo(ctx, video, w, h, mirror, warp, t) {
   }
 
   if (warp > 0.02) {
-    const slices = Math.floor(18 + warp * 28)
+    const slices = Math.floor(14 + warp * 16)
     const sliceH = h / slices
     for (let s = 0; s < slices; s += 1) {
       const sy = s * sliceH
-      const offset = Math.sin(t * 2.2 + s * 0.45) * warp * 28
+      const offset = Math.sin(t * 1.6 + s * 0.4) * warp * 10
       ctx.drawImage(video, 0, sy, video.videoWidth, (sliceH / h) * video.videoHeight, offset, sy, w, sliceH)
     }
     return
@@ -59,9 +59,9 @@ function applySwirl(ctx, amount, t) {
   const cx = w * 0.5
   const cy = h * 0.5
   const maxR = Math.hypot(w, h) * 0.55
-  const rings = Math.floor(16 + amount * 20)
-  const twist = amount * Math.PI * 1.6
-  const spin = t * amount * 0.7
+  const rings = Math.floor(10 + amount * 12)
+  const twist = amount * Math.PI * 0.45
+  const spin = t * amount * 0.22
 
   ctx.save()
   for (let i = rings; i >= 0; i -= 1) {
@@ -95,29 +95,28 @@ function applyRipple(ctx, amount, t) {
 
   const cx = w * 0.5
   const cy = h * 0.5
-  const amp = amount * 22
-  const freq = 0.035 + amount * 0.04
-  const slices = Math.floor(28 + amount * 36)
+  const amp = amount * 8
+  const freq = 0.022 + amount * 0.015
+  const slices = Math.floor(20 + amount * 18)
   const sliceH = h / slices
 
   ctx.clearRect(0, 0, w, h)
   for (let s = 0; s < slices; s += 1) {
     const y = s * sliceH
     const dy = y + sliceH * 0.5 - cy
-    const wave = Math.sin(dy * freq + t * 4.5) * amp
-    const waveY = Math.cos(dy * freq * 0.7 + t * 3.2) * amp * 0.35
+    const wave = Math.sin(dy * freq + t * 3) * amp
+    const waveY = Math.cos(dy * freq * 0.7 + t * 2.2) * amp * 0.25
     ctx.drawImage(scratch, 0, y, w, sliceH, wave, y + waveY, w, sliceH)
   }
 
-  // Light vertical ripple pass
   tmp.drawImage(ctx.canvas, 0, 0)
-  const cols = Math.floor(20 + amount * 24)
+  const cols = Math.floor(14 + amount * 12)
   const sliceW = w / cols
   ctx.clearRect(0, 0, w, h)
   for (let c = 0; c < cols; c += 1) {
     const x = c * sliceW
     const dx = x + sliceW * 0.5 - cx
-    const wave = Math.sin(dx * freq + t * 3.8) * amp * 0.55
+    const wave = Math.sin(dx * freq + t * 2.6) * amp * 0.4
     ctx.drawImage(scratch, x, 0, sliceW, h, x, wave, sliceW, h)
   }
 }
@@ -131,8 +130,8 @@ function applyBarrel(ctx, amount, t) {
 
   const cx = w * 0.5
   const cy = h * 0.5
-  const breathe = 1 + Math.sin(t * 1.5) * amount * 0.04
-  const rings = Math.floor(12 + amount * 16)
+  const breathe = 1 + Math.sin(t * 1.2) * amount * 0.015
+  const rings = Math.floor(8 + amount * 10)
   const maxR = Math.hypot(w, h) * 0.5
 
   ctx.clearRect(0, 0, w, h)
@@ -141,9 +140,8 @@ function applyBarrel(ctx, amount, t) {
   for (let i = 0; i < rings; i += 1) {
     const p0 = i / rings
     const p1 = (i + 1) / rings
-    // Push outer rings farther out (barrel)
-    const zoom0 = 1 + amount * 0.55 * p0 * p0 * breathe
-    const zoom1 = 1 + amount * 0.55 * p1 * p1 * breathe
+    const zoom0 = 1 + amount * 0.2 * p0 * p0 * breathe
+    const zoom1 = 1 + amount * 0.2 * p1 * p1 * breathe
     const r0 = (p0 * maxR) / zoom0
     const r1 = (p1 * maxR) / zoom1
 
@@ -167,13 +165,13 @@ function applyTunnel(ctx, amount, t) {
   const tmp = ensureScratch(w, h)
   tmp.drawImage(ctx.canvas, 0, 0)
 
-  const layers = Math.floor(3 + amount * 5)
-  const spin = t * amount * 0.4
+  const layers = Math.floor(2 + amount * 3)
+  const spin = t * amount * 0.15
   ctx.save()
   for (let L = layers; L >= 1; L -= 1) {
     const p = L / layers
-    const scale = 1 - amount * 0.38 * p
-    const alpha = 0.18 + amount * 0.22 * (1 - p)
+    const scale = 1 - amount * 0.14 * p
+    const alpha = 0.08 + amount * 0.1 * (1 - p)
     ctx.globalAlpha = alpha
     ctx.translate(w / 2, h / 2)
     ctx.rotate(spin * p)
@@ -188,14 +186,14 @@ function applyTunnel(ctx, amount, t) {
 
 /** Blocky pixelation. */
 function applyPixelate(ctx, amount) {
-  if (amount < 0.05) return
+  if (amount < 0.08) return
   const { width: w, height: h } = ctx.canvas
   const tmp = ensureScratch(w, h)
   tmp.drawImage(ctx.canvas, 0, 0)
 
-  const blocks = Math.max(8, Math.floor(48 - amount * 40))
-  const sw = Math.max(8, Math.floor(w / blocks))
-  const sh = Math.max(8, Math.floor(h / blocks))
+  const blocks = Math.max(16, Math.floor(64 - amount * 36))
+  const sw = Math.max(16, Math.floor(w / blocks))
+  const sh = Math.max(16, Math.floor(h / blocks))
   ctx.imageSmoothingEnabled = false
   ctx.clearRect(0, 0, w, h)
   ctx.drawImage(scratch, 0, 0, w, h, 0, 0, sw, sh)
@@ -213,31 +211,35 @@ export function drawPsychedelicFrame(ctx, video, effects, t) {
   const { width: w, height: h } = ctx.canvas
   if (!w || !h || !video.videoWidth) return
 
-  const i = clamp(effects.intensity ?? 0.5, 0, 1)
-  const trails = clamp(effects.trails ?? 0, 0, 1) * i
-  const hueSpeed = (effects.hueSpeed ?? 0) * i
-  const rgbSplit = (effects.rgbSplit ?? 0) * i
-  const warp = (effects.warp ?? 0) * i
-  const glitch = (effects.glitch ?? 0) * i
+  // Ease master intensity so mid sliders stay subtle
+  const iRaw = clamp(effects.intensity ?? 0.5, 0, 1)
+  const i = iRaw * iRaw * 0.85
+  const soft = (v) => clamp(v ?? 0, 0, 1) * i
+
+  const trails = soft(effects.trails)
+  const hueSpeed = soft(effects.hueSpeed)
+  const rgbSplit = soft(effects.rgbSplit)
+  const warp = soft(effects.warp)
+  const glitch = soft(effects.glitch)
   const mirror = clamp(effects.mirror ?? 0, 0, 1)
-  const pulse = (effects.pulse ?? 0) * i
-  const swirl = (effects.swirl ?? 0) * i
-  const ripple = (effects.ripple ?? 0) * i
-  const barrel = (effects.barrel ?? 0) * i
-  const tunnel = (effects.tunnel ?? 0) * i
-  const pixelate = (effects.pixelate ?? 0) * i
+  const pulse = soft(effects.pulse)
+  const swirl = soft(effects.swirl)
+  const ripple = soft(effects.ripple)
+  const barrel = soft(effects.barrel)
+  const tunnel = soft(effects.tunnel)
+  const pixelate = soft(effects.pixelate)
 
   if (trails > 0.02) {
-    ctx.fillStyle = `rgba(0,0,0,${0.08 + (1 - trails) * 0.35})`
+    ctx.fillStyle = `rgba(0,0,0,${0.22 + (1 - trails) * 0.45})`
     ctx.fillRect(0, 0, w, h)
   } else {
     ctx.clearRect(0, 0, w, h)
   }
 
-  const hue = (t * hueSpeed * 120) % 360
-  const sat = 1 + i * 0.85
-  const contrast = 1 + i * 0.25
-  const pulseScale = 1 + Math.sin(t * (2 + pulse * 4)) * pulse * 0.04
+  const hue = (t * hueSpeed * 48) % 360
+  const sat = 1 + i * 0.28
+  const contrast = 1 + i * 0.08
+  const pulseScale = 1 + Math.sin(t * (1.5 + pulse * 2)) * pulse * 0.015
 
   ctx.save()
   ctx.translate(w / 2, h / 2)
@@ -255,35 +257,35 @@ export function drawPsychedelicFrame(ctx, video, effects, t) {
   applyPixelate(ctx, pixelate)
 
   if (rgbSplit > 0.02) {
-    const ox = Math.sin(t * 1.7) * rgbSplit * 14
-    const oy = Math.cos(t * 1.3) * rgbSplit * 8
+    const ox = Math.sin(t * 1.2) * rgbSplit * 5
+    const oy = Math.cos(t * 0.9) * rgbSplit * 3
     ctx.globalCompositeOperation = 'screen'
-    ctx.globalAlpha = 0.35 + rgbSplit * 0.35
+    ctx.globalAlpha = 0.12 + rgbSplit * 0.18
     ctx.drawImage(video, ox, 0, w, h)
     ctx.drawImage(video, -ox * 0.7, oy, w, h)
     ctx.globalAlpha = 1
     ctx.globalCompositeOperation = 'source-over'
   }
 
-  if (glitch > 0.02 && Math.random() < glitch * 0.35) {
-    const bands = 2 + Math.floor(Math.random() * 4)
+  if (glitch > 0.02 && Math.random() < glitch * 0.12) {
+    const bands = 1 + Math.floor(Math.random() * 2)
     for (let b = 0; b < bands; b += 1) {
       const y = Math.random() * h
-      const bh = 4 + Math.random() * 28 * glitch
-      const dx = (Math.random() - 0.5) * 80 * glitch
+      const bh = 3 + Math.random() * 12 * glitch
+      const dx = (Math.random() - 0.5) * 28 * glitch
       ctx.drawImage(ctx.canvas, 0, y, w, bh, dx, y, w, bh)
     }
   }
 
-  if (i > 0.05) {
-    const g = ctx.createRadialGradient(w * 0.5, h * 0.45, h * 0.1, w * 0.5, h * 0.5, h * 0.75)
+  if (i > 0.08) {
+    const g = ctx.createRadialGradient(w * 0.5, h * 0.45, h * 0.15, w * 0.5, h * 0.5, h * 0.8)
     g.addColorStop(0, 'rgba(0,0,0,0)')
-    g.addColorStop(1, `rgba(0,0,0,${0.15 + i * 0.35})`)
+    g.addColorStop(1, `rgba(0,0,0,${0.06 + i * 0.18})`)
     ctx.fillStyle = g
     ctx.fillRect(0, 0, w, h)
 
     ctx.globalCompositeOperation = 'overlay'
-    ctx.fillStyle = `hsla(${hue}, 90%, 55%, ${0.06 + i * 0.12})`
+    ctx.fillStyle = `hsla(${hue}, 70%, 55%, ${0.02 + i * 0.05})`
     ctx.fillRect(0, 0, w, h)
     ctx.globalCompositeOperation = 'source-over'
   }

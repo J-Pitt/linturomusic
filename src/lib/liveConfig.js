@@ -70,17 +70,17 @@ export function createHandshakeStream() {
 }
 
 export const DEFAULT_EFFECTS = {
-  intensity: 0.55,
-  hueSpeed: 0.45,
-  rgbSplit: 0.4,
-  trails: 0.35,
-  warp: 0.28,
-  glitch: 0.12,
+  intensity: 0.28,
+  hueSpeed: 0.18,
+  rgbSplit: 0.12,
+  trails: 0.1,
+  warp: 0.08,
+  glitch: 0.05,
   mirror: 0,
-  pulse: 0.35,
-  swirl: 0.2,
-  ripple: 0.15,
+  pulse: 0.12,
+  swirl: 0.08,
+  ripple: 0.06,
   barrel: 0,
-  tunnel: 0.1,
+  tunnel: 0.04,
   pixelate: 0,
 }
