@@ -8,9 +8,11 @@ import {
   SpeakerWaveIcon,
   SpeakerXMarkIcon,
   VideoCameraIcon,
+  StopIcon,
 } from '@heroicons/react/24/outline'
 import { DEFAULT_EFFECTS, LIVE_HOST_KEY, LIVE_PEER_ID } from '../lib/liveConfig'
 import { drawPsychedelicFrame, fitCanvasToVideo } from '../lib/liveEffects'
+import { createLiveRecorder, publishLiveVideo, uploadRecordingBlob } from '../lib/liveRecord'
 
 const fieldClass =
   'w-full accent-paper h-1.5 bg-hairline rounded-full appearance-none cursor-pointer'
@@ -71,6 +73,14 @@ export default function Live() {
   const [effects, setEffects] = useState(DEFAULT_EFFECTS)
   const [muted, setMuted] = useState(true)
   const [needsGesture, setNeedsGesture] = useState(false)
+  const [recording, setRecording] = useState(false)
+  const [recordSeconds, setRecordSeconds] = useState(0)
+  const [review, setReview] = useState(null) // { url, blob, id }
+  const [reviewTitle, setReviewTitle] = useState('')
+  const [publishState, setPublishState] = useState('idle') // idle | uploading | publishing | done | error
+  const [publishDetail, setPublishDetail] = useState('')
+  const [uploadProgress, setUploadProgress] = useState(0)
+  const hostKeyRef = useRef('')
 
   const viewerVideoRef = useRef(null)
   const previewVideoRef = useRef(null)
@@ -82,6 +92,8 @@ export default function Live() {
   const rafRef = useRef(0)
   const effectsRef = useRef(effects)
   const startTimeRef = useRef(0)
+  const recorderRef = useRef(null)
+  const recordTimerRef = useRef(null)
 
   useEffect(() => {
     effectsRef.current = effects
@@ -278,10 +290,125 @@ export default function Live() {
       return
     }
     setHostError('')
+    hostKeyRef.current = hostKeyInput.trim()
+    try {
+      sessionStorage.setItem('linturo-live-host-key', hostKeyInput.trim())
+    } catch {
+      /* ignore */
+    }
     setMode('host')
     setStatus('idle')
     setStatusDetail('Plug in your USB camera, pick it in the list, then Go live.')
     refreshDevices({ preferNewUsb: true })
+  }
+
+  useEffect(() => {
+    try {
+      const saved = sessionStorage.getItem('linturo-live-host-key')
+      if (saved) hostKeyRef.current = saved
+    } catch {
+      /* ignore */
+    }
+  }, [])
+
+  const clearReview = () => {
+    if (review?.url) URL.revokeObjectURL(review.url)
+    setReview(null)
+    setReviewTitle('')
+    setPublishState('idle')
+    setPublishDetail('')
+    setUploadProgress(0)
+  }
+
+  const startRecording = () => {
+    const stream = outboundStreamRef.current
+    if (!stream || status !== 'live') {
+      setStatusDetail('Go live before recording.')
+      return
+    }
+    try {
+      const rec = createLiveRecorder(stream)
+      recorderRef.current = rec
+      rec.start()
+      setRecording(true)
+      setRecordSeconds(0)
+      clearInterval(recordTimerRef.current)
+      recordTimerRef.current = setInterval(() => {
+        setRecordSeconds((s) => s + 1)
+      }, 1000)
+      setStatusDetail('Recording the live feed (with FX).')
+    } catch (err) {
+      console.error(err)
+      setStatusDetail(err?.message || 'Could not start recording')
+    }
+  }
+
+  const stopRecording = async () => {
+    const rec = recorderRef.current
+    clearInterval(recordTimerRef.current)
+    setRecording(false)
+    if (!rec) return
+    try {
+      const blob = await rec.stop()
+      recorderRef.current = null
+      if (!blob.size) {
+        setStatusDetail('Recording was empty.')
+        return
+      }
+      const id = `set-${Date.now()}`
+      const url = URL.createObjectURL(blob)
+      const mins = Math.floor(recordSeconds / 60)
+      const stamp = new Date().toLocaleString(undefined, {
+        month: 'short',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+      })
+      setReviewTitle(`Live ${stamp}`)
+      setReview({ url, blob, id, duration: recordSeconds, mins })
+      setPublishState('idle')
+      setPublishDetail('Watch the take, then add it to Videos or discard.')
+      setStatusDetail('Recording stopped — review below.')
+    } catch (err) {
+      console.error(err)
+      setStatusDetail(err?.message || 'Could not finish recording')
+    }
+  }
+
+  const publishRecording = async () => {
+    if (!review?.blob) return
+    const hostKey = hostKeyRef.current || LIVE_HOST_KEY
+    setPublishState('uploading')
+    setPublishDetail('Uploading to S3…')
+    setUploadProgress(0)
+    try {
+      const { key } = await uploadRecordingBlob(review.blob, {
+        hostKey,
+        id: review.id,
+        onProgress: setUploadProgress,
+      })
+      setPublishState('publishing')
+      setPublishDetail('Saving to Videos…')
+      await publishLiveVideo({
+        hostKey,
+        id: review.id,
+        key,
+        title: reviewTitle.trim() || 'Live set',
+        subtitle: 'Live recording',
+      })
+      setPublishState('done')
+      setPublishDetail('Added to Videos on the home page.')
+    } catch (err) {
+      console.error(err)
+      setPublishState('error')
+      setPublishDetail(err?.message || 'Publish failed')
+    }
+  }
+
+  const formatRecTime = (s) => {
+    const m = Math.floor(s / 60)
+    const r = s % 60
+    return `${m}:${String(r).padStart(2, '0')}`
   }
 
   const startEffectLoop = () => {
@@ -444,7 +571,10 @@ export default function Live() {
     }
   }
 
-  const endLive = () => {
+  const endLive = async () => {
+    if (recording) {
+      await stopRecording()
+    }
     teardownBroadcast()
     setStatus('idle')
     setStatusDetail('Broadcast ended.')
@@ -791,6 +921,93 @@ export default function Live() {
                   Refresh
                 </button>
               </div>
+
+              {status === 'live' && (
+                <div className="space-y-3 pt-2 border-t border-hairline">
+                  <p className="text-xs uppercase tracking-[0.24em] text-mute">Record</p>
+                  <div className="flex gap-2 items-center">
+                    {recording ? (
+                      <button
+                        type="button"
+                        onClick={stopRecording}
+                        className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 border border-paper text-paper text-sm font-medium"
+                      >
+                        <StopIcon className="h-4 w-4" />
+                        Stop · {formatRecTime(recordSeconds)}
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={startRecording}
+                        className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-paper text-ink text-sm font-medium"
+                      >
+                        <span className="h-2.5 w-2.5 rounded-full bg-ink" />
+                        Record set
+                      </button>
+                    )}
+                  </div>
+                  <p className="text-[11px] text-mute leading-relaxed">
+                    Captures the live feed with FX + XDJ audio. After you stop, review and choose
+                    whether to add it to Videos.
+                  </p>
+                </div>
+              )}
+
+              {review && (
+                <div className="space-y-3 pt-2 border-t border-hairline">
+                  <p className="text-xs uppercase tracking-[0.24em] text-mute">Review take</p>
+                  <video
+                    src={review.url}
+                    controls
+                    playsInline
+                    className="w-full aspect-video bg-black border border-hairline"
+                  />
+                  <label className="block space-y-1.5">
+                    <span className="text-xs text-mute">Title for Videos</span>
+                    <input
+                      type="text"
+                      value={reviewTitle}
+                      onChange={(e) => setReviewTitle(e.target.value)}
+                      className="w-full px-3 py-2 border border-hairline bg-black text-paper text-sm"
+                      disabled={publishState === 'uploading' || publishState === 'publishing'}
+                    />
+                  </label>
+                  {publishState === 'uploading' && (
+                    <div className="h-1 bg-hairline">
+                      <div
+                        className="h-full bg-paper transition-all"
+                        style={{ width: `${Math.round(uploadProgress * 100)}%` }}
+                      />
+                    </div>
+                  )}
+                  <p className="text-xs text-mute">{publishDetail}</p>
+                  <div className="flex flex-wrap gap-2">
+                    {publishState !== 'done' && (
+                      <button
+                        type="button"
+                        onClick={publishRecording}
+                        disabled={
+                          publishState === 'uploading' ||
+                          publishState === 'publishing' ||
+                          !reviewTitle.trim()
+                        }
+                        className="flex-1 min-w-[8rem] px-4 py-2.5 bg-paper text-ink text-sm font-medium disabled:opacity-50"
+                      >
+                        {publishState === 'uploading' || publishState === 'publishing'
+                          ? 'Publishing…'
+                          : 'Add to Videos'}
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={clearReview}
+                      className="px-4 py-2.5 border border-hairline text-sm text-mute hover:text-paper"
+                    >
+                      {publishState === 'done' ? 'Done' : 'Discard'}
+                    </button>
+                  </div>
+                </div>
+              )}
 
               <div className="space-y-3 pt-2 border-t border-hairline">
                 <p className="text-xs uppercase tracking-[0.24em] text-mute">Psychedelic FX</p>

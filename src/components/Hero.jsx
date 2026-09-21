@@ -8,9 +8,10 @@ import {
   ArrowsPointingInIcon,
 } from '@heroicons/react/24/outline'
 import { HeartIcon as HeartIconSolid } from '@heroicons/react/24/solid'
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import { config } from '../config'
 import { formatCount, loadLikedIds, loadStats, recordPlay, toggleLike } from '../lib/stats'
+import { fetchPublishedLiveVideos } from '../lib/liveRecord'
 import VolumeControl from './VolumeControl'
 import SiteNav from './SiteNav'
 
@@ -94,13 +95,13 @@ const FEATURED_VIDEOS = [
   },
 ]
 
-function featuredFromHash(hash) {
+function featuredFromHash(hash, list = FEATURED_VIDEOS) {
   const raw = (hash || '').replace(/^#/, '').trim().toLowerCase()
   if (!raw) return null
   // `#videos` / `#mixes` are section anchors — do not treat them as featured tabs
-  if (raw === 'featured') return FEATURED_VIDEOS[0]
+  if (raw === 'featured') return list[0]
   return (
-    FEATURED_VIDEOS.find(
+    list.find(
       (v) =>
         v.slug === raw ||
         v.id.toLowerCase() === raw ||
@@ -112,6 +113,11 @@ function featuredFromHash(hash) {
 const Hero = () => {
   const [currentSet, setCurrentSet] = useState(null)
   const [isPlaying, setIsPlaying] = useState(false)
+  const [liveVideos, setLiveVideos] = useState([])
+  const featuredVideos = useMemo(
+    () => [...FEATURED_VIDEOS, ...liveVideos],
+    [liveVideos]
+  )
   const [audioError, setAudioError] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [currentTime, setCurrentTime] = useState(0)
@@ -142,9 +148,26 @@ const Hero = () => {
   const [volume, setVolume] = useState(1)
   const [muted, setMuted] = useState(false)
   const lastVolumeRef = useRef(1)
-  const featuredVideo = FEATURED_VIDEOS.find((v) => v.id === featuredVideoId) || FEATURED_VIDEOS[0]
+  const featuredVideo =
+    featuredVideos.find((v) => v.id === featuredVideoId) || featuredVideos[0]
   const isYoutubeFeatured = featuredVideo.type === 'youtube'
   const isSmileGlitch = featuredVideo.id === 'rec059'
+
+  useEffect(() => {
+    let cancelled = false
+    fetchPublishedLiveVideos().then((videos) => {
+      if (cancelled) return
+      setLiveVideos(videos)
+      const fromHash = featuredFromHash(window.location.hash, [
+        ...FEATURED_VIDEOS,
+        ...videos,
+      ])
+      if (fromHash) setFeaturedVideoId(fromHash.id)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const applyMediaVolume = (el, v = volume, m = muted) => {
     if (!el) return
@@ -198,7 +221,7 @@ const Hero = () => {
       return id
     })
     if (syncHash) {
-      const video = FEATURED_VIDEOS.find((v) => v.id === id)
+      const video = featuredVideos.find((v) => v.id === id)
       if (video && typeof window !== 'undefined') {
         const next = `#${video.slug}`
         if (window.location.hash !== next) {
@@ -712,7 +735,7 @@ const Hero = () => {
             aria-label="Featured visual mixes"
             className="mb-6 flex flex-wrap gap-x-5 gap-y-2"
           >
-            {FEATURED_VIDEOS.map((video) => {
+            {featuredVideos.map((video) => {
               const selected = featuredVideoId === video.id
               return (
                 <button
@@ -740,7 +763,7 @@ const Hero = () => {
             id="featured"
             className="relative scroll-mt-24 border border-hairline bg-black text-left"
           >
-            {FEATURED_VIDEOS.map((video) => (
+            {featuredVideos.map((video) => (
               <span
                 key={video.slug}
                 id={video.slug}

@@ -5,6 +5,16 @@ export const LIVE_PEER_ID = 'linturo-music-live'
 export const LIVE_HOST_KEY =
   import.meta.env.VITE_LIVE_HOST_KEY || 'linturo'
 
+/** Live record/publish API (Lambda Function URL). */
+export const LIVE_API_URL =
+  import.meta.env.VITE_LIVE_API_URL ||
+  'https://kyjdji4gaqvitwcydedoatsnle0rauwy.lambda-url.us-west-2.on.aws/'
+
+/** Public manifest of host-approved live recordings. */
+export const LIVE_VIDEOS_MANIFEST_URL =
+  import.meta.env.VITE_LIVE_VIDEOS_MANIFEST_URL ||
+  'https://linturomusic.s3.us-west-2.amazonaws.com/live-videos.json'
+
 export const DEFAULT_EFFECTS = {
   intensity: 0.55,
   hueSpeed: 0.45,

@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Splash intensity — 4 vs 6</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: #111;
+        color: #f5f5f5;
+        font-family: Inter, system-ui, sans-serif;
+      }
+      h1 {
+        margin: 0;
+        padding: 16px 20px 8px;
+        font-size: 14px;
+        font-weight: 500;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #a1a1aa;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 2px;
+        min-height: calc(100vh - 48px);
+      }
+      @media (max-width: 800px) {
+        .grid {
+          grid-template-columns: 1fr;
+        }
+      }
+      .panel {
+        position: relative;
+        min-height: 50vh;
+        overflow: hidden;
+        background: #000;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+      }
+      .label {
+        position: absolute;
+        top: 16px;
+        left: 16px;
+        z-index: 3;
+        font-size: 12px;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        color: #f5f5f5;
+        background: rgba(0, 0, 0, 0.65);
+        border: 1px solid #27272a;
+        padding: 6px 10px;
+      }
+      .meta {
+        position: absolute;
+        bottom: 16px;
+        left: 16px;
+        right: 16px;
+        z-index: 3;
+        font-size: 11px;
+        color: #a1a1aa;
+        background: rgba(0, 0, 0, 0.65);
+        border: 1px solid #27272a;
+        padding: 8px 10px;
+        line-height: 1.45;
+      }
+      video {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+      .vignette {
+        position: absolute;
+        inset: 0;
+        z-index: 1;
+        pointer-events: none;
+      }
+      .tag {
+        position: relative;
+        z-index: 2;
+        width: min(70%, 360px);
+        height: auto;
+      }
+
+      /* Intensity ~4 (previous) */
+      .level-4 video {
+        filter: grayscale(1) brightness(0.35) contrast(1.05);
+      }
+      .level-4 .vignette {
+        background:
+          radial-gradient(ellipse at center, transparent 20%, rgba(0, 0, 0, 0.55) 70%, rgba(0, 0, 0, 0.9) 100%),
+          linear-gradient(to bottom, rgba(0, 0, 0, 0.35) 0%, transparent 30%, transparent 70%, rgba(0, 0, 0, 0.85) 100%);
+      }
+
+      /* Intensity ~6 (current) */
+      .level-6 video {
+        filter: grayscale(1) brightness(0.52) contrast(1.12);
+      }
+      .level-6 .vignette {
+        background:
+          radial-gradient(ellipse at center, transparent 35%, rgba(0, 0, 0, 0.4) 75%, rgba(0, 0, 0, 0.82) 100%),
+          linear-gradient(to bottom, rgba(0, 0, 0, 0.25) 0%, transparent 35%, transparent 65%, rgba(0, 0, 0, 0.75) 100%);
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Splash intensity compare · live video + tag</h1>
+    <div class="grid">
+      <section class="panel level-4" aria-label="Intensity 4">
+        <span class="label">4 — quieter</span>
+        <video
+          src="https://linturomusic.s3.us-west-2.amazonaws.com/linturo-glitch.mp4"
+          poster="https://linturomusic.s3.us-west-2.amazonaws.com/linturo-glitch.jpg"
+          muted
+          loop
+          playsinline
+          autoplay
+        ></video>
+        <div class="vignette"></div>
+        <img class="tag" src="/linturo-tag.png" alt="linturo" />
+        <p class="meta">brightness 0.35 · contrast 1.05 · heavier vignette (live site now)</p>
+      </section>
+      <section class="panel level-6" aria-label="Intensity 6">
+        <span class="label">6 — stronger</span>
+        <video
+          src="https://linturomusic.s3.us-west-2.amazonaws.com/linturo-glitch.mp4"
+          poster="https://linturomusic.s3.us-west-2.amazonaws.com/linturo-glitch.jpg"
+          muted
+          loop
+          playsinline
+          autoplay
+        ></video>
+        <div class="vignette"></div>
+        <img class="tag" src="/linturo-tag.png" alt="linturo" />
+        <p class="meta">brightness 0.52 · contrast 1.12 · lighter vignette</p>
+      </section>
+    </div>
+  </body>
+</html>
