@@ -78,6 +78,13 @@ const FEATURED_VIDEOS = [
     poster: 'https://linturomusic.s3.us-west-2.amazonaws.com/longroad-cover.png',
   },
   {
+    id: 'clubSet',
+    slug: 'club-set',
+    title: 'Club Set',
+    subtitle: 'Live set highlight',
+    src: config.VIDEO_FILES.VIDEO2,
+  },
+  {
     id: 'linturo',
     slug: 'linturo',
     title: 'Linturo',
