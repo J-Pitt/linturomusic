@@ -104,6 +104,9 @@ export default function Live() {
     typeof window !== 'undefined' ? defaultGuestName() : 'Guest'
   )
   const [chatConnected, setChatConnected] = useState(false)
+  const [viewerWantsJoin, setViewerWantsJoin] = useState(false)
+  const [audioLevel, setAudioLevel] = useState(0)
+  const [audioBroadcasting, setAudioBroadcasting] = useState(false)
   const hostKeyRef = useRef('')
 
   const viewerVideoRef = useRef(null)
@@ -127,7 +130,8 @@ export default function Live() {
   const reconnectTimerRef = useRef(null)
   const presenceTimerRef = useRef(null)
   const hostPeerIdRef = useRef('')
-  const [viewerWantsJoin, setViewerWantsJoin] = useState(false)
+  const audioMeterRef = useRef(null)
+  const audioMeterRafRef = useRef(0)
 
   useEffect(() => {
     effectsRef.current = effects
@@ -136,6 +140,60 @@ export default function Live() {
   const stopTracks = (stream) => {
     stream?.getTracks?.().forEach((t) => t.stop())
   }
+
+  const stopAudioMeter = useCallback(() => {
+    cancelAnimationFrame(audioMeterRafRef.current)
+    audioMeterRafRef.current = 0
+    try {
+      audioMeterRef.current?.ctx?.close?.()
+    } catch {
+      /* ignore */
+    }
+    audioMeterRef.current = null
+    setAudioLevel(0)
+    setAudioBroadcasting(false)
+  }, [])
+
+  const startAudioMeter = useCallback(
+    (stream) => {
+      stopAudioMeter()
+      const track = stream?.getAudioTracks?.()?.[0]
+      if (!track || track.readyState !== 'live') {
+        setAudioBroadcasting(false)
+        return
+      }
+      setAudioBroadcasting(true)
+      try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext
+        const ctx = new AudioCtx()
+        const source = ctx.createMediaStreamSource(new MediaStream([track]))
+        const analyser = ctx.createAnalyser()
+        analyser.fftSize = 256
+        analyser.smoothingTimeConstant = 0.7
+        source.connect(analyser)
+        const data = new Uint8Array(analyser.fftSize)
+        audioMeterRef.current = { ctx, analyser }
+
+        const tick = () => {
+          analyser.getByteTimeDomainData(data)
+          let sum = 0
+          for (let i = 0; i < data.length; i += 1) {
+            const v = (data[i] - 128) / 128
+            sum += v * v
+          }
+          const rms = Math.sqrt(sum / data.length)
+          setAudioLevel(Math.min(1, rms * 4))
+          setAudioBroadcasting(track.readyState === 'live' && track.enabled)
+          audioMeterRafRef.current = requestAnimationFrame(tick)
+        }
+        tick()
+      } catch (err) {
+        console.error(err)
+        setAudioBroadcasting(Boolean(track))
+      }
+    },
+    [stopAudioMeter]
+  )
 
   const refreshDevices = useCallback(async ({ preferNewUsb = false } = {}) => {
     try {
@@ -309,7 +367,8 @@ export default function Live() {
     localStreamRef.current = null
     outboundStreamRef.current = null
     if (previewVideoRef.current) previewVideoRef.current.srcObject = null
-  }, [])
+    stopAudioMeter()
+  }, [stopAudioMeter])
 
   const teardownViewer = useCallback(() => {
     clearTimeout(reconnectTimerRef.current)
@@ -727,6 +786,7 @@ export default function Live() {
       setStatus('live')
       setStatusDetail('You are live. Switch USB camera anytime from the list.')
       setChatConnected(true)
+      startAudioMeter(outbound)
     } catch (err) {
       console.error(err)
       teardownBroadcast()
@@ -1156,6 +1216,34 @@ export default function Live() {
                     Choose the XDJ-AZ (or USB audio). Processing is off so the mixer master stays
                     clean.
                   </p>
+                  <div className="space-y-1.5 pt-1">
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="text-mute">Input level</span>
+                      <span
+                        className={
+                          audioBroadcasting && audioLevel > 0.02
+                            ? 'text-paper'
+                            : 'text-mute'
+                        }
+                      >
+                        {!audioBroadcasting
+                          ? status === 'live'
+                            ? 'No audio track'
+                            : 'Go live to meter'
+                          : audioLevel > 0.02
+                            ? 'Signal in'
+                            : 'Silent'}
+                      </span>
+                    </div>
+                    <div className="h-2 w-full bg-hairline overflow-hidden">
+                      <div
+                        className={`h-full transition-[width] duration-75 ${
+                          audioLevel > 0.75 ? 'bg-paper' : 'bg-mute'
+                        }`}
+                        style={{ width: `${Math.round(audioLevel * 100)}%` }}
+                      />
+                    </div>
+                  </div>
                 </label>
               </div>
 
