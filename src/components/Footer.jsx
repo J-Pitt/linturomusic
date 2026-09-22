@@ -45,22 +45,6 @@ const Footer = () => {
           </div>
 
           <nav aria-label="Footer" className="flex flex-wrap gap-x-5 gap-y-2 text-sm text-mute">
-            <a
-              href="https://www.mixcloud.com/linturo/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:text-paper transition-colors"
-            >
-              Mixcloud
-            </a>
-            <a
-              href="https://www.youtube.com/@linturo"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:text-paper transition-colors"
-            >
-              YouTube
-            </a>
             <Link to="/clips" className="hover:text-paper transition-colors">
               Clips
             </Link>
