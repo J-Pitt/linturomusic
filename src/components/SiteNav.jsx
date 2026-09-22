@@ -122,7 +122,7 @@ export default function SiteNav({ className = '' }) {
               <p>Brooklyn/Manhattan area only</p>
               <p>
                 All paid gigs are played sober. I require 30 mins to get
-                familiar with the equipment. If I need to bring my own desk, I
+                familiar with the equipment. If I need to bring my own deck, I
                 charge $300/hr.
               </p>
             </div>
