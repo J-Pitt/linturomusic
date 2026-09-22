@@ -4,6 +4,7 @@ import About from './components/About'
 import Contact from './components/Contact'
 import Clips from './components/Clips'
 import Zoe from './components/Zoe'
+import Beatport from './components/Beatport'
 import Live from './components/Live'
 import Login from './components/Login'
 import Footer from './components/Footer'
@@ -48,6 +49,7 @@ function AppShell() {
           />
           <Route path="/clips" element={<Clips />} />
           <Route path="/zoe" element={<Zoe />} />
+          <Route path="/beatport" element={<Beatport />} />
           <Route path="/live" element={<Live />} />
           <Route path="/login" element={<Login />} />
         </Routes>
