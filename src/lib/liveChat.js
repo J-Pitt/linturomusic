@@ -1,11 +1,20 @@
 const MAX_TEXT = 280
 const MAX_NAME = 24
 
-export function sanitizeName(name) {
-  return String(name || 'Guest')
+/** Strip to allowed chars; empty if nothing left (no Guest fallback). */
+export function normalizeDisplayName(name) {
+  return String(name || '')
     .replace(/[^\w\s\-_.']/g, '')
     .trim()
-    .slice(0, MAX_NAME) || 'Guest'
+    .slice(0, MAX_NAME)
+}
+
+export function isValidDisplayName(name) {
+  return normalizeDisplayName(name).length >= 2
+}
+
+export function sanitizeName(name) {
+  return normalizeDisplayName(name) || 'Guest'
 }
 
 export function sanitizeChatText(text) {
@@ -26,13 +35,38 @@ export function makeChatMessage({ name, text, role = 'viewer' }) {
   }
 }
 
+function parseViewerEntry(entry) {
+  if (!entry || typeof entry !== 'object') return null
+  const peerId = String(entry.peerId || '').slice(0, 80)
+  const name = normalizeDisplayName(entry.name)
+  if (!peerId || !isValidDisplayName(name)) return null
+  return { peerId, name }
+}
+
 export function parseLivePayload(raw) {
   try {
     const data = typeof raw === 'string' ? JSON.parse(raw) : raw
     if (!data || typeof data !== 'object') return null
+
     if (data.type === 'viewers' && typeof data.count === 'number') {
       return { type: 'viewers', count: Math.max(0, Math.floor(data.count)) }
     }
+
+    if (data.type === 'viewer-list' && Array.isArray(data.viewers)) {
+      const viewers = data.viewers.map(parseViewerEntry).filter(Boolean).slice(0, 200)
+      return { type: 'viewer-list', viewers }
+    }
+
+    if (data.type === 'hello') {
+      const name = normalizeDisplayName(data.name)
+      if (!isValidDisplayName(name)) return null
+      return { type: 'hello', name }
+    }
+
+    if (data.type === 'ping') {
+      return { type: 'ping' }
+    }
+
     if (data.type === 'chat' && data.text) {
       return {
         type: 'chat',
@@ -43,6 +77,7 @@ export function parseLivePayload(raw) {
         ts: Number(data.ts) || Date.now(),
       }
     }
+
     if (data.type === 'history' && Array.isArray(data.messages)) {
       return {
         type: 'history',
@@ -51,6 +86,7 @@ export function parseLivePayload(raw) {
           .filter((m) => m?.type === 'chat'),
       }
     }
+
     return null
   } catch {
     return null
@@ -60,17 +96,21 @@ export function parseLivePayload(raw) {
 export function defaultGuestName() {
   try {
     const saved = sessionStorage.getItem('linturo-live-chat-name')
-    if (saved) return sanitizeName(saved)
+    if (saved && isValidDisplayName(saved)) return normalizeDisplayName(saved)
   } catch {
     /* ignore */
   }
-  return `Guest ${Math.floor(1000 + Math.random() * 9000)}`
+  return ''
 }
 
 export function saveGuestName(name) {
-  const clean = sanitizeName(name)
+  const clean = normalizeDisplayName(name)
   try {
-    sessionStorage.setItem('linturo-live-chat-name', clean)
+    if (isValidDisplayName(clean)) {
+      sessionStorage.setItem('linturo-live-chat-name', clean)
+    } else {
+      sessionStorage.removeItem('linturo-live-chat-name')
+    }
   } catch {
     /* ignore */
   }

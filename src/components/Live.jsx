@@ -27,7 +27,9 @@ import {
 } from '../lib/liveRecord'
 import {
   defaultGuestName,
+  isValidDisplayName,
   makeChatMessage,
+  normalizeDisplayName,
   parseLivePayload,
   saveGuestName,
 } from '../lib/liveChat'
@@ -38,6 +40,28 @@ const fieldClass =
 
 const BUILTIN_CAM_RE = /facetime|built-?in|macbook|integrated|default|iphone|continuity/i
 const USB_CAM_RE = /usb|logitech|elgato|capture|cam link|obsbot|insta360|brio|c920|c922|c930|external|hd webcam|webcam/i
+
+function LiveViewerList({ viewers }) {
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-xs uppercase tracking-[0.24em] text-mute">Watching</p>
+        <p className="text-[11px] text-mute tabular-nums">{viewers.length}</p>
+      </div>
+      {viewers.length === 0 ? (
+        <p className="text-xs text-mute">No viewers yet.</p>
+      ) : (
+        <ul className="border border-hairline bg-black/60 px-2.5 py-2 space-y-1 max-h-28 overflow-y-auto">
+          {viewers.map((v) => (
+            <li key={v.peerId} className="text-xs text-paper/90 truncate">
+              {v.name}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  )
+}
 
 function isExternalCamera(device) {
   const label = device?.label || ''
@@ -86,6 +110,7 @@ export default function Live() {
   const [status, setStatus] = useState('idle')
   const [statusDetail, setStatusDetail] = useState('')
   const [viewerCount, setViewerCount] = useState(0)
+  const [viewerList, setViewerList] = useState([])
   const [devices, setDevices] = useState({ video: [], audio: [] })
   const [videoDeviceId, setVideoDeviceId] = useState('')
   const [audioDeviceId, setAudioDeviceId] = useState('')
@@ -101,8 +126,9 @@ export default function Live() {
   const [uploadProgress, setUploadProgress] = useState(0)
   const [chatMessages, setChatMessages] = useState([])
   const [chatName, setChatName] = useState(() =>
-    typeof window !== 'undefined' ? defaultGuestName() : 'Guest'
+    typeof window !== 'undefined' ? defaultGuestName() : ''
   )
+  const [joinNameError, setJoinNameError] = useState('')
   const [chatConnected, setChatConnected] = useState(false)
   const [viewerWantsJoin, setViewerWantsJoin] = useState(false)
   const [audioLevel, setAudioLevel] = useState(0)
@@ -118,6 +144,7 @@ export default function Live() {
   const peerRef = useRef(null)
   const callsRef = useRef(new Map())
   const dataConnsRef = useRef(new Map())
+  const viewersMapRef = useRef(new Map())
   const viewerDataConnRef = useRef(null)
   const chatHistoryRef = useRef([])
   const rafRef = useRef(0)
@@ -130,15 +157,22 @@ export default function Live() {
   const hadRemoteStreamRef = useRef(false)
   const reconnectTimerRef = useRef(null)
   const presenceTimerRef = useRef(null)
+  const viewerPruneTimerRef = useRef(null)
+  const viewerPingTimerRef = useRef(null)
   const hostPeerIdRef = useRef('')
   const audioMeterRef = useRef(null)
   const audioMeterRafRef = useRef(0)
   const inputGainRef = useRef(1.4)
   const gainNodeRef = useRef(null)
+  const chatNameRef = useRef(chatName)
 
   useEffect(() => {
     effectsRef.current = effects
   }, [effects])
+
+  useEffect(() => {
+    chatNameRef.current = chatName
+  }, [chatName])
 
   useEffect(() => {
     inputGainRef.current = inputGain
@@ -391,6 +425,9 @@ export default function Live() {
   const teardownBroadcast = useCallback(() => {
     cancelAnimationFrame(rafRef.current)
     clearInterval(presenceTimerRef.current)
+    clearInterval(viewerPruneTimerRef.current)
+    presenceTimerRef.current = null
+    viewerPruneTimerRef.current = null
     const hostKey = hostKeyRef.current || LIVE_HOST_KEY
     setLivePresence({ hostKey, live: false }).catch(() => {})
     hostPeerIdRef.current = ''
@@ -410,7 +447,9 @@ export default function Live() {
       }
     })
     dataConnsRef.current.clear()
+    viewersMapRef.current.clear()
     setViewerCount(0)
+    setViewerList([])
     setChatMessages([])
     chatHistoryRef.current = []
     setChatConnected(false)
@@ -426,6 +465,8 @@ export default function Live() {
 
   const teardownViewer = useCallback(() => {
     clearTimeout(reconnectTimerRef.current)
+    clearInterval(viewerPingTimerRef.current)
+    viewerPingTimerRef.current = null
     viewerSessionRef.current += 1
     callsRef.current.forEach((call) => {
       try {
@@ -442,6 +483,8 @@ export default function Live() {
     }
     viewerDataConnRef.current = null
     setChatConnected(false)
+    setViewerCount(0)
+    setViewerList([])
     peerRef.current?.destroy()
     peerRef.current = null
     handshakeRef.current?.dispose?.()
@@ -449,6 +492,7 @@ export default function Live() {
     hadRemoteStreamRef.current = false
     if (viewerVideoRef.current) viewerVideoRef.current.srcObject = null
   }, [])
+
 
   useEffect(() => {
     return () => {
@@ -506,11 +550,83 @@ export default function Live() {
     })
   }, [])
 
-  const syncViewerCount = useCallback(() => {
-    const count = callsRef.current.size
-    setViewerCount(count)
-    broadcastData({ type: 'viewers', count })
+  const publishViewerRoster = useCallback(() => {
+    const viewers = Array.from(viewersMapRef.current.values())
+      .map(({ peerId, name }) => ({ peerId, name }))
+      .sort((a, b) => a.name.localeCompare(b.name))
+    setViewerList(viewers)
+    setViewerCount(viewers.length)
+    broadcastData({ type: 'viewer-list', viewers })
+    broadcastData({ type: 'viewers', count: viewers.length })
   }, [broadcastData])
+
+  const removeViewer = useCallback(
+    (peerId) => {
+      if (!peerId) return
+      const hadViewer = viewersMapRef.current.delete(peerId)
+      const hadCall = callsRef.current.has(peerId)
+      const hadConn = dataConnsRef.current.has(peerId)
+      try {
+        callsRef.current.get(peerId)?.close?.()
+      } catch {
+        /* ignore */
+      }
+      callsRef.current.delete(peerId)
+      dataConnsRef.current.delete(peerId)
+      if (hadViewer || hadCall || hadConn) publishViewerRoster()
+    },
+    [publishViewerRoster]
+  )
+
+  const upsertViewer = useCallback(
+    (peerId, name) => {
+      const clean = normalizeDisplayName(name)
+      if (!peerId || !isValidDisplayName(clean)) return
+      const prev = viewersMapRef.current.get(peerId)
+      viewersMapRef.current.set(peerId, {
+        peerId,
+        name: clean,
+        lastSeen: Date.now(),
+      })
+      if (!prev || prev.name !== clean) publishViewerRoster()
+    },
+    [publishViewerRoster]
+  )
+
+  const pruneViewers = useCallback(() => {
+    let changed = false
+    for (const peerId of [...viewersMapRef.current.keys()]) {
+      const conn = dataConnsRef.current.get(peerId)
+      if (conn?.open) {
+        const entry = viewersMapRef.current.get(peerId)
+        if (entry) entry.lastSeen = Date.now()
+        continue
+      }
+      viewersMapRef.current.delete(peerId)
+      try {
+        callsRef.current.get(peerId)?.close?.()
+      } catch {
+        /* ignore */
+      }
+      callsRef.current.delete(peerId)
+      dataConnsRef.current.delete(peerId)
+      changed = true
+    }
+    for (const [peerId, conn] of [...dataConnsRef.current.entries()]) {
+      if (!conn?.open) {
+        dataConnsRef.current.delete(peerId)
+        if (viewersMapRef.current.delete(peerId)) changed = true
+        callsRef.current.delete(peerId)
+      }
+    }
+    for (const [peerId, call] of [...callsRef.current.entries()]) {
+      if (call?.open === false) {
+        callsRef.current.delete(peerId)
+        changed = true
+      }
+    }
+    if (changed) publishViewerRoster()
+  }, [publishViewerRoster])
 
   const sendHostChat = (text) => {
     const msg = makeChatMessage({ name: 'linturo', text, role: 'host' })
@@ -520,7 +636,7 @@ export default function Live() {
   }
 
   const sendViewerChat = (text) => {
-    const msg = makeChatMessage({ name: chatName, text, role: 'viewer' })
+    const msg = makeChatMessage({ name: chatNameRef.current, text, role: 'viewer' })
     if (!msg.text) return
     appendChat(msg)
     try {
@@ -529,6 +645,7 @@ export default function Live() {
       /* ignore */
     }
   }
+
 
   const clearReview = () => {
     if (review?.url) URL.revokeObjectURL(review.url)
@@ -658,6 +775,11 @@ export default function Live() {
       }
     })
     callsRef.current.clear()
+    dataConnsRef.current.clear()
+    viewersMapRef.current.clear()
+    setViewerList([])
+    setViewerCount(0)
+    clearInterval(viewerPruneTimerRef.current)
     peerRef.current?.destroy()
     peerRef.current = null
     stopTracks(outboundStreamRef.current)
@@ -809,14 +931,16 @@ export default function Live() {
         })
         call.answer(stream)
         callsRef.current.set(call.peer, call)
-        syncViewerCount()
         call.on('close', () => {
           callsRef.current.delete(call.peer)
-          syncViewerCount()
+          // Drop from roster if their data channel is also gone
+          const conn = dataConnsRef.current.get(call.peer)
+          if (!conn?.open) removeViewer(call.peer)
         })
         call.on('error', () => {
           callsRef.current.delete(call.peer)
-          syncViewerCount()
+          const conn = dataConnsRef.current.get(call.peer)
+          if (!conn?.open) removeViewer(call.peer)
         })
       })
 
@@ -831,7 +955,11 @@ export default function Live() {
                 messages: chatHistoryRef.current.slice(-40),
               })
             )
-            conn.send(JSON.stringify({ type: 'viewers', count: callsRef.current.size }))
+            const viewers = Array.from(viewersMapRef.current.values()).map(
+              ({ peerId, name }) => ({ peerId, name })
+            )
+            conn.send(JSON.stringify({ type: 'viewer-list', viewers }))
+            conn.send(JSON.stringify({ type: 'viewers', count: viewers.length }))
           } catch {
             /* ignore */
           }
@@ -839,19 +967,35 @@ export default function Live() {
         conn.on('data', (raw) => {
           const msg = parseLivePayload(raw)
           if (!msg) return
+          if (msg.type === 'hello') {
+            upsertViewer(conn.peer, msg.name)
+            return
+          }
+          if (msg.type === 'ping') {
+            const entry = viewersMapRef.current.get(conn.peer)
+            if (entry) entry.lastSeen = Date.now()
+            return
+          }
           if (msg.type === 'chat') {
-            appendChat(msg)
-            broadcastData(msg)
+            const rosterName = viewersMapRef.current.get(conn.peer)?.name
+            const stamped = rosterName ? { ...msg, name: rosterName } : msg
+            appendChat(stamped)
+            broadcastData(stamped)
           }
         })
         conn.on('close', () => {
-          dataConnsRef.current.delete(conn.peer)
+          removeViewer(conn.peer)
           if (dataConnsRef.current.size === 0) setChatConnected(false)
         })
         conn.on('error', () => {
-          dataConnsRef.current.delete(conn.peer)
+          removeViewer(conn.peer)
         })
       })
+
+      clearInterval(viewerPruneTimerRef.current)
+      viewerPruneTimerRef.current = setInterval(() => {
+        pruneViewers()
+      }, 4000)
 
       peer.on('disconnected', () => {
         setStatusDetail('Signal disconnected — reconnecting…')
@@ -861,6 +1005,7 @@ export default function Live() {
       setStatus('live')
       setStatusDetail('You are live. Meter moving = XDJ is reaching the host. Viewers: tap Tap for sound if silent.')
       setChatConnected(true)
+      publishViewerRoster()
     } catch (err) {
       console.error(err)
       teardownBroadcast()
@@ -879,12 +1024,25 @@ export default function Live() {
   }
 
   const connectAsViewer = useCallback(async () => {
+    const name = normalizeDisplayName(chatNameRef.current)
+    if (!isValidDisplayName(name)) {
+      setJoinNameError('Enter a username (at least 2 characters) to join.')
+      setStatus('idle')
+      setStatusDetail('Choose a username, then join.')
+      return
+    }
+    setJoinNameError('')
+    saveGuestName(name)
+    setChatName(name)
+
     teardownViewer()
     const session = viewerSessionRef.current
     setStatus('connecting')
     setStatusDetail('Looking for the live set…')
     setNeedsGesture(false)
     setChatMessages([])
+    setViewerList([])
+    setViewerCount(0)
 
     const stillCurrent = () => session === viewerSessionRef.current
 
@@ -893,6 +1051,14 @@ export default function Live() {
       reconnectTimerRef.current = setTimeout(() => {
         if (viewerWantsJoin) connectAsViewer()
       }, 5000)
+    }
+
+    const sendHello = (conn) => {
+      try {
+        conn.send(JSON.stringify({ type: 'hello', name: chatNameRef.current }))
+      } catch {
+        /* ignore */
+      }
     }
 
     try {
@@ -956,11 +1122,29 @@ export default function Live() {
 
       if (!stillCurrent()) return
       setChatConnected(true)
+      sendHello(dataConn)
+
+      clearInterval(viewerPingTimerRef.current)
+      viewerPingTimerRef.current = setInterval(() => {
+        if (!stillCurrent()) return
+        try {
+          if (viewerDataConnRef.current?.open) {
+            viewerDataConnRef.current.send(JSON.stringify({ type: 'ping' }))
+            sendHello(viewerDataConnRef.current)
+          }
+        } catch {
+          /* ignore */
+        }
+      }, 15000)
 
       dataConn.on('data', (raw) => {
         if (!stillCurrent()) return
         const msg = parseLivePayload(raw)
         if (!msg) return
+        if (msg.type === 'viewer-list') {
+          setViewerList(msg.viewers)
+          setViewerCount(msg.viewers.length)
+        }
         if (msg.type === 'viewers') setViewerCount(msg.count)
         if (msg.type === 'chat') appendChat(msg)
         if (msg.type === 'history') msg.messages.forEach((m) => appendChat(m))
@@ -968,6 +1152,8 @@ export default function Live() {
       dataConn.on('close', () => {
         if (!stillCurrent()) return
         setChatConnected(false)
+        setViewerCount(0)
+        setViewerList([])
       })
 
       const call = peer.call(presence.peerId, handshake.stream)
@@ -1033,6 +1219,9 @@ export default function Live() {
         const wasLive = hadRemoteStreamRef.current
         hadRemoteStreamRef.current = false
         if (viewerVideoRef.current) viewerVideoRef.current.srcObject = null
+        setViewerCount(0)
+        setViewerList([])
+        setChatConnected(false)
         setStatus('offline')
         setStatusDetail(
           wasLive ? 'Connection dropped — retrying…' : 'Could not start video — retrying…'
@@ -1043,6 +1232,8 @@ export default function Live() {
       call.on('error', () => {
         if (!stillCurrent()) return
         clearTimeout(timeout)
+        setViewerCount(0)
+        setViewerList([])
         setStatus('offline')
         setStatusDetail('Connection issue — retrying…')
         scheduleReconnect()
@@ -1050,6 +1241,8 @@ export default function Live() {
     } catch (err) {
       console.error(err)
       if (!stillCurrent()) return
+      setViewerCount(0)
+      setViewerList([])
       setStatus('offline')
       setStatusDetail(
         err?.type === 'peer-unavailable'
@@ -1118,9 +1311,7 @@ export default function Live() {
           <h1 className="text-sm sm:text-base font-medium tracking-wide uppercase">Live</h1>
         </div>
         <div className="text-xs text-mute tabular-nums min-w-[5.5rem] text-right">
-          {status === 'live' || viewerCount > 0
-            ? `${viewerCount} watching`
-            : status}
+          {status === 'live' ? `${viewerCount} watching` : status}
         </div>
       </header>
 
@@ -1142,16 +1333,45 @@ export default function Live() {
                 {status === 'connecting' ? (
                   <p className="text-xs text-mute pointer-events-none">Connecting…</p>
                 ) : (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setViewerWantsJoin(true)
-                      connectAsViewer()
-                    }}
-                    className="px-5 py-3 bg-paper text-ink text-sm font-medium"
-                  >
-                    {status === 'offline' ? 'Retry join' : 'Join live'}
-                  </button>
+                  <div className="w-full max-w-xs space-y-3">
+                    <label className="block text-left space-y-1.5">
+                      <span className="text-[11px] uppercase tracking-[0.2em] text-mute">
+                        Username
+                      </span>
+                      <input
+                        type="text"
+                        value={chatName}
+                        onChange={(e) => {
+                          setChatName(normalizeDisplayName(e.target.value))
+                          setJoinNameError('')
+                        }}
+                        maxLength={24}
+                        placeholder="Pick a name"
+                        className="w-full px-3 py-2.5 border border-hairline bg-black text-paper text-sm focus:outline-none focus:border-paper"
+                        autoComplete="nickname"
+                      />
+                    </label>
+                    {joinNameError ? (
+                      <p className="text-xs text-paper/80">{joinNameError}</p>
+                    ) : (
+                      <p className="text-[11px] text-mute">Required to join — others will see it.</p>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!isValidDisplayName(chatName)) {
+                          setJoinNameError('Enter a username (at least 2 characters) to join.')
+                          return
+                        }
+                        setViewerWantsJoin(true)
+                        connectAsViewer()
+                      }}
+                      className="w-full px-5 py-3 bg-paper text-ink text-sm font-medium disabled:opacity-40"
+                      disabled={!isValidDisplayName(chatName)}
+                    >
+                      {status === 'offline' ? 'Retry join' : 'Join live'}
+                    </button>
+                  </div>
                 )}
               </div>
             )}
@@ -1170,12 +1390,14 @@ export default function Live() {
               </button>
             )}
           </div>
-          <div className="px-4 sm:px-6 py-3 border-t border-hairline">
+          <div className="px-4 sm:px-6 py-3 border-t border-hairline space-y-3">
+            {status === 'live' && <LiveViewerList viewers={viewerList} />}
             <LiveChat
               messages={chatMessages}
               onSend={sendViewerChat}
               name={chatName}
               onNameChange={(n) => setChatName(saveGuestName(n))}
+              nameReadOnly={status === 'live'}
               disabled={status !== 'live' || !chatConnected}
               placeholder="Chat with the room…"
             />
@@ -1185,11 +1407,14 @@ export default function Live() {
             <button
               type="button"
               onClick={() => {
+                setViewerWantsJoin(false)
                 teardownViewer()
                 setMode('gate')
                 setStatus('idle')
                 setStatusDetail('')
                 setChatMessages([])
+                setViewerList([])
+                setViewerCount(0)
               }}
               className="text-xs uppercase tracking-[0.2em] text-mute hover:text-paper transition-colors self-start sm:self-auto"
             >
@@ -1503,6 +1728,7 @@ export default function Live() {
                   <p className="text-xs uppercase tracking-[0.24em] text-mute">Room</p>
                   <p className="text-xs text-mute tabular-nums">{viewerCount} watching</p>
                 </div>
+                <LiveViewerList viewers={viewerList} />
                 <LiveChat
                   messages={chatMessages}
                   onSend={sendHostChat}
