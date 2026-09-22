@@ -28,13 +28,7 @@ function json(statusCode, body) {
   }
 }
 
-function assertHost(body) {
-  if (!body?.hostKey || body.hostKey !== HOST_KEY) {
-    const err = new Error('Unauthorized')
-    err.statusCode = 401
-    throw err
-  }
-}
+const { loginAdmin, assertAuthorized } = require('./auth')
 
 function slugify(title) {
   return String(title || 'live-set')
@@ -81,8 +75,16 @@ exports.handler = async (event) => {
     const body = typeof event.body === 'string' ? JSON.parse(event.body || '{}') : event.body || {}
     const action = body.action
 
+    if (action === 'login') {
+      const session = loginAdmin({
+        email: body.email,
+        password: body.password,
+      })
+      return json(200, session)
+    }
+
     if (action === 'presign') {
-      assertHost(body)
+      assertAuthorized(body)
       const id = body.id || `live-${Date.now()}`
       const ext = body.ext === 'mp4' ? 'mp4' : 'webm'
       const contentType = ext === 'mp4' ? 'video/mp4' : 'video/webm'
@@ -103,7 +105,7 @@ exports.handler = async (event) => {
     }
 
     if (action === 'publish') {
-      assertHost(body)
+      assertAuthorized(body)
       const { id, key, title, subtitle } = body
       if (!id || !key || !title) {
         return json(400, { error: 'id, key, and title are required' })
@@ -132,7 +134,7 @@ exports.handler = async (event) => {
     }
 
     if (action === 'presence-set') {
-      assertHost(body)
+      assertAuthorized(body)
       const live = Boolean(body.live)
       const peerId = live ? String(body.peerId || '').slice(0, 64) : ''
       if (live && !peerId) {

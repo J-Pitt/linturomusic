@@ -68,16 +68,34 @@ async function api(body) {
   return data
 }
 
-export async function presignLiveUpload({ hostKey, id, ext }) {
-  return api({ action: 'presign', hostKey, id, ext })
+function withAuth({ accessToken, hostKey, ...rest }) {
+  if (accessToken) return { ...rest, accessToken }
+  if (hostKey) return { ...rest, hostKey }
+  return rest
 }
 
-export async function publishLiveVideo({ hostKey, id, key, title, subtitle }) {
-  return api({ action: 'publish', hostKey, id, key, title, subtitle })
+export async function presignLiveUpload({ accessToken, hostKey, id, ext }) {
+  return api({ action: 'presign', ...withAuth({ accessToken, hostKey }), id, ext })
 }
 
-export async function setLivePresence({ hostKey, live, peerId = '' }) {
-  return api({ action: 'presence-set', hostKey, live, peerId })
+export async function publishLiveVideo({ accessToken, hostKey, id, key, title, subtitle }) {
+  return api({
+    action: 'publish',
+    ...withAuth({ accessToken, hostKey }),
+    id,
+    key,
+    title,
+    subtitle,
+  })
+}
+
+export async function setLivePresence({ accessToken, hostKey, live, peerId = '' }) {
+  return api({
+    action: 'presence-set',
+    ...withAuth({ accessToken, hostKey }),
+    live,
+    peerId,
+  })
 }
 
 export async function fetchLivePresence() {
@@ -94,9 +112,10 @@ export async function fetchLivePresence() {
   }
 }
 
-export async function uploadRecordingBlob(blob, { hostKey, id, onProgress }) {
+export async function uploadRecordingBlob(blob, { accessToken, hostKey, id, onProgress }) {
   const ext = blob.type.includes('mp4') ? 'mp4' : 'webm'
   const { uploadUrl, key, contentType, publicUrl } = await presignLiveUpload({
+    accessToken,
     hostKey,
     id,
     ext,

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import Peer from 'peerjs'
 import {
   ArrowLeftIcon,
@@ -12,7 +12,6 @@ import {
 } from '@heroicons/react/24/outline'
 import {
   DEFAULT_EFFECTS,
-  LIVE_HOST_KEY,
   LIVE_PEER_OPTIONS,
   createHandshakeStream,
   makeHostPeerId,
@@ -34,6 +33,8 @@ import {
   saveGuestName,
 } from '../lib/liveChat'
 import LiveChat from './LiveChat'
+import LiveRecordingReview from './LiveRecordingReview'
+import { useAuth } from '../context/AuthContext'
 
 const fieldClass =
   'w-full accent-paper h-1.5 bg-hairline rounded-full appearance-none cursor-pointer'
@@ -104,9 +105,10 @@ function EffectSlider({ label, value, onChange, min = 0, max = 1, step = 0.01 })
 }
 
 export default function Live() {
-  const [mode, setMode] = useState('viewer') // viewer | host
-  const [hostKeyInput, setHostKeyInput] = useState('')
-  const [hostError, setHostError] = useState('')
+  const navigate = useNavigate()
+  const location = useLocation()
+  const { isAuthenticated, user, accessToken, logout } = useAuth()
+  const [mode, setMode] = useState('viewer') // viewer | host | gate
   const [status, setStatus] = useState('idle')
   const [statusDetail, setStatusDetail] = useState('')
   const [viewerCount, setViewerCount] = useState(0)
@@ -134,7 +136,7 @@ export default function Live() {
   const [audioLevel, setAudioLevel] = useState(0)
   const [audioBroadcasting, setAudioBroadcasting] = useState(false)
   const [inputGain, setInputGain] = useState(1.4)
-  const hostKeyRef = useRef('')
+  const accessTokenRef = useRef('')
 
   const viewerVideoRef = useRef(null)
   const previewVideoRef = useRef(null)
@@ -173,6 +175,10 @@ export default function Live() {
   useEffect(() => {
     chatNameRef.current = chatName
   }, [chatName])
+
+  useEffect(() => {
+    accessTokenRef.current = accessToken
+  }, [accessToken])
 
   useEffect(() => {
     inputGainRef.current = inputGain
@@ -312,6 +318,16 @@ export default function Live() {
     }
   }, [])
 
+  useEffect(() => {
+    if (location.state?.openHost && isAuthenticated) {
+      setMode('host')
+      setStatus('idle')
+      setStatusDetail('Plug in your USB camera, pick it in the list, then Go live.')
+      refreshDevices({ preferNewUsb: true })
+      navigate('/live', { replace: true, state: {} })
+    }
+  }, [location.state?.openHost, isAuthenticated, navigate, refreshDevices])
+
   const requestDeviceAccess = useCallback(async () => {
     // Permission prompt so USB camera labels appear in the list
     const warm = await navigator.mediaDevices.getUserMedia({
@@ -428,8 +444,8 @@ export default function Live() {
     clearInterval(viewerPruneTimerRef.current)
     presenceTimerRef.current = null
     viewerPruneTimerRef.current = null
-    const hostKey = hostKeyRef.current || LIVE_HOST_KEY
-    setLivePresence({ hostKey, live: false }).catch(() => {})
+    const token = accessTokenRef.current
+    if (token) setLivePresence({ accessToken: token, live: false }).catch(() => {})
     hostPeerIdRef.current = ''
     callsRef.current.forEach((call) => {
       try {
@@ -501,33 +517,23 @@ export default function Live() {
     }
   }, [teardownBroadcast, teardownViewer])
 
-  const unlockHost = (e) => {
-    e.preventDefault()
-    if (hostKeyInput.trim() !== LIVE_HOST_KEY) {
-      setHostError('Wrong key')
-      return
+  useEffect(() => {
+    if (mode === 'host' && !isAuthenticated) {
+      setMode('gate')
+      teardownBroadcast()
     }
-    setHostError('')
-    hostKeyRef.current = hostKeyInput.trim()
-    try {
-      sessionStorage.setItem('linturo-live-host-key', hostKeyInput.trim())
-    } catch {
-      /* ignore */
+  }, [mode, isAuthenticated, teardownBroadcast])
+
+  const enterHostMode = () => {
+    if (!isAuthenticated) {
+      navigate('/login', { state: { from: { pathname: '/live' }, openHost: true } })
+      return
     }
     setMode('host')
     setStatus('idle')
     setStatusDetail('Plug in your USB camera, pick it in the list, then Go live.')
     refreshDevices({ preferNewUsb: true })
   }
-
-  useEffect(() => {
-    try {
-      const saved = sessionStorage.getItem('linturo-live-host-key')
-      if (saved) hostKeyRef.current = saved
-    } catch {
-      /* ignore */
-    }
-  }, [])
 
   const appendChat = useCallback((msg) => {
     if (!msg?.id) return
@@ -711,22 +717,28 @@ export default function Live() {
     }
   }
 
-  const publishRecording = async () => {
-    if (!review?.blob) return
-    const hostKey = hostKeyRef.current || LIVE_HOST_KEY
+  const publishRecording = async (blobOverride) => {
+    const blob = blobOverride || review?.blob
+    if (!blob) return
+    const token = accessTokenRef.current
+    if (!token) {
+      setPublishState('error')
+      setPublishDetail('Sign in again to publish.')
+      return
+    }
     setPublishState('uploading')
     setPublishDetail('Uploading to S3…')
     setUploadProgress(0)
     try {
-      const { key } = await uploadRecordingBlob(review.blob, {
-        hostKey,
+      const { key } = await uploadRecordingBlob(blob, {
+        accessToken: token,
         id: review.id,
         onProgress: setUploadProgress,
       })
       setPublishState('publishing')
       setPublishDetail('Saving to Videos…')
       await publishLiveVideo({
-        hostKey,
+        accessToken: token,
         id: review.id,
         key,
         title: reviewTitle.trim() || 'Live set',
@@ -905,12 +917,13 @@ export default function Live() {
         })
       })
 
-      const hostKey = hostKeyRef.current || LIVE_HOST_KEY
+      const token = accessTokenRef.current
+      if (!token) throw new Error('Sign in to go live.')
       try {
-        await setLivePresence({ hostKey, live: true, peerId })
+        await setLivePresence({ accessToken: token, live: true, peerId })
         clearInterval(presenceTimerRef.current)
         presenceTimerRef.current = setInterval(() => {
-          setLivePresence({ hostKey, live: true, peerId }).catch(() => {})
+          setLivePresence({ accessToken: token, live: true, peerId }).catch(() => {})
         }, 20000)
       } catch (presenceErr) {
         console.error('presence publish failed', presenceErr)
@@ -1409,12 +1422,18 @@ export default function Live() {
               onClick={() => {
                 setViewerWantsJoin(false)
                 teardownViewer()
-                setMode('gate')
                 setStatus('idle')
                 setStatusDetail('')
                 setChatMessages([])
                 setViewerList([])
                 setViewerCount(0)
+                if (!isAuthenticated) {
+                  navigate('/login', {
+                    state: { from: { pathname: '/live' }, openHost: true },
+                  })
+                  return
+                }
+                setMode('gate')
               }}
               className="text-xs uppercase tracking-[0.2em] text-mute hover:text-paper transition-colors self-start sm:self-auto"
             >
@@ -1426,41 +1445,57 @@ export default function Live() {
 
       {mode === 'gate' ? (
         <div className="flex-1 flex items-center justify-center px-4 py-16">
-          <form
-            onSubmit={unlockHost}
-            className="w-full max-w-sm border border-hairline p-6 space-y-4"
-          >
-            <h2 className="text-lg font-medium">Host unlock</h2>
-            <p className="text-sm text-mute">
+          <div className="w-full max-w-sm border border-hairline p-6 space-y-4">
+            <h2 className="text-lg font-medium">Host controls</h2>
+            <p className="text-sm text-mute leading-relaxed">
               Broadcast from this browser with your camera and XDJ-AZ as the audio input.
             </p>
-            <input
-              type="password"
-              value={hostKeyInput}
-              onChange={(e) => setHostKeyInput(e.target.value)}
-              placeholder="Host key"
-              className="w-full px-3 py-2.5 border border-hairline bg-black text-paper text-sm focus:outline-none focus:border-paper"
-              autoComplete="current-password"
-            />
-            {hostError ? <p className="text-sm text-mute">{hostError}</p> : null}
-            <div className="flex gap-3">
-              <button
-                type="submit"
-                className="flex-1 px-4 py-2.5 bg-paper text-ink text-sm font-medium"
-              >
-                Enter
-              </button>
+            {isAuthenticated ? (
+              <p className="text-xs text-mute">
+                Signed in as <span className="text-paper">{user?.email}</span>
+              </p>
+            ) : (
+              <p className="text-xs text-mute">Sign in to unlock the broadcast panel.</p>
+            )}
+            <div className="flex flex-col gap-2">
+              {isAuthenticated ? (
+                <button
+                  type="button"
+                  onClick={enterHostMode}
+                  className="w-full px-4 py-2.5 bg-paper text-ink text-sm font-medium"
+                >
+                  Open broadcast panel
+                </button>
+              ) : (
+                <Link
+                  to="/login"
+                  state={{ from: { pathname: '/live' }, openHost: true }}
+                  className="w-full px-4 py-2.5 bg-paper text-ink text-sm font-medium text-center"
+                >
+                  Sign in
+                </Link>
+              )}
               <button
                 type="button"
-                onClick={() => {
-                  setMode('viewer')
-                }}
-                className="px-4 py-2.5 border border-hairline text-sm text-mute hover:text-paper"
+                onClick={() => setMode('viewer')}
+                className="w-full px-4 py-2.5 border border-hairline text-sm text-mute hover:text-paper"
               >
-                Cancel
+                Back to viewer
               </button>
+              {isAuthenticated ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    logout()
+                    setMode('viewer')
+                  }}
+                  className="w-full px-4 py-2.5 text-xs uppercase tracking-[0.2em] text-mute hover:text-paper"
+                >
+                  Sign out
+                </button>
+              ) : null}
             </div>
-          </form>
+          </div>
         </div>
       ) : null}
 
@@ -1668,59 +1703,16 @@ export default function Live() {
               )}
 
               {review && (
-                <div className="space-y-3 pt-2 border-t border-hairline">
-                  <p className="text-xs uppercase tracking-[0.24em] text-mute">Review take</p>
-                  <video
-                    src={review.url}
-                    controls
-                    playsInline
-                    className="w-full aspect-video bg-black border border-hairline"
-                  />
-                  <label className="block space-y-1.5">
-                    <span className="text-xs text-mute">Title for Videos</span>
-                    <input
-                      type="text"
-                      value={reviewTitle}
-                      onChange={(e) => setReviewTitle(e.target.value)}
-                      className="w-full px-3 py-2 border border-hairline bg-black text-paper text-sm"
-                      disabled={publishState === 'uploading' || publishState === 'publishing'}
-                    />
-                  </label>
-                  {publishState === 'uploading' && (
-                    <div className="h-1 bg-hairline">
-                      <div
-                        className="h-full bg-paper transition-all"
-                        style={{ width: `${Math.round(uploadProgress * 100)}%` }}
-                      />
-                    </div>
-                  )}
-                  <p className="text-xs text-mute">{publishDetail}</p>
-                  <div className="flex flex-wrap gap-2">
-                    {publishState !== 'done' && (
-                      <button
-                        type="button"
-                        onClick={publishRecording}
-                        disabled={
-                          publishState === 'uploading' ||
-                          publishState === 'publishing' ||
-                          !reviewTitle.trim()
-                        }
-                        className="flex-1 min-w-[8rem] px-4 py-2.5 bg-paper text-ink text-sm font-medium disabled:opacity-50"
-                      >
-                        {publishState === 'uploading' || publishState === 'publishing'
-                          ? 'Publishing…'
-                          : 'Add to Videos'}
-                      </button>
-                    )}
-                    <button
-                      type="button"
-                      onClick={clearReview}
-                      className="px-4 py-2.5 border border-hairline text-sm text-mute hover:text-paper"
-                    >
-                      {publishState === 'done' ? 'Done' : 'Discard'}
-                    </button>
-                  </div>
-                </div>
+                <LiveRecordingReview
+                  review={review}
+                  reviewTitle={reviewTitle}
+                  onTitleChange={setReviewTitle}
+                  publishState={publishState}
+                  publishDetail={publishDetail}
+                  uploadProgress={uploadProgress}
+                  onPublish={publishRecording}
+                  onDiscard={clearReview}
+                />
               )}
 
               <div className="space-y-3 pt-2 border-t border-hairline">

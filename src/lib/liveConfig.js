@@ -1,7 +1,3 @@
-/** Unlock host/broadcast controls. Override with VITE_LIVE_HOST_KEY. */
-export const LIVE_HOST_KEY =
-  import.meta.env.VITE_LIVE_HOST_KEY || 'linturo'
-
 /** Live record/publish API (Lambda Function URL). */
 export const LIVE_API_URL =
   import.meta.env.VITE_LIVE_API_URL ||
