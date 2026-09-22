@@ -142,6 +142,50 @@
   height: 0 !important;
 }
 
+.fall-special {
+  flex-shrink: 0;
+  padding: 0.45rem 0.65rem;
+  border: 1px solid #ffffff;
+  background: #000;
+  color: #ffffff;
+  font-size: 10px;
+  line-height: 1.3;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  text-decoration: none;
+  cursor: pointer;
+  animation: fall-special-pulse 2.4s ease-in-out infinite;
+}
+
+.fall-special:hover {
+  color: #ffffff;
+  border-color: #ffffff;
+}
+
+@keyframes fall-special-pulse {
+  0%,
+  100% {
+    opacity: 0.82;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@media (min-width: 640px) {
+  .fall-special {
+    font-size: 11px;
+    padding: 0.5rem 0.75rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fall-special {
+    animation: none;
+    opacity: 0.9;
+  }
+}
+
 /* Volume slider — white/gray */
 .volume-slider {
   -webkit-appearance: none;

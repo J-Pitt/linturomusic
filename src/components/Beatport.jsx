@@ -4,7 +4,7 @@ import { ArrowDownTrayIcon, ArrowLeftIcon } from '@heroicons/react/24/outline'
 import SiteNav from './SiteNav'
 
 const EXTENSION_HREF = '/downloads/linturo-beatport-playlist.zip'
-const EXTENSION_VERSION = '1.3.0'
+const EXTENSION_VERSION = '1.5.0'
 
 const STEPS = [
   {
@@ -24,8 +24,8 @@ const STEPS = [
     body: 'Log in to Beatport, open a chart, Top 100, genre, release, playlist, or search page, then click the extension icon. Pick or create a playlist and click Add tracks. If the list is still loading, tap Refresh tracks first.',
   },
   {
-    title: 'Or import Spotify / SoundCloud',
-    body: 'Stay logged in to Spotify or SoundCloud in Chrome. On Beatport, open the extension, paste a playlist URL (Spotify playlist/album or SoundCloud set), click Match, then add the Beatport hits.',
+    title: 'Or crate from a folder',
+    body: 'Choose a folder of songs, set how many similar tracks you want (1–250), click Find similar, then add them to a Beatport playlist. Filenames like Artist - Title.mp3 work best.',
   },
 ]
 
@@ -35,8 +35,8 @@ const NOTES = [
     body: 'If you do not see the icon, open Chrome’s puzzle menu, pin Beatport Add Page to Playlist, then click it on a Beatport tab.',
   },
   {
-    title: 'Matching is best-effort',
-    body: 'Import searches Beatport by title and artist. Tracks it cannot find stay listed as unmatched. The extension uses your existing Beatport session and does not store your password.',
+    title: 'Similar is catalog-based',
+    body: 'It does not listen to the audio. It uses file names and tags, then Beatport’s catalog (genre, BPM, artist, related). Seeds it cannot identify stay listed. The extension uses your existing Beatport session and does not store your password.',
   },
   {
     title: 'Your crate, your account',
@@ -71,8 +71,8 @@ const Beatport = () => {
           <h1 className="text-2xl sm:text-3xl font-medium text-paper mb-3">Beatport crate</h1>
           <p className="text-sm sm:text-base text-mute max-w-xl leading-relaxed mb-8">
             Dump every track on a Beatport chart, genre, or search page into one of your playlists.
-            You can also paste a Spotify or SoundCloud playlist and match what Beatport has. No store
-            listing — just a zip you load in Chrome.
+            Or pick a folder of songs, choose how many similar tracks to pull from Beatport, and add
+            them to a playlist. No store listing — just a zip you load in Chrome.
           </p>
 
           <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-12">

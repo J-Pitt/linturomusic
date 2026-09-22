@@ -1,5 +1,6 @@
+import { useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { SignalIcon } from '@heroicons/react/24/outline'
+import { SignalIcon, XMarkIcon } from '@heroicons/react/24/outline'
 
 const HOME_LINKS = [
   { label: 'Videos', href: '#videos' },
@@ -16,44 +17,125 @@ const HOME_LINKS = [
 export default function SiteNav({ className = '' }) {
   const { pathname } = useLocation()
   const onHome = pathname === '/'
+  const [specialOpen, setSpecialOpen] = useState(false)
 
   const hrefFor = (hash) => (onHome ? hash : `/${hash}`)
 
+  useEffect(() => {
+    if (!specialOpen) return
+    const onKey = (e) => {
+      if (e.key === 'Escape') setSpecialOpen(false)
+    }
+    window.addEventListener('keydown', onKey)
+    const prevOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      window.removeEventListener('keydown', onKey)
+      document.body.style.overflow = prevOverflow
+    }
+  }, [specialOpen])
+
   return (
-    <header
-      className={`relative z-40 flex items-center justify-between gap-3 sm:gap-4 px-4 sm:px-6 lg:px-8 py-5 ${className}`}
-    >
-      <Link to="/" className="shrink-0" aria-label="linturo home">
-        <img
-          src="/linturo-tag.png"
-          alt="linturo"
-          className="h-14 sm:h-16 w-auto object-contain"
-        />
-      </Link>
-      <div className="flex items-center justify-end gap-3 sm:gap-5 min-w-0">
-        <nav
-          aria-label="Page sections"
-          className="flex flex-wrap items-center justify-end gap-x-3 gap-y-1 sm:gap-x-5 text-sm text-mute"
+    <>
+      <header
+        className={`relative z-40 flex items-center justify-between gap-3 sm:gap-4 px-4 sm:px-6 lg:px-8 py-4 ${className}`}
+      >
+        <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+          <Link to="/" className="shrink-0" aria-label="linturo home">
+            <img
+              src="/linturo-tag.png"
+              alt="linturo"
+              className="h-28 sm:h-32 w-auto object-contain"
+            />
+          </Link>
+          <button
+            type="button"
+            onClick={() => setSpecialOpen(true)}
+            className="fall-special"
+          >
+            Click for Fall Special
+          </button>
+        </div>
+        <div className="flex items-center justify-end gap-3 sm:gap-5 min-w-0">
+          <nav
+            aria-label="Page sections"
+            className="flex flex-wrap items-center justify-end gap-x-3 gap-y-1 sm:gap-x-5 text-sm text-mute"
+          >
+            {HOME_LINKS.map((link) => (
+              <a
+                key={link.href}
+                href={hrefFor(link.href)}
+                className="hover:text-paper transition-colors duration-200"
+              >
+                {link.label}
+              </a>
+            ))}
+          </nav>
+          <Link
+            to="/live"
+            className="shrink-0 inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 border border-hairline text-xs sm:text-sm uppercase tracking-[0.18em] text-paper hover:border-paper transition-colors"
+            aria-label="Live stream"
+          >
+            <SignalIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            Live
+          </Link>
+        </div>
+      </header>
+
+      {specialOpen && (
+        <div
+          className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 sm:p-8"
+          onClick={() => setSpecialOpen(false)}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="fall-special-title"
         >
-          {HOME_LINKS.map((link) => (
-            <a
-              key={link.href}
-              href={hrefFor(link.href)}
-              className="hover:text-paper transition-colors duration-200"
+          <div
+            className="relative w-full max-w-md border border-hairline bg-ink px-6 py-8 sm:px-8 sm:py-10"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={() => setSpecialOpen(false)}
+              className="absolute top-3 right-3 text-mute hover:text-paper transition-colors"
+              aria-label="Close"
             >
-              {link.label}
+              <XMarkIcon className="w-5 h-5" />
+            </button>
+            <p
+              id="fall-special-title"
+              className="text-xs uppercase tracking-[0.22em] text-paper mb-6"
+            >
+              Fall Special
+            </p>
+            <div className="space-y-4 text-sm text-mute leading-relaxed">
+              <p>
+                Thurs–Fri booking before 1am $25 for first time venues! (1 hour
+                slot — equipment must be provided).
+              </p>
+              <p>Small bars, {'<50'} people $10!</p>
+              <p>
+                House parties/rooftops/basements are free for the first booking,
+                2 hour set, unless it’s banging then who knows 🫠 (cause I love
+                a good house party!)
+              </p>
+              <p>Brooklyn/Manhattan area only</p>
+              <p>
+                All paid gigs are played sober. I require 30 mins to get
+                familiar with the equipment. If I need to bring my own desk, I
+                charge $300/hr.
+              </p>
+            </div>
+            <a
+              href={hrefFor('#contact')}
+              onClick={() => setSpecialOpen(false)}
+              className="inline-block mt-8 text-sm text-paper border-b border-paper pb-0.5 hover:text-mute hover:border-mute transition-colors"
+            >
+              Book
             </a>
-          ))}
-        </nav>
-        <Link
-          to="/live"
-          className="shrink-0 inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 border border-hairline text-xs sm:text-sm uppercase tracking-[0.18em] text-paper hover:border-paper transition-colors"
-          aria-label="Live stream"
-        >
-          <SignalIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-          Live
-        </Link>
-      </div>
-    </header>
+          </div>
+        </div>
+      )}
+    </>
   )
 }
