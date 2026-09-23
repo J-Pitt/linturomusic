@@ -944,7 +944,6 @@ const Hero = () => {
                   ) : (
                     <HeartIcon className="w-5 h-5" />
                   )}
-                  {formatCount(stats[featuredVideo.id]?.likes || 0)}
                 </button>
               </div>
             </div>
@@ -1014,7 +1013,6 @@ const Hero = () => {
                     ) : (
                       <HeartIcon className="w-3.5 h-3.5" />
                     )}
-                    {formatCount(mixStats.likes)}
                   </button>
                 </div>
               )
