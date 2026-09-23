@@ -77,6 +77,8 @@ export const config = {
     LINTURO_GLITCH_POSTER: import.meta.env.VITE_VIDEO_LINTURO_GLITCH_POSTER || 'https://linturomusic.s3.us-west-2.amazonaws.com/linturo-glitch.jpg',
     REC084_SEPT_LOOP: import.meta.env.VITE_VIDEO_REC084_SEPT_LOOP || 'https://linturomusic.s3.us-west-2.amazonaws.com/rec084-sept-loop.mp4',
     REC084_SEPT_LOOP_POSTER: import.meta.env.VITE_VIDEO_REC084_SEPT_LOOP_POSTER || 'https://linturomusic.s3.us-west-2.amazonaws.com/rec084-sept-loop.jpg',
+    THE_COLORS_WITHIN: import.meta.env.VITE_VIDEO_THE_COLORS_WITHIN || 'https://linturomusic.s3.us-west-2.amazonaws.com/the-colors-within.mp4',
+    THE_COLORS_WITHIN_POSTER: import.meta.env.VITE_VIDEO_THE_COLORS_WITHIN_POSTER || 'https://linturomusic.s3.us-west-2.amazonaws.com/the-colors-within.jpg',
   },
   
   // App metadata

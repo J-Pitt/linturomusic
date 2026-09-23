@@ -52,6 +52,15 @@ const RECENT_MIXES = [
 
 const FEATURED_VIDEOS = [
   {
+    id: 'colorsWithin',
+    /** Shareable hash: linturomusic.com/#the-colors-within */
+    slug: 'the-colors-within',
+    title: 'The Colors Within',
+    subtitle: 'Visual mix · one hour',
+    src: config.VIDEO_FILES.THE_COLORS_WITHIN,
+    poster: config.VIDEO_FILES.THE_COLORS_WITHIN_POSTER,
+  },
+  {
     id: 'septLoop',
     /** Shareable hash: linturomusic.com/#sept-loop */
     slug: 'sept-loop',

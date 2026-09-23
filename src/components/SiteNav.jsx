@@ -110,14 +110,16 @@ export default function SiteNav({ className = '' }) {
             </p>
             <div className="space-y-4 text-sm text-mute leading-relaxed">
               <p>
-                Thurs–Fri booking before 1am $25 for first time venues! (1 hour
-                slot — equipment must be provided).
+                Thursday and Friday bookings before 1am free for first time
+                venues! (1 hour slot — equipment must be provided). After that
+                it&apos;s $150/hr.
               </p>
-              <p>Small bars, {'<50'} people $10!</p>
               <p>
-                House parties/rooftops/basements are free for the first booking,
-                2 hour set, unless it’s banging then who knows 🫠 (cause I love
-                a good house party!)
+                House parties/rooftops/basements are free for first time
+                bookings as well, just pay for my transport (I have to uber my
+                equipment) and we&apos;re good, up to a 2 hour set, unless
+                it&apos;s banging, then who knows 🫠 I love a good house
+                party..
               </p>
               <p>Brooklyn/Manhattan area only</p>
               <p>
