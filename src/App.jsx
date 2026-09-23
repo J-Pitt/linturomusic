@@ -17,7 +17,7 @@ import './App.css'
 const BeatsPage = lazy(() => import('./beats/BeatsPage'))
 
 function AppShell() {
-  const { pathname } = useLocation()
+  const pathname = useLocation().pathname.replace(/(.)\/+$/, '$1')
   const hideFooter =
     pathname === '/live' ||
     pathname === '/login' ||
