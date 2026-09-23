@@ -93,6 +93,14 @@ const FEATURED_VIDEOS = [
     src: config.VIDEO_FILES.LINTURO_GLITCH,
     poster: config.VIDEO_FILES.LINTURO_GLITCH_POSTER,
   },
+  {
+    id: 'colorsWithin',
+    slug: 'the-colors-within',
+    title: 'The Colors Within',
+    subtitle: 'Visual mix · one hour',
+    src: config.VIDEO_FILES.THE_COLORS_WITHIN,
+    poster: config.VIDEO_FILES.THE_COLORS_WITHIN_POSTER,
+  },
 ]
 
 function featuredFromHash(hash, list = FEATURED_VIDEOS) {
