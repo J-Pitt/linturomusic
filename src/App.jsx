@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react'
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom'
 import Hero from './components/Hero'
 import About from './components/About'
@@ -13,12 +14,15 @@ import Footer from './components/Footer'
 import SiteNav from './components/SiteNav'
 import './App.css'
 
+const BeatsPage = lazy(() => import('./beats/BeatsPage'))
+
 function AppShell() {
   const { pathname } = useLocation()
   const hideFooter =
     pathname === '/live' ||
     pathname === '/login' ||
-    pathname === '/beatport'
+    pathname === '/beatport' ||
+    pathname === '/beats'
 
   return (
     <div className="App">
@@ -60,6 +64,16 @@ function AppShell() {
             element={
               <FriendsGate title="Beatport crate">
                 <Beatport />
+              </FriendsGate>
+            }
+          />
+          <Route
+            path="/beats"
+            element={
+              <FriendsGate title="Linturo Beats">
+                <Suspense fallback={<div className="min-h-[100dvh] bg-ink" />}>
+                  <BeatsPage />
+                </Suspense>
               </FriendsGate>
             }
           />

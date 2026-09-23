@@ -1,10 +1,26 @@
+import { fileURLToPath, URL } from 'node:url'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { obfuscationPlugin } from './vite-obfuscation-plugin.js'
 
+function beatsProxy() {
+  return {
+    target: 'https://collection.linturomusic.com',
+    changeOrigin: true,
+    rewrite: (path) => path.replace(/^\/beats-cdn/, '/beats'),
+  }
+}
+
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), obfuscationPlugin()],
+  resolve: {
+    alias: {
+      '@': fileURLToPath(new URL('./src/beats', import.meta.url)),
+    },
+  },
+  server: { proxy: { '/beats-cdn': beatsProxy() } },
+  preview: { proxy: { '/beats-cdn': beatsProxy() } },
   build: {
     // Enable minification
     minify: 'terser',
