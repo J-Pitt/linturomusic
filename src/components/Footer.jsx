@@ -40,7 +40,7 @@ const Footer = () => {
               />
             </button>
             <p className="text-sm text-mute max-w-sm">
-              Just trying to play some music and make some friends along the way.
+              Just trying to play some music and make some friends.
             </p>
           </div>
 

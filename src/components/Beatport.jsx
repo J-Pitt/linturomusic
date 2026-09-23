@@ -4,7 +4,7 @@ import { ArrowDownTrayIcon, ArrowLeftIcon } from '@heroicons/react/24/outline'
 import SiteNav from './SiteNav'
 
 const EXTENSION_HREF = '/downloads/linturo-beatport-playlist.zip'
-const EXTENSION_VERSION = '1.5.0'
+const EXTENSION_VERSION = '1.6.0'
 
 const STEPS = [
   {
@@ -13,30 +13,34 @@ const STEPS = [
   },
   {
     title: 'Unzip it',
-    body: 'You should get a folder named linturo-beatport-playlist with manifest.json inside. If you already had an older copy loaded, remove it first on chrome://extensions.',
+    body: 'You need the folder, not the zip. On a Mac, double-click it. On Windows, right-click the zip in File Explorer and choose Extract All. Inside you should see linturo-beatport-playlist with manifest.json. If an older copy is already loaded, remove it first.',
   },
   {
-    title: 'Load unpacked in Chrome',
-    body: 'Go to chrome://extensions, turn on Developer mode (top right), click Load unpacked, and choose that folder.',
+    title: 'Load unpacked',
+    body: 'Chrome: open chrome://extensions. Edge: open edge://extensions. Turn on Developer mode (top right), click Load unpacked, and choose that unzipped folder — the one that contains manifest.json, not the zip file.',
   },
   {
     title: 'Add a Beatport page',
     body: 'Log in to Beatport, open a chart, Top 100, genre, release, playlist, or search page, then click the extension icon. Pick or create a playlist and click Add tracks. If the list is still loading, tap Refresh tracks first.',
   },
   {
-    title: 'Or crate from a folder',
-    body: 'Choose a folder of songs, set how many similar tracks you want (1–250), click Find similar, then add them to a Beatport playlist. Filenames like Artist - Title.mp3 work best.',
+    title: 'Or crate from names / a folder',
+    body: 'Paste track names (one per line, Artist - Title preferred) or choose a folder of songs, set how many similar tracks you want (1–250), click Find similar, then add them to a Beatport playlist.',
   },
 ]
 
 const NOTES = [
   {
+    title: 'Windows',
+    body: 'Use Chrome or Edge. After Extract All, Load unpacked must point at the folder with manifest.json — if Windows nested another folder, go one level in. Stay logged in to Beatport in that same browser. Firefox will not work.',
+  },
+  {
     title: 'Pin it in the toolbar',
-    body: 'If you do not see the icon, open Chrome’s puzzle menu, pin Beatport Add Page to Playlist, then click it on a Beatport tab.',
+    body: 'If you do not see the icon, open the puzzle menu in Chrome or Edge, pin Beatport Add Page to Playlist, then click it on a Beatport tab.',
   },
   {
     title: 'Similar is catalog-based',
-    body: 'It does not listen to the audio. It uses file names and tags, then Beatport’s catalog (genre, BPM, artist, related). Seeds it cannot identify stay listed. The extension uses your existing Beatport session and does not store your password.',
+    body: 'It does not listen to the audio. It uses pasted names, file names, and tags, then Beatport’s catalog (genre, BPM, artist, related). Seeds it cannot identify stay listed. The extension uses your existing Beatport session and does not store your password.',
   },
   {
     title: 'Your crate, your account',
@@ -71,8 +75,9 @@ const Beatport = () => {
           <h1 className="text-2xl sm:text-3xl font-medium text-paper mb-3">Beatport crate</h1>
           <p className="text-sm sm:text-base text-mute max-w-xl leading-relaxed mb-8">
             Dump every track on a Beatport chart, genre, or search page into one of your playlists.
-            Or pick a folder of songs, choose how many similar tracks to pull from Beatport, and add
-            them to a playlist. No store listing — just a zip you load in Chrome.
+            Or paste track names / pick a folder of songs, choose how many similar tracks to pull from
+            Beatport, and add them to a playlist. No store listing — just a zip you load in Chrome or
+            Edge on a Mac or Windows PC.
           </p>
 
           <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-12">
@@ -130,8 +135,8 @@ const Beatport = () => {
             <div>
               <h2 className="text-sm font-medium text-paper mb-2">How to use it</h2>
               <p className="text-sm text-mute leading-relaxed mb-6">
-                Chrome will warn that this is an unpacked developer extension. That is expected —
-                it is not on the store. Keep it enabled and you are good.
+                Chrome and Edge will warn that this is an unpacked developer extension. That is
+                expected — it is not on the store. Keep it enabled. Same zip on Mac and Windows.
               </p>
               <ol className="space-y-5">
                 {STEPS.map((step, index) => (
@@ -149,7 +154,7 @@ const Beatport = () => {
             </div>
           </div>
 
-          <div className="mt-14 grid sm:grid-cols-3 gap-px bg-hairline border border-hairline">
+          <div className="mt-14 grid sm:grid-cols-2 lg:grid-cols-4 gap-px bg-hairline border border-hairline">
             {NOTES.map((item) => (
               <div key={item.title} className="bg-ink p-5">
                 <h3 className="text-sm text-paper mb-2">{item.title}</h3>

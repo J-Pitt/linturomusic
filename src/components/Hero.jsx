@@ -52,6 +52,15 @@ const RECENT_MIXES = [
 
 const FEATURED_VIDEOS = [
   {
+    id: 'septLoop',
+    /** Shareable hash: linturomusic.com/#sept-loop */
+    slug: 'sept-loop',
+    title: 'Sept Loop',
+    subtitle: 'Visual mix · one hour',
+    src: config.VIDEO_FILES.REC084_SEPT_LOOP,
+    poster: config.VIDEO_FILES.REC084_SEPT_LOOP_POSTER,
+  },
+  {
     id: 'beginning',
     /** Shareable hash: linturomusic.com/#the-beginning */
     slug: 'the-beginning',
