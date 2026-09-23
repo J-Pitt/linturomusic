@@ -142,6 +142,13 @@
   height: 0 !important;
 }
 
+video::-webkit-media-controls-current-time-display,
+video::-webkit-media-controls-time-remaining-display,
+audio::-webkit-media-controls-current-time-display,
+audio::-webkit-media-controls-time-remaining-display {
+  display: none !important;
+}
+
 .fall-special {
   flex-shrink: 0;
   padding: 0.45rem 0.65rem;

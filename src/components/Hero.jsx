@@ -255,16 +255,6 @@ const Hero = () => {
     document.getElementById('videos')?.scrollIntoView({ behavior: 'smooth' })
   }
 
-  const formatTime = (timeInSeconds) => {
-    if (isNaN(timeInSeconds)) return '0:00'
-    const hours = Math.floor(timeInSeconds / 3600)
-    const minutes = Math.floor((timeInSeconds % 3600) / 60)
-    const seconds = Math.floor(timeInSeconds % 60)
-    const mm = hours > 0 ? minutes.toString().padStart(2, '0') : String(minutes)
-    const ss = seconds.toString().padStart(2, '0')
-    return hours > 0 ? `${hours}:${mm}:${ss}` : `${mm}:${ss}`
-  }
-
   const handleSeek = (e) => {
     if (!audioRef.current) return
     const rect = e.currentTarget.getBoundingClientRect()
@@ -837,15 +827,13 @@ const Hero = () => {
                           style={{ width: `${(ytTime / LONG_ROAD_END_SEC) * 100}%` }}
                         />
                       </div>
-                      <div className="mt-1.5 flex items-center justify-between gap-3 text-[11px] text-mute">
-                        <span>{formatTime(ytTime)}</span>
+                      <div className="mt-1.5 flex items-center justify-center text-[11px] text-mute">
                         <VolumeControl
                           volume={volume}
                           muted={muted}
                           onVolumeChange={handleVolumeChange}
                           onToggleMute={handleToggleMute}
                         />
-                        <span>{formatTime(LONG_ROAD_END_SEC)}</span>
                       </div>
                     </div>
                   </div>
@@ -1049,15 +1037,13 @@ const Hero = () => {
                   style={{ width: `${duration > 0 ? (currentTime / duration) * 100 : 0}%` }}
                 />
               </div>
-              <div className="flex justify-between items-center gap-3 text-xs text-mute">
-                <span>{formatTime(currentTime)}</span>
+              <div className="flex justify-center items-center text-xs text-mute">
                 <VolumeControl
                   volume={volume}
                   muted={muted}
                   onVolumeChange={handleVolumeChange}
                   onToggleMute={handleToggleMute}
                 />
-                <span>{formatTime(duration)}</span>
               </div>
             </motion.div>
           )}

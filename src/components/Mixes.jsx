@@ -65,16 +65,6 @@ const Mixes = () => {
 
   const audioUrls = Object.fromEntries(MIXES.map((m) => [m.id, m.url]))
 
-  const formatTime = (timeInSeconds) => {
-    if (isNaN(timeInSeconds)) return '0:00'
-    const hours = Math.floor(timeInSeconds / 3600)
-    const minutes = Math.floor((timeInSeconds % 3600) / 60)
-    const seconds = Math.floor(timeInSeconds % 60)
-    const mm = hours > 0 ? minutes.toString().padStart(2, '0') : String(minutes)
-    const ss = seconds.toString().padStart(2, '0')
-    return hours > 0 ? `${hours}:${mm}:${ss}` : `${mm}:${ss}`
-  }
-
   const handleSeek = (e) => {
     if (!audioRef.current) return
     const rect = e.currentTarget.getBoundingClientRect()
@@ -246,15 +236,13 @@ const Mixes = () => {
                   style={{ width: `${duration > 0 ? (currentTime / duration) * 100 : 0}%` }}
                 />
               </div>
-              <div className="flex justify-between items-center gap-3 text-xs text-mute">
-                <span className="tabular-nums">{formatTime(currentTime)}</span>
+              <div className="flex justify-center items-center text-xs text-mute">
                 <VolumeControl
                   volume={volume}
                   muted={muted}
                   onVolumeChange={handleVolumeChange}
                   onToggleMute={handleToggleMute}
                 />
-                <span className="tabular-nums">{formatTime(duration)}</span>
               </div>
             </motion.div>
           )}
