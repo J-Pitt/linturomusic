@@ -16,7 +16,7 @@ import {
   createHandshakeStream,
   makeHostPeerId,
 } from '../lib/liveConfig'
-import { drawPsychedelicFrame, fitCanvasToVideo } from '../lib/liveEffects'
+import { VIDEO_PRESETS, drawPsychedelicFrame, fitCanvasToVideo } from '../lib/liveEffects'
 import {
   createLiveRecorder,
   fetchLivePresence,
@@ -117,6 +117,7 @@ export default function Live() {
   const [videoDeviceId, setVideoDeviceId] = useState('')
   const [audioDeviceId, setAudioDeviceId] = useState('')
   const [effects, setEffects] = useState(DEFAULT_EFFECTS)
+  const [presetId, setPresetId] = useState('')
   const [muted, setMuted] = useState(true)
   const [needsGesture, setNeedsGesture] = useState(false)
   const [recording, setRecording] = useState(false)
@@ -1304,7 +1305,15 @@ export default function Live() {
   }
 
   const setEffect = (key, value) => {
+    setPresetId('')
     setEffects((prev) => ({ ...prev, [key]: value }))
+  }
+
+  const applyPreset = (id) => {
+    const preset = VIDEO_PRESETS.find((p) => p.id === id)
+    if (!preset) return
+    setPresetId(id)
+    setEffects({ ...preset.effects })
   }
 
   return (
@@ -1734,6 +1743,22 @@ export default function Live() {
 
               <div className="space-y-3 pt-2 border-t border-hairline">
                 <p className="text-xs uppercase tracking-[0.24em] text-mute">Psychedelic FX</p>
+                <div className="grid grid-cols-3 gap-1.5">
+                  {VIDEO_PRESETS.map((preset) => (
+                    <button
+                      key={preset.id}
+                      type="button"
+                      onClick={() => applyPreset(preset.id)}
+                      className={`px-2 py-1.5 text-[11px] border transition-colors ${
+                        presetId === preset.id
+                          ? 'border-paper bg-paper text-ink'
+                          : 'border-hairline text-mute hover:text-paper hover:border-paper'
+                      }`}
+                    >
+                      {preset.label}
+                    </button>
+                  ))}
+                </div>
                 <EffectSlider
                   label="Master intensity"
                   value={effects.intensity}
@@ -1801,7 +1826,10 @@ export default function Live() {
                 />
                 <button
                   type="button"
-                  onClick={() => setEffects(DEFAULT_EFFECTS)}
+                  onClick={() => {
+                    setPresetId('')
+                    setEffects(DEFAULT_EFFECTS)
+                  }}
                   className="text-xs text-mute hover:text-paper"
                 >
                   Reset FX

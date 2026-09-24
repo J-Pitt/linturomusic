@@ -38,47 +38,45 @@ export default function SiteNav({ className = '' }) {
   return (
     <>
       <header
-        className={`relative z-40 flex items-center justify-between gap-3 sm:gap-4 px-4 sm:px-6 lg:px-8 py-4 ${className}`}
+        className={`relative z-40 px-4 sm:px-6 lg:px-8 py-4 ${className}`}
       >
-        <div className="flex items-center gap-3 sm:gap-4 min-w-0">
-          <Link to="/" className="shrink-0" aria-label="linturo home">
+        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-3 md:flex md:items-center md:justify-between md:gap-4">
+          <Link to="/" className="shrink-0 justify-self-start" aria-label="linturo home">
             <img
               src="/linturo-tag.png"
               alt="linturo"
-              className="h-28 sm:h-32 w-auto object-contain"
+              className="h-28 w-auto object-contain md:h-32"
             />
           </Link>
-          <button
-            type="button"
-            onClick={() => setSpecialOpen(true)}
-            className="fall-special"
-          >
-            Click for Fall Special
-          </button>
-        </div>
-        <div className="flex items-center justify-end gap-3 sm:gap-5 min-w-0">
-          <nav
-            aria-label="Page sections"
-            className="flex flex-wrap items-center justify-end gap-x-3 gap-y-1 sm:gap-x-5 text-sm text-mute"
-          >
-            {HOME_LINKS.map((link) => (
-              <a
-                key={link.href}
-                href={hrefFor(link.href)}
-                className="hover:text-paper transition-colors duration-200"
-              >
-                {link.label}
-              </a>
-            ))}
-          </nav>
           <Link
             to="/live"
-            className="shrink-0 inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 border border-hairline text-xs sm:text-sm uppercase tracking-[0.18em] text-paper hover:border-paper transition-colors"
+            className="shrink-0 justify-self-end md:order-last inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 border border-hairline text-xs sm:text-sm uppercase tracking-[0.18em] text-paper hover:border-paper transition-colors"
             aria-label="Live stream"
           >
             <SignalIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             Live
           </Link>
+          <button
+            type="button"
+            onClick={() => setSpecialOpen(true)}
+            className="fall-special col-span-2 justify-self-start"
+          >
+            Click for Fall Special
+          </button>
+          <nav
+            aria-label="Page sections"
+            className="col-span-2 grid grid-cols-4 items-center gap-x-2 text-sm text-mute md:flex md:flex-wrap md:justify-end md:gap-x-5 md:ml-auto"
+          >
+            {HOME_LINKS.map((link) => (
+              <a
+                key={link.href}
+                href={hrefFor(link.href)}
+                className="text-center md:text-left hover:text-paper transition-colors duration-200"
+              >
+                {link.label}
+              </a>
+            ))}
+          </nav>
         </div>
       </header>
 
@@ -112,7 +110,9 @@ export default function SiteNav({ className = '' }) {
               <p>
                 Thursday and Friday bookings before 1am free for first time
                 venues! (1 hour slot — equipment must be provided). After that
-                it&apos;s $150/hr.
+                it&apos;s $150/hr. I would appreciate 30 mins to get familiar
+                with the equipment before I play. If I need to bring my own
+                deck I charge $300/hr.
               </p>
               <p>
                 House parties/rooftops/basements are free for first time
@@ -122,11 +122,6 @@ export default function SiteNav({ className = '' }) {
                 party..
               </p>
               <p>Brooklyn/Manhattan area only</p>
-              <p>
-                All paid gigs are played sober. I require 30 mins to get
-                familiar with the equipment. If I need to bring my own deck, I
-                charge $300/hr.
-              </p>
             </div>
             <a
               href={hrefFor('#contact')}
