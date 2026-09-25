@@ -42,6 +42,10 @@ export function hasBuffer(path: string) {
   return buffers.has(path);
 }
 
+export function peekBuffer(path: string) {
+  return buffers.get(path) ?? null;
+}
+
 /** Fire-and-forget decode; safe to call repeatedly. */
 export function preloadBuffers(paths: string[]) {
   for (const path of paths) {

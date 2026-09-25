@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Studio } from "@/components/studio";
+import { GuidedBeat } from "@/components/guided-beat";
 import { BEATS_CDN } from "@/lib/media";
 import type { SoundItem } from "@/lib/types";
 
@@ -41,7 +41,7 @@ export default function BeatsPage() {
 
   return (
     <div className="min-h-[100dvh] bg-ink text-paper">
-      <Studio items={items} />
+      <GuidedBeat items={items} />
     </div>
   );
 }
