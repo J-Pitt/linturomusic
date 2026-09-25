@@ -6,7 +6,7 @@ const MIN_BEATS = 8;
 
 export type PadPick = { name: string; label: string };
 
-/** A few standard hats and cymbals — not the full hat folder. */
+/** Eight short percussion one-shots. Hats first, then clap and shaker. */
 export const PERCUSSION: PadPick[] = [
   { name: "HipHop Hat · ClosedHH 09", label: "Closed hat" },
   { name: "HipHop Hat · ClosedHH 16", label: "Tight hat" },
@@ -14,18 +14,39 @@ export const PERCUSSION: PadPick[] = [
   { name: "HipHop Hat · OpenHH 04", label: "Open hat 2" },
   { name: "HipHop Cymbal · Cym 14", label: "Cymbal" },
   { name: "Trap Cymbal · Ride 16", label: "Ride" },
+  { name: "HipHop Clap · Clp 8", label: "Clap" },
+  { name: "Trap Perc · Shkr 4", label: "Shaker" },
 ];
 
-/** Seven short, thumpy bass one-shots. */
+/** Extra percussion. Shown on demand and decoded only when tapped. */
+export const MORE_PERCUSSION: PadPick[] = [
+  { name: "HipHop Hat · ClosedHH 11", label: "Closed 3" },
+  { name: "HipHop Hat · OpenHH 18", label: "Open 3" },
+  { name: "Trap Cymbal · Cym 03", label: "Cymbal 2" },
+  { name: "Trap Rim · Rim 02", label: "Rim" },
+  { name: "HipHop Clap · Clp 20", label: "Clap 2" },
+  { name: "Trap Snap · MX Push Snap 2", label: "Snap" },
+  { name: "HipHop Rim · NS_RIM_RastR", label: "Rim 2" },
+  { name: "HipHop Perc · BDWK Shk", label: "Shaker 2" },
+];
+
+/** Eight short, thumpy bass one-shots. */
 export const BASS: PadPick[] = [
   { name: "HipHop Bass · Cipher Bass 1", label: "Thump" },
   { name: "HipHop Bass · Cipher Bass 2", label: "Thump 2" },
   { name: "HipHop 808 · 808 9", label: "808" },
   { name: "HipHop 808 · 808 5", label: "808 2" },
+  { name: "HipHop 808 · 808 10", label: "808 3" },
   { name: "Trap 808 · BigBop 808", label: "Big 808" },
   { name: "Inst Bass · F9 Magma 808-060 C3", label: "Magma" },
-  { name: "Inst Bass · F9 Orbit 808-060 C3", label: "Orbit" },
+  { name: "Inst Bass · F9 Magma 808-052 E2", label: "Low 808" },
 ];
+
+export const SECTION_NAMES = ["Intro", "Groove", "Switch", "Outro", "Break", "Lift"] as const;
+
+export function sectionName(index: number) {
+  return SECTION_NAMES[index] ?? `Part ${index + 1}`;
+}
 
 export function loopBeats(item: SoundItem) {
   if (!item.duration || item.duration <= 0) return null;

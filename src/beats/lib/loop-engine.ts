@@ -1,15 +1,21 @@
 import { getAudioContext, getBuffer, peekBuffer, unlockAudio } from "@/lib/audio-cache";
 
-type Overdub = { id: string; path: string; offset: number };
+export type LoopHit = { id: string; path: string; offset: number };
+export type LoopSection = { id: string; hits: LoopHit[] };
 
 let generation = 0;
 let loopSrc: AudioBufferSourceNode | null = null;
 let loopStart = 0;
 let loopDur = 0;
 let loopPath: string | null = null;
-let overdubs: Overdub[] = [];
+let sections: LoopSection[] = [];
+let loopsPerSection = 2;
 let timer = 0;
 let seq = 0;
+let lastPlaying = -1;
+let playingListener: ((index: number) => void) | null = null;
+let countTicket = 0;
+const countTimers: number[] = [];
 const fired = new Set<string>();
 
 function trigger(path: string, when: number) {
@@ -49,15 +55,31 @@ function stopSource() {
   loopSrc = null;
 }
 
+function sectionIndexForCycle(cycle: number) {
+  if (!sections.length) return 0;
+  const span = Math.max(1, loopsPerSection);
+  const n = Math.floor(cycle / span);
+  return ((n % sections.length) + sections.length) % sections.length;
+}
+
+function notifyPlaying(index: number) {
+  if (index === lastPlaying) return;
+  lastPlaying = index;
+  playingListener?.(index);
+}
+
 function arm() {
   const tick = () => {
     if (!loopDur || !loopSrc) return;
     const ctx = getAudioContext();
     const now = ctx.currentTime;
     const cycleNow = Math.floor((now - loopStart) / loopDur);
+    notifyPlaying(sectionIndexForCycle(Math.max(0, cycleNow)));
     const horizon = now + 0.28;
-    for (const hit of overdubs) {
-      for (let cycle = Math.max(0, cycleNow); cycle <= cycleNow + 1; cycle++) {
+    for (let cycle = Math.max(0, cycleNow); cycle <= cycleNow + 1; cycle++) {
+      const section = sections[sectionIndexForCycle(cycle)];
+      if (!section) continue;
+      for (const hit of section.hits) {
         const when = loopStart + cycle * loopDur + hit.offset;
         if (when < now + 0.04 || when > horizon) continue;
         const key = `${hit.id}:${cycle}`;
@@ -66,7 +88,7 @@ function arm() {
         trigger(hit.path, when);
       }
     }
-    if (fired.size > 500) {
+    if (fired.size > 800) {
       for (const key of fired) {
         const cycle = Number(key.slice(key.lastIndexOf(":") + 1));
         if (cycle < cycleNow - 1) fired.delete(key);
@@ -78,15 +100,16 @@ function arm() {
   timer = window.setTimeout(tick, 40);
 }
 
-/** Replace whatever is playing with this loop. Clears tapped overdubs. */
+/** Replace whatever is playing with this loop. Clears section patterns. */
 export async function startLoop(path: string) {
   const ticket = ++generation;
   await unlockAudio();
   const buf = await getBuffer(path);
   if (ticket !== generation) return;
   stopSource();
-  overdubs = [];
+  sections = [];
   fired.clear();
+  lastPlaying = -1;
   const ctx = getAudioContext();
   const src = ctx.createBufferSource();
   src.buffer = buf;
@@ -101,24 +124,123 @@ export async function startLoop(path: string) {
   arm();
 }
 
+function clearCountTimers() {
+  for (const id of countTimers) window.clearTimeout(id);
+  countTimers.length = 0;
+}
+
+export function cancelCountIn() {
+  countTicket += 1;
+  clearCountTimers();
+}
+
 export function stopLoop() {
   generation += 1;
+  cancelCountIn();
   stopSource();
   loopPath = null;
   loopDur = 0;
   loopStart = 0;
-  overdubs = [];
+  sections = [];
   fired.clear();
+  lastPlaying = -1;
 }
 
-/** Play a one-shot now and again on every pass of the base loop. */
-export function tapOverdub(path: string) {
+/** 0–1 position inside the current pass of the base loop. */
+export function loopProgress() {
+  if (!loopDur || !loopPath) return 0;
+  const elapsed = getAudioContext().currentTime - loopStart;
+  let progress = elapsed / loopDur;
+  progress -= Math.floor(progress);
+  return progress < 0 ? progress + 1 : progress;
+}
+
+function clickAt(when: number, accent: boolean) {
+  const ctx = getAudioContext();
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.frequency.value = accent ? 1200 : 800;
+  gain.gain.value = accent ? 0.12 : 0.07;
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  const start = Math.max(when, ctx.currentTime);
+  osc.start(start);
+  osc.stop(start + 0.05);
+}
+
+/**
+ * Four clicks into the next downbeat of the loop.
+ * Calls onBeat with 1–4, then resolves when recording should start.
+ */
+export function countIn(beatsInLoop: number, onBeat: (beat: number | null) => void) {
+  const ticket = ++countTicket;
+  clearCountTimers();
+  if (!loopDur || !loopPath) {
+    onBeat(null);
+    return Promise.resolve(false);
+  }
+  const ctx = getAudioContext();
+  const beat = loopDur / Math.max(4, beatsInLoop);
+  const now = ctx.currentTime;
+  const elapsed = Math.max(0, now - loopStart);
+  let startAt = loopStart + Math.ceil((elapsed + 0.03) / loopDur) * loopDur;
+  while (startAt - ctx.currentTime < beat * 4 - 0.01) startAt += loopDur;
+
+  for (let i = 0; i < 4; i++) {
+    const when = startAt - (4 - i) * beat;
+    clickAt(when, i === 0);
+    const shown = i + 1;
+    const id = window.setTimeout(() => {
+      if (ticket !== countTicket) return;
+      onBeat(shown);
+    }, Math.max(0, (when - now) * 1000));
+    countTimers.push(id);
+  }
+
+  return new Promise<boolean>((resolve) => {
+    const id = window.setTimeout(() => {
+      if (ticket !== countTicket) {
+        resolve(false);
+        return;
+      }
+      onBeat(null);
+      resolve(true);
+    }, Math.max(0, (startAt - now) * 1000));
+    countTimers.push(id);
+  });
+}
+
+/** Audition a one-shot without writing it into the arrangement. */
+export function preview(path: string) {
+  const ctx = getAudioContext();
+  if (ctx.state === "suspended") void ctx.resume();
+  trigger(path, ctx.currentTime);
+}
+
+/** How the tapped patterns line up. The base loop itself keeps running. */
+export function setArrangement(next: LoopSection[], repeats: number) {
+  sections = next.map((section) => ({
+    id: section.id,
+    hits: section.hits.map((hit) => ({ ...hit })),
+  }));
+  loopsPerSection = Math.max(1, repeats);
+}
+
+export function watchPlayingSection(fn: ((index: number) => void) | null) {
+  playingListener = fn;
+}
+
+/**
+ * Play a one-shot now and return where it landed in the loop.
+ * The caller stores it on a section; it sounds again only while that section plays.
+ */
+export function tapOverdub(path: string): LoopHit | null {
   const ctx = getAudioContext();
   if (ctx.state === "suspended") void ctx.resume();
   const now = ctx.currentTime;
   trigger(path, now);
-  if (!loopDur || !loopPath) return;
+  if (!loopDur || !loopPath) return null;
   let offset = (now - loopStart) % loopDur;
   if (offset < 0) offset += loopDur;
-  overdubs.push({ id: String(++seq), path, offset });
+  return { id: String(++seq), path, offset };
 }
