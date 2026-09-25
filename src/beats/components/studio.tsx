@@ -4,6 +4,7 @@ import { Download, Pause, Plus, Play, Search } from "lucide-react";
 import { BeatGrid, type BeatGridHandle } from "@/components/beat-grid";
 import { MobilePads } from "@/components/mobile-pads";
 import { Input } from "@/components/ui/input";
+import { playOneShot, unlockAudio } from "@/lib/audio-cache";
 import { buildPadBanks } from "@/lib/pad-banks";
 import { ALLOW_DOWNLOAD, filename, mediaUrl, SAMPLE_DRAG_MIME } from "@/lib/media";
 import type { SoundItem } from "@/lib/types";
@@ -216,6 +217,7 @@ export function Studio({ items }: { items: SoundItem[] }) {
     gridRef.current?.addAtPlayhead(item);
   }
 
+  /** Library audition — HTMLAudio is fine; pads use playPadHit instead. */
   async function trigger(item: SoundItem) {
     gridRef.current?.recordHit(item);
     startPreview(item);
@@ -244,6 +246,21 @@ export function Studio({ items }: { items: SoundItem[] }) {
           ? "Browser blocked autoplay. Click Play again."
           : "Could not start audio. Download the WAV instead."
       );
+    }
+  }
+
+  /** Pad hit: Web Audio one-shot (decoded buffers) — no load()/play() round-trip. */
+  function playPadHit(item: SoundItem) {
+    void unlockAudio();
+    playOneShot(item.path);
+    gridRef.current?.recordHit(item);
+    // Stop library HTML preview so it doesn't double with the one-shot.
+    const el = audioRef.current;
+    if (el && !el.paused) {
+      el.pause();
+      el.currentTime = 0;
+      activeIdRef.current = null;
+      setPlaying(false);
     }
   }
 
@@ -421,7 +438,7 @@ export function Studio({ items }: { items: SoundItem[] }) {
             banks={padBanks}
             recording={recording}
             countInBeat={countInBeat}
-            onHit={(item) => void trigger(item)}
+            onHit={playPadHit}
             onRecord={() => gridRef.current?.toggleRecordWithCountIn()}
             onScrollSounds={() => goPanel(0)}
             onScrollGrid={() => goPanel(2)}

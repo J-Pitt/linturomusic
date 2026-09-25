@@ -6,8 +6,17 @@ const peakCache = new Map<string, Float32Array>();
 const inflight = new Map<string, Promise<AudioBuffer>>();
 
 export function getAudioContext() {
-  if (!ctx) ctx = new AudioContext();
+  if (!ctx) {
+    ctx = new AudioContext({ latencyHint: "interactive" });
+  }
   return ctx;
+}
+
+/** Resume the shared context (call from a user gesture). */
+export function unlockAudio(): Promise<void> {
+  const audio = getAudioContext();
+  if (audio.state === "running") return Promise.resolve();
+  return audio.resume();
 }
 
 export async function getBuffer(path: string) {
@@ -27,6 +36,40 @@ export async function getBuffer(path: string) {
   })();
   inflight.set(path, job);
   return job;
+}
+
+export function hasBuffer(path: string) {
+  return buffers.has(path);
+}
+
+/** Fire-and-forget decode; safe to call repeatedly. */
+export function preloadBuffers(paths: string[]) {
+  for (const path of paths) {
+    if (buffers.has(path) || inflight.has(path)) continue;
+    void getBuffer(path).catch(() => null);
+  }
+}
+
+/**
+ * Lowest-latency one-shot: starts immediately if the buffer is cached.
+ * If not cached yet, loads then plays (first hit may be late; subsequent hits are instant).
+ */
+export function playOneShot(path: string): void {
+  const audio = getAudioContext();
+  if (audio.state === "suspended") void audio.resume();
+
+  const buf = buffers.get(path);
+  if (!buf) {
+    void getBuffer(path)
+      .then(() => playOneShot(path))
+      .catch(() => null);
+    return;
+  }
+
+  const src = audio.createBufferSource();
+  src.buffer = buf;
+  src.connect(audio.destination);
+  src.start();
 }
 
 export function peaksFromChannel(data: Float32Array, buckets: number) {
