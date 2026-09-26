@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { getBuffer, getPeaks, peekBuffer, putBuffer, unlockAudio, usePunch } from "@/lib/audio-cache";
+import { getBuffer, getPeaks, peekBuffer, peekPeaks, putBuffer, unlockAudio, usePunch } from "@/lib/audio-cache";
 import { downloadWav } from "@/lib/download-beat";
 import {
   BASS,
@@ -34,7 +34,7 @@ import { startSampleRecording } from "@/lib/sample-recorder";
 import type { SoundItem } from "@/lib/types";
 
 type Step = "loop" | "sections";
-type LoopGroup = "bass" | "other";
+type LoopGroup = "bass" | "custom";
 type Mode = "play" | "count" | "record";
 type Pad = { item: SoundItem; label: string };
 type CustomSample = { id: string; name: string };
@@ -55,7 +55,7 @@ function copyHits(hits: LoopHit[]) {
 export function GuidedBeat({ items }: { items: SoundItem[] }) {
   const request = useRef(0);
   const [step, setStep] = useState<Step>("loop");
-  const [group, setGroup] = useState<LoopGroup>("bass");
+  const [group, setGroup] = useState<LoopGroup>("custom");
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<SoundItem | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -90,9 +90,8 @@ export function GuidedBeat({ items }: { items: SoundItem[] }) {
   }, [items]);
 
   const listed = useMemo(() => {
-    const pool = loops.filter((loop) => (group === "bass" ? isBassHeavy(loop) : !isBassHeavy(loop)));
-    if (pool.length <= 40) return pool;
-    return pool.slice(0, Math.ceil((pool.length * 2) / 3));
+    if (group === "bass") return loops.filter(isBassHeavy);
+    return loops;
   }, [loops, group]);
 
   const visible = useMemo(() => {
@@ -480,7 +479,7 @@ export function GuidedBeat({ items }: { items: SoundItem[] }) {
               body={
                 pickingLoop
                   ? "This loop becomes the next section, eight beats long."
-                  : `${listed.length} ${group === "bass" ? "bass-heavy" : "other"} loops. Each section is 8 beats. Duplicate it on the next screen.`
+                  : `${listed.length} ${group === "bass" ? "bass-heavy" : "Linturo Custom"} loops. Each section is 8 beats. Duplicate it on the next screen.`
               }
               loops={visible}
               group={group}
@@ -893,11 +892,11 @@ function LoopStep({
         className="h-10 border border-hairline bg-black px-3 text-sm text-paper outline-none placeholder:text-mute-dim focus:border-paper"
       />
       <div className="flex gap-2 overflow-x-auto pb-1">
+        <Chip active={group === "custom"} onClick={() => onGroup("custom")}>
+          Linturo Custom
+        </Chip>
         <Chip active={group === "bass"} onClick={() => onGroup("bass")}>
           Bass heavy
-        </Chip>
-        <Chip active={group === "other"} onClick={() => onGroup("other")}>
-          Other
         </Chip>
       </div>
       {loops.length === 0 ? (
@@ -994,6 +993,7 @@ function ArrangementWave({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const headRef = useRef<HTMLDivElement>(null);
   const tapRef = useRef<{ x: number; y: number } | null>(null);
+  const peaksRef = useRef(new Map<string, Float32Array>());
   const shape = `${editId}|${repeats}|${sections
     .map(
       (section) =>
@@ -1010,9 +1010,9 @@ function ArrangementWave({
     const paint = (peaksByPath: Map<string, Float32Array>) => {
       if (cancelled) return;
       const dpr = Math.min(2, window.devicePixelRatio || 1);
-      const { spans, total } = sectionSpans();
+      const { spans, total } = sectionSpans(sections, repeats);
       const pxPerSec = (140 / 60) * BEAT_PX;
-      const cssW = Math.max(wrap.clientWidth, Math.ceil(total * pxPerSec));
+      const cssW = Math.max(wrap.clientWidth, Math.ceil(total * pxPerSec)) * 2;
       const h = 64;
       canvas.style.width = `${cssW}px`;
       canvas.style.height = `${h}px`;
@@ -1032,7 +1032,7 @@ function ArrangementWave({
           ctx.fillStyle = "rgba(245, 245, 245, 0.05)";
           ctx.fillRect(x0, 0, width, canvas.height);
         }
-        const peaks = span.loopPath ? peaksByPath.get(span.loopPath) : null;
+        const peaks = span.loopPath ? (peaksByPath.get(span.loopPath) ?? null) : null;
         if (!peaks) {
           ctx.fillStyle = "rgba(255, 255, 255, 0.035)";
           ctx.fillRect(x0, 0, width, canvas.height);
@@ -1063,6 +1063,9 @@ function ArrangementWave({
           const bar = beat % 4 === 0;
           ctx.fillStyle = bar ? "rgba(245, 245, 245, 0.55)" : "rgba(245, 245, 245, 0.2)";
           ctx.fillRect(Math.round(x), 0, bar ? Math.max(1, dpr) : 1, canvas.height);
+          const halfX = x0 + ((beat + 0.5) / beats) * width;
+          ctx.fillStyle = "rgba(245, 245, 245, 0.12)";
+          ctx.fillRect(Math.round(halfX), canvas.height * 0.45, 1, canvas.height * 0.55);
         }
         if (index > 0) {
           ctx.fillStyle = "rgba(245, 245, 245, 0.9)";
@@ -1083,12 +1086,21 @@ function ArrangementWave({
     };
 
     const paths = [...new Set(sections.map((section) => section.loopPath).filter((path): path is string => !!path))];
-    paint(new Map());
-    void Promise.all(paths.map(async (path) => [path, await getPeaks(path, 120)] as const))
-      .then((pairs) => {
-        if (!cancelled) paint(new Map(pairs));
-      })
-      .catch(() => null);
+    for (const path of paths) {
+      const cached = peekPeaks(path, 120);
+      if (cached) peaksRef.current.set(path, cached);
+    }
+    paint(peaksRef.current);
+    const missing = paths.filter((path) => !peaksRef.current.has(path));
+    if (missing.length) {
+      void Promise.all(missing.map(async (path) => [path, await getPeaks(path, 120)] as const))
+        .then((pairs) => {
+          if (cancelled) return;
+          for (const [path, peaks] of pairs) peaksRef.current.set(path, peaks);
+          paint(peaksRef.current);
+        })
+        .catch(() => null);
+    }
 
     return () => {
       cancelled = true;
@@ -1098,7 +1110,7 @@ function ArrangementWave({
   useEffect(() => {
     const wrap = wrapRef.current;
     if (!wrap || !editId) return;
-    const { spans, total } = sectionSpans();
+    const { spans, total } = sectionSpans(sections, repeats);
     const span = spans.find((item) => item.id === editId);
     if (!span) return;
     const x = (span.start / total) * wrap.scrollWidth;
@@ -1136,7 +1148,7 @@ function ArrangementWave({
         if (!wrap) return;
         const rect = wrap.getBoundingClientRect();
         const x = event.clientX - rect.left + wrap.scrollLeft;
-        const { spans, total } = sectionSpans();
+        const { spans, total } = sectionSpans(sections, repeats);
         const width = Math.max(wrap.scrollWidth, 1);
         const time = (x / width) * total;
         const span =
@@ -1145,7 +1157,7 @@ function ArrangementWave({
         if (span) onSelect(span.id);
       }}
     >
-      <canvas ref={canvasRef} className="pointer-events-none h-16" aria-hidden />
+      <canvas ref={canvasRef} className="pointer-events-none h-16 max-w-none" aria-hidden />
       <div
         ref={headRef}
         className={`pointer-events-none absolute top-0 left-0 z-10 h-full w-px ${recording ? "bg-red-400" : "bg-paper"}`}

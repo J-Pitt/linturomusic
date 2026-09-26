@@ -25,10 +25,12 @@ export function beatsInDuration(duration: number) {
   return Math.max(1, Math.round((duration * GRID_BPM) / 60));
 }
 
+/** Nearest beat, or the half between two beats when the tap lands in the middle. */
 export function snapToBeat(offset: number, loopDur: number) {
   const beats = beatsInDuration(loopDur);
   const beat = loopDur / beats;
-  let snapped = Math.round(offset / beat) * beat;
+  const half = beat / 2;
+  let snapped = Math.round(offset / half) * half;
   if (snapped >= loopDur - 1e-4) snapped = 0;
   if (snapped < 0) snapped = 0;
   return snapped;
@@ -110,13 +112,16 @@ function windowLength(path: string | null, fallback: number) {
   return Math.min(loopLength(path, fallback), sectionSeconds());
 }
 
-export function sectionSpans(): { spans: SectionSpan[]; total: number } {
-  const first = sections.find((section) => section.loopPath && peekBuffer(section.loopPath));
+export function sectionSpans(
+  source: LoopSection[] = sections,
+  repeats: number = loopsPerSection,
+): { spans: SectionSpan[]; total: number } {
+  const first = source.find((section) => section.loopPath && peekBuffer(section.loopPath));
   const fallback = first?.loopPath ? peekBuffer(first.loopPath)?.duration || loopDur || 4 : loopDur || 4;
   let cursor = 0;
-  const spans: SectionSpan[] = sections.map((section) => {
+  const spans: SectionSpan[] = source.map((section) => {
     const one = windowLength(section.loopPath, fallback);
-    const hold = one * Math.max(1, loopsPerSection);
+    const hold = one * Math.max(1, repeats);
     const span = {
       id: section.id,
       loopPath: section.loopPath,

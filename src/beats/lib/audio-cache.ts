@@ -134,6 +134,10 @@ export function peaksFromChannel(data: Float32Array, buckets: number) {
   return peaks;
 }
 
+export function peekPeaks(path: string, buckets = 2048) {
+  return peakCache.get(`${path}:${buckets}`) ?? null;
+}
+
 export async function getPeaks(path: string, buckets = 2048) {
   const key = `${path}:${buckets}`;
   const hit = peakCache.get(key);
