@@ -46,6 +46,14 @@ export function peekBuffer(path: string) {
   return buffers.get(path) ?? null;
 }
 
+/** Keep a recorded sample in the same cache the pads and the beat use. */
+export function putBuffer(path: string, buffer: AudioBuffer) {
+  buffers.set(path, buffer);
+  for (const key of peakCache.keys()) {
+    if (key.startsWith(`${path}:`)) peakCache.delete(key);
+  }
+}
+
 /** Fire-and-forget decode; safe to call repeatedly. */
 export function preloadBuffers(paths: string[]) {
   for (const path of paths) {

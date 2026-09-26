@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { getBuffer, getPeaks, peekBuffer, unlockAudio } from "@/lib/audio-cache";
+import { getBuffer, getPeaks, peekBuffer, putBuffer, unlockAudio } from "@/lib/audio-cache";
+import { downloadWav } from "@/lib/download-beat";
 import {
   BASS,
-  MORE_PERCUSSION,
+  EXTRA_BASS,
+  EXTRA_PERCUSSION,
   PERCUSSION,
   isBaseLoop,
   loopBeats,
@@ -11,11 +13,14 @@ import {
   sectionName,
 } from "@/lib/guided";
 import {
-  cancelCountIn,
+  arrangementProgress,
+  beatsInDuration,
   countIn,
-  loopProgress,
   preview,
+  renderArrangement,
   resumeLoop,
+  pausePlayback,
+  sectionSpans,
   setArrangement,
   startLoop,
   stopLoop,
@@ -24,11 +29,13 @@ import {
   type LoopHit,
   type LoopSection,
 } from "@/lib/loop-engine";
+import { startSampleRecording } from "@/lib/sample-recorder";
 import type { SoundItem } from "@/lib/types";
 
 type Step = "loop" | "sections";
 type Mode = "play" | "count" | "record";
 type Pad = { item: SoundItem; label: string };
+type CustomSample = { id: string; name: string };
 
 const STEPS = [
   { id: "1", label: "Loop" },
@@ -57,7 +64,23 @@ export function GuidedBeat({ items }: { items: SoundItem[] }) {
   const [mode, setMode] = useState<Mode>("play");
   const [count, setCount] = useState<number | null>(null);
   const [loadingPath, setLoadingPath] = useState<string | null>(null);
-  const [morePerc, setMorePerc] = useState(false);
+  const [pickingLoop, setPickingLoop] = useState(false);
+  const [running, setRunning] = useState(true);
+  const [samples, setSamples] = useState<CustomSample[]>([]);
+  const [sampling, setSampling] = useState(false);
+  const [askingMic, setAskingMic] = useState(false);
+  const [sampleError, setSampleError] = useState<string | null>(null);
+  const [focusSample, setFocusSample] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
+  const sampleTake = useRef<{ stop: () => AudioBuffer } | null>(null);
+  const sampleTimer = useRef(0);
+  const resumeAfterSample = useRef(false);
+  const [recordSnap, setRecordSnap] = useState<{ id: string; hits: LoopHit[] }[] | null>(null);
+  const [showMoreArrow, setShowMoreArrow] = useState(false);
+  const sectionsRef = useRef(sections);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const moreRef = useRef<HTMLDivElement>(null);
+  sectionsRef.current = sections;
 
   const loops = useMemo(() => {
     return items.filter(isBaseLoop).sort((a, b) => a.name.localeCompare(b.name));
@@ -71,24 +94,49 @@ export function GuidedBeat({ items }: { items: SoundItem[] }) {
     return [...names].sort();
   }, [loops]);
 
+  const listed = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const loop of loops) {
+      for (const name of loop.projects ?? []) counts.set(name, (counts.get(name) ?? 0) + 1);
+    }
+    const sizes = [...counts.values()].sort((a, b) => a - b);
+    const cutoff = (sizes[Math.floor(sizes.length / 2)] ?? 0) * 1.5;
+    const pool = project === "all" ? loops : loops.filter((loop) => loop.projects?.includes(project));
+    const count = project === "all" ? loops.length : (counts.get(project) ?? pool.length);
+    if (count <= cutoff) return pool;
+    return pool.slice(0, Math.ceil((pool.length * 2) / 3));
+  }, [loops, project]);
+
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return loops.filter((loop) => {
-      if (project !== "all" && !loop.projects?.includes(project)) return false;
-      if (!q) return true;
-      return `${loop.name} ${loop.genre ?? ""} ${(loop.projects ?? []).join(" ")}`
-        .toLowerCase()
-        .includes(q);
-    });
-  }, [loops, project, query]);
+    if (!q) return listed;
+    return listed.filter((loop) =>
+      `${loop.name} ${loop.genre ?? ""} ${(loop.projects ?? []).join(" ")}`.toLowerCase().includes(q),
+    );
+  }, [listed, query]);
 
   const percussion = useMemo(() => pickSounds(items, PERCUSSION), [items]);
-  const morePercussion = useMemo(() => pickSounds(items, MORE_PERCUSSION), [items]);
+  const extraPercussion = useMemo(
+    () => EXTRA_PERCUSSION.map((group) => ({ title: group.title, pads: pickSounds(items, group.pads) })),
+    [items],
+  );
   const bass = useMemo(() => pickSounds(items, BASS), [items]);
+  const extraBass = useMemo(() => pickSounds(items, EXTRA_BASS), [items]);
   const editIndex = Math.max(0, sections.findIndex((section) => section.id === editId));
   const editing = sections[editIndex] ?? null;
 
-  useEffect(() => () => stopLoop(), []);
+  useEffect(
+    () => () => {
+      stopLoop();
+      if (sampleTimer.current) window.clearTimeout(sampleTimer.current);
+      try {
+        sampleTake.current?.stop();
+      } catch {
+        /* mic already closed */
+      }
+    },
+    [],
+  );
 
   useEffect(() => {
     watchPlayingSection(setPlaying);
@@ -98,6 +146,28 @@ export function GuidedBeat({ items }: { items: SoundItem[] }) {
   useEffect(() => {
     setArrangement(sections, repeats);
   }, [sections, repeats]);
+
+  useEffect(() => {
+    const root = scrollRef.current;
+    const target = moreRef.current;
+    if (step !== "sections" || pickingLoop || !root || !target) {
+      setShowMoreArrow(false);
+      return;
+    }
+    const update = () => {
+      const rootBox = root.getBoundingClientRect();
+      const box = target.getBoundingClientRect();
+      const seen = box.top < rootBox.bottom - 8;
+      setShowMoreArrow(!seen);
+    };
+    update();
+    root.addEventListener("scroll", update, { passive: true });
+    window.addEventListener("resize", update);
+    return () => {
+      root.removeEventListener("scroll", update);
+      window.removeEventListener("resize", update);
+    };
+  }, [step, pickingLoop, extraPercussion, extraBass]);
 
   async function choose(item: SoundItem) {
     if (selected?.id === item.id) {
@@ -124,14 +194,17 @@ export function GuidedBeat({ items }: { items: SoundItem[] }) {
   }
 
   function beginSections() {
+    if (!selected) return;
     const id = newId();
-    setSections([{ id, hits: [] }]);
+    setSections([{ id, hits: [], loopPath: selected.path }]);
     setEditId(id);
     setRepeats(2);
     setPlaying(0);
     setMode("play");
     setCount(null);
-    setMorePerc(false);
+    setRecordSnap(null);
+    setRunning(true);
+    setPickingLoop(false);
     setStep("sections");
   }
 
@@ -145,7 +218,25 @@ export function GuidedBeat({ items }: { items: SoundItem[] }) {
     setPlaying(0);
     setMode("play");
     setCount(null);
+    setRecordSnap(null);
+    setRunning(true);
+    setPickingLoop(false);
     setStep("loop");
+  }
+
+  async function addLoopSection(item: SoundItem) {
+    const ticket = ++request.current;
+    setBusyId(item.id);
+    try {
+      await getBuffer(item.path);
+      if (ticket !== request.current) return;
+      const id = newId();
+      setSections((prev) => [...prev, { id, hits: [], loopPath: item.path }]);
+      setEditId(id);
+      setPickingLoop(false);
+    } finally {
+      if (ticket === request.current) setBusyId(null);
+    }
   }
 
   async function onPad(path: string, record: boolean) {
@@ -173,6 +264,7 @@ export function GuidedBeat({ items }: { items: SoundItem[] }) {
     const beats = Math.max(4, Math.round(loopBeats(selected) ?? 8));
     setMode("count");
     setCount(null);
+    setRunning(true);
     const started = await countIn(beats, setCount);
     if (!started) {
       setMode("play");
@@ -180,14 +272,113 @@ export function GuidedBeat({ items }: { items: SoundItem[] }) {
       return;
     }
     setCount(null);
+    setRecordSnap(
+      sectionsRef.current.map((section) => ({
+        id: section.id,
+        hits: section.hits.map((hit) => ({ ...hit })),
+      })),
+    );
     setMode("record");
   }
 
-  function stopRecord() {
-    cancelCountIn();
-    resumeLoop();
+  function undoRecord() {
+    if (!recordSnap) return;
+    const byId = new Map(recordSnap.map((section) => [section.id, section.hits]));
+    setSections((prev) =>
+      prev.map((section) => {
+        const hits = byId.get(section.id);
+        return hits ? { ...section, hits: hits.map((hit) => ({ ...hit })) } : section;
+      }),
+    );
+    setRecordSnap(null);
+    if (mode !== "play") stopPlayback();
+  }
+
+  function stopPlayback() {
+    pausePlayback();
     setCount(null);
     setMode("play");
+    setRunning(false);
+  }
+
+  function startPlayback() {
+    resumeLoop();
+    setRunning(true);
+  }
+
+  async function finishSample() {
+    if (sampleTimer.current) {
+      window.clearTimeout(sampleTimer.current);
+      sampleTimer.current = 0;
+    }
+    const take = sampleTake.current;
+    if (!take) return;
+    sampleTake.current = null;
+    setSampling(false);
+    try {
+      const buffer = take.stop();
+      const id = `sample:${newId()}`;
+      putBuffer(id, buffer);
+      setSamples((prev) => [...prev, { id, name: `Sample ${prev.length + 1}` }]);
+      setFocusSample(id);
+      setSampleError(null);
+    } catch {
+      setSampleError("Couldn’t save that sample.");
+    }
+    if (resumeAfterSample.current) {
+      resumeAfterSample.current = false;
+      startPlayback();
+    }
+  }
+
+  async function toggleSample() {
+    if (sampleTake.current) {
+      await finishSample();
+      return;
+    }
+    if (askingMic) return;
+    setSampleError(null);
+    if (mode !== "play") {
+      stopPlayback();
+    } else if (running) {
+      resumeAfterSample.current = true;
+      pausePlayback();
+      setRunning(false);
+    }
+    setAskingMic(true);
+    try {
+      sampleTake.current = await startSampleRecording();
+      setSampling(true);
+      sampleTimer.current = window.setTimeout(() => {
+        if (sampleTake.current) void finishSample();
+      }, 15000);
+    } catch {
+      setSampleError("Allow the microphone to record a sample.");
+      if (resumeAfterSample.current) {
+        resumeAfterSample.current = false;
+        startPlayback();
+      }
+    } finally {
+      setAskingMic(false);
+    }
+  }
+
+  function renameSample(id: string, name: string) {
+    setSamples((prev) => prev.map((sample) => (sample.id === id ? { ...sample, name } : sample)));
+  }
+
+  async function downloadBeat() {
+    if (exporting) return;
+    setExporting(true);
+    try {
+      const buffer = await renderArrangement();
+      if (!buffer) return;
+      const title = selected ? loopTitle(selected) : "beat";
+      const safe = title.replace(/[^\w\- ]+/g, "").trim().replace(/\s+/g, "-") || "beat";
+      downloadWav(buffer, `linturo-${safe}`);
+    } finally {
+      setExporting(false);
+    }
   }
 
   function addSection(empty: boolean) {
@@ -195,7 +386,8 @@ export function GuidedBeat({ items }: { items: SoundItem[] }) {
     setSections((prev) => {
       const source = prev.find((section) => section.id === editId) ?? prev[prev.length - 1];
       const hits = empty || !source ? [] : copyHits(source.hits);
-      return [...prev, { id, hits }];
+      const loopPath = empty ? null : (source?.loopPath ?? null);
+      return [...prev, { id, hits, loopPath }];
     });
     setEditId(id);
   }
@@ -244,7 +436,8 @@ export function GuidedBeat({ items }: { items: SoundItem[] }) {
         ) : null}
       </header>
 
-      <div className="min-h-0 flex-1 overflow-y-auto">
+      <div className="relative min-h-0 flex-1">
+        <div ref={scrollRef} className="h-full overflow-y-auto">
         {step === "sections" && selected ? (
           <div className="sticky top-0 z-10 border-b border-hairline bg-ink px-4 py-2">
             <p className="mb-1 flex items-center gap-2 text-[10px] tracking-[0.16em] uppercase">
@@ -256,31 +449,43 @@ export function GuidedBeat({ items }: { items: SoundItem[] }) {
               ) : (
                 <span className="text-mute-dim">{mode === "count" ? "Count-in" : "Play"}</span>
               )}
-              <span className="text-mute-dim">· loop</span>
+              <span className="text-mute-dim">· whole beat</span>
             </p>
-            <LoopWave path={selected.path} recording={mode === "record"} />
+            <ArrangementWave
+              sections={sections}
+              editId={editId}
+              repeats={repeats}
+              recording={mode === "record"}
+            />
           </div>
         ) : null}
         <div className="px-4 py-4">
-          {step === "loop" ? (
+          {step === "loop" || pickingLoop ? (
             <LoopStep
+              title={pickingLoop ? "Add a loop section" : "Choose your base loop"}
+              body={
+                pickingLoop
+                  ? "This loop becomes the next section. The waveform keeps the blank space around it."
+                  : `${listed.length} project loops, 8 beats or longer. Play one, then build sections on it.`
+              }
               loops={visible}
-              total={loops.length}
               projects={projects}
               project={project}
               query={query}
-              selectedId={selected?.id ?? null}
+              selectedId={pickingLoop ? null : (selected?.id ?? null)}
               busyId={busyId}
+              action={pickingLoop ? "Add" : "Play"}
               onProject={setProject}
               onQuery={setQuery}
-              onChoose={(item) => void choose(item)}
+              onChoose={(item) => void (pickingLoop ? addLoopSection(item) : choose(item))}
             />
           ) : (
             <SectionStep
               percussion={percussion}
-              morePercussion={morePercussion}
-              showMore={morePerc}
+              extraPercussion={extraPercussion}
               bass={bass}
+              extraBass={extraBass}
+              moreRef={moreRef}
               sections={sections}
               editId={editId}
               playing={playing}
@@ -290,22 +495,41 @@ export function GuidedBeat({ items }: { items: SoundItem[] }) {
               loadingPath={loadingPath}
               onEdit={setEditId}
               onRepeats={setRepeats}
-              onMore={() => setMorePerc((open) => !open)}
               onTap={(path) => void onPad(path, mode === "record")}
+              samples={samples}
+              sampling={sampling}
+              askingMic={askingMic}
+              sampleError={sampleError}
+              focusSample={focusSample}
+              onRecordSample={() => void toggleSample()}
+              onRename={renameSample}
             />
           )}
         </div>
+        </div>
+        {showMoreArrow ? (
+          <button
+            type="button"
+            onClick={() => moreRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}
+            className="absolute bottom-3 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2 border border-hairline bg-ink/95 px-3 py-2 text-[10px] tracking-[0.16em] text-paper uppercase"
+          >
+            More sounds
+            <span aria-hidden className="text-sm leading-none">
+              ↓
+            </span>
+          </button>
+        ) : null}
       </div>
 
       <footer className="shrink-0 border-t border-hairline px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-        {step === "loop" ? (
+        {step === "loop" || pickingLoop ? (
           <button
             type="button"
             disabled={!selected || busyId != null}
-            onClick={beginSections}
+            onClick={pickingLoop ? () => setPickingLoop(false) : beginSections}
             className="w-full border border-paper py-3.5 text-sm tracking-[0.18em] text-paper uppercase disabled:opacity-30"
           >
-            Build sections
+            {pickingLoop ? "Back" : "Build sections"}
           </button>
         ) : (
           <div className="flex flex-col gap-2">
@@ -320,15 +544,14 @@ export function GuidedBeat({ items }: { items: SoundItem[] }) {
               </button>
               <button
                 type="button"
-                disabled={mode === "play"}
-                onClick={stopRecord}
-                className={`flex-1 border py-3.5 text-sm tracking-[0.18em] uppercase disabled:opacity-30 ${
+                onClick={running ? stopPlayback : startPlayback}
+                className={`flex-1 border py-3.5 text-sm tracking-[0.18em] uppercase ${
                   mode === "record"
                     ? "border-red-500 text-red-500"
-                    : "border-hairline text-mute"
+                    : "border-paper text-paper"
                 }`}
               >
-                Stop
+                {running ? "Stop" : "Play"}
               </button>
             </div>
             <div className="flex gap-2">
@@ -342,11 +565,34 @@ export function GuidedBeat({ items }: { items: SoundItem[] }) {
               <button
                 type="button"
                 onClick={() => addSection(false)}
-                className="flex-1 border border-paper bg-paper py-3.5 text-sm tracking-[0.14em] text-black uppercase"
+                className="flex-1 border border-hairline py-3.5 text-sm tracking-[0.14em] text-mute uppercase"
               >
                 Add section
               </button>
+              <button
+                type="button"
+                onClick={() => setPickingLoop(true)}
+                className="flex-1 border border-paper bg-paper py-3.5 text-sm tracking-[0.14em] text-black uppercase"
+              >
+                Add loop
+              </button>
             </div>
+            <button
+              type="button"
+              disabled={exporting}
+              onClick={() => void downloadBeat()}
+              className="w-full border border-paper py-3.5 text-sm tracking-[0.18em] text-paper uppercase disabled:opacity-30"
+            >
+              {exporting ? "Preparing…" : "Download beat"}
+            </button>
+            <button
+              type="button"
+              disabled={!recordSnap}
+              onClick={undoRecord}
+              className="w-full border border-hairline py-3 text-[11px] tracking-[0.16em] text-mute uppercase disabled:opacity-30"
+            >
+              Undo last record
+            </button>
             <div className="flex items-center justify-between gap-3">
               <button
                 type="button"
@@ -396,9 +642,10 @@ export function GuidedBeat({ items }: { items: SoundItem[] }) {
 
 function SectionStep({
   percussion,
-  morePercussion,
-  showMore,
+  extraPercussion,
   bass,
+  extraBass,
+  moreRef,
   sections,
   editId,
   playing,
@@ -408,13 +655,20 @@ function SectionStep({
   loadingPath,
   onEdit,
   onRepeats,
-  onMore,
   onTap,
+  samples,
+  sampling,
+  askingMic,
+  sampleError,
+  focusSample,
+  onRecordSample,
+  onRename,
 }: {
   percussion: Pad[];
-  morePercussion: Pad[];
-  showMore: boolean;
+  extraPercussion: { title: string; pads: Pad[] }[];
   bass: Pad[];
+  extraBass: Pad[];
+  moreRef: { current: HTMLDivElement | null };
   sections: LoopSection[];
   editId: string | null;
   playing: number;
@@ -424,8 +678,14 @@ function SectionStep({
   loadingPath: string | null;
   onEdit: (id: string) => void;
   onRepeats: (repeats: number) => void;
-  onMore: () => void;
   onTap: (path: string) => void;
+  samples: CustomSample[];
+  sampling: boolean;
+  askingMic: boolean;
+  sampleError: string | null;
+  focusSample: string | null;
+  onRecordSample: () => void;
+  onRename: (id: string, name: string) => void;
 }) {
   const editIndex = Math.max(0, sections.findIndex((section) => section.id === editId));
   const name = sectionName(editIndex);
@@ -437,8 +697,10 @@ function SectionStep({
     coach = "Count-in from the top. Recording starts when the loop does.";
   } else if (editIndex === 0 && hits > 0) {
     coach = "That’s on the intro. Record again to add more, or add a section — it starts as a copy.";
+  } else if (editIndex > 0 && !sections[editIndex]?.loopPath) {
+    coach = `${name} is a blank. It stays in the waveform so you can hear the other sections around it.`;
   } else if (editIndex > 0 && hits === 0) {
-    coach = `${name} is just the loop. Record into it, or leave it as a break.`;
+    coach = `${name} is a new loop. Tap sounds to try them with the rest of the beat.`;
   } else if (editIndex > 0) {
     coach = `${name} is in the arrangement. Record to add hits. Sections play in order, then the beat repeats.`;
   }
@@ -493,45 +755,89 @@ function SectionStep({
         </div>
       ) : null}
 
+      <div className="flex flex-col gap-3">
+        <button
+          type="button"
+          onClick={onRecordSample}
+          disabled={askingMic}
+          className={`border py-3.5 text-sm tracking-[0.18em] uppercase disabled:opacity-30 ${
+            sampling ? "border-red-500 text-red-500" : "border-paper text-paper"
+          }`}
+        >
+          {sampling ? "Stop sample" : askingMic ? "Listening…" : "Record sample"}
+        </button>
+        {sampleError ? <p className="text-sm text-mute">{sampleError}</p> : null}
+        {samples.length ? (
+          <div>
+            <p className="mb-2 text-[10px] tracking-[0.18em] text-mute-dim uppercase">Your samples</p>
+            <div className="grid grid-cols-2 gap-2">
+              {samples.map((sample) => (
+                <div key={sample.id} className="flex flex-col gap-1">
+                  <button
+                    type="button"
+                    onPointerDown={(event) => {
+                      event.preventDefault();
+                      void unlockAudio();
+                      onTap(sample.id);
+                    }}
+                    className="pad-key touch-manipulation min-h-14 border border-hairline bg-[#111] px-2 py-3 text-center text-[10px] tracking-[0.06em] text-paper uppercase"
+                  >
+                    {sample.name.trim() || "Sample"}
+                  </button>
+                  <input
+                    value={sample.name}
+                    autoFocus={sample.id === focusSample}
+                    onChange={(event) => onRename(sample.id, event.target.value)}
+                    placeholder="Name this sample"
+                    className="h-8 border border-hairline bg-black px-2 text-xs text-paper outline-none placeholder:text-mute-dim focus:border-paper"
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : null}
+      </div>
       <PadGrid title="Percussion" pads={percussion} loadingPath={loadingPath} onTap={onTap} />
-      {morePercussion.length ? (
-        <div>
-          <button
-            type="button"
-            onClick={onMore}
-            className="mb-2 text-[10px] tracking-[0.16em] text-mute uppercase"
-          >
-            {showMore ? "Hide extra percussion" : "More percussion"}
-          </button>
-          {showMore ? (
-            <PadGrid pads={morePercussion} loadingPath={loadingPath} onTap={onTap} />
-          ) : null}
-        </div>
-      ) : null}
       <PadGrid title="Bass" pads={bass} loadingPath={loadingPath} onTap={onTap} />
+      <div ref={moreRef} className="flex flex-col gap-4 pt-2">
+        {extraPercussion.map((group) => (
+          <PadGrid
+            key={group.title}
+            title={group.title}
+            pads={group.pads}
+            loadingPath={loadingPath}
+            onTap={onTap}
+          />
+        ))}
+        <PadGrid title="More bass" pads={extraBass} loadingPath={loadingPath} onTap={onTap} />
+      </div>
     </div>
   );
 }
 
 function LoopStep({
+  title,
+  body,
   loops,
-  total,
   projects,
   project,
   query,
   selectedId,
   busyId,
+  action,
   onProject,
   onQuery,
   onChoose,
 }: {
+  title: string;
+  body: string;
   loops: SoundItem[];
-  total: number;
   projects: string[];
   project: string;
   query: string;
   selectedId: string | null;
   busyId: string | null;
+  action: string;
   onProject: (project: string) => void;
   onQuery: (query: string) => void;
   onChoose: (item: SoundItem) => void;
@@ -539,10 +845,8 @@ function LoopStep({
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <h1 className="text-2xl font-light tracking-tight">Choose your base loop</h1>
-        <p className="mt-2 text-sm text-mute">
-          {total} project loops, 8 beats or longer. Play one, then build sections on it.
-        </p>
+        <h1 className="text-2xl font-light tracking-tight">{title}</h1>
+        <p className="mt-2 text-sm text-mute">{body}</p>
       </div>
       <input
         value={query}
@@ -585,7 +889,7 @@ function LoopStep({
                   </span>
                 </span>
                 <span className="shrink-0 text-[10px] tracking-[0.16em] uppercase">
-                  {busyId === loop.id ? "Loading" : on ? "Playing" : "Play"}
+                  {busyId === loop.id ? "Loading" : on ? "Playing" : action}
                 </span>
               </button>
             );
@@ -638,10 +942,28 @@ function PadGrid({
   );
 }
 
-function LoopWave({ path, recording }: { path: string; recording: boolean }) {
+const BEAT_PX = 16;
+
+function ArrangementWave({
+  sections,
+  editId,
+  repeats,
+  recording,
+}: {
+  sections: LoopSection[];
+  editId: string | null;
+  repeats: number;
+  recording: boolean;
+}) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const headRef = useRef<HTMLDivElement>(null);
+  const shape = `${editId}|${repeats}|${sections
+    .map(
+      (section) =>
+        `${section.id}:${section.loopPath ?? "blank"}:${section.hits.map((hit) => hit.offset.toFixed(3)).join(",")}`,
+    )
+    .join("|")}`;
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -649,43 +971,111 @@ function LoopWave({ path, recording }: { path: string; recording: boolean }) {
     if (!canvas || !wrap) return;
     let cancelled = false;
 
-    const paint = (peaks: Float32Array) => {
+    const paint = (peaksByPath: Map<string, Float32Array>) => {
+      if (cancelled) return;
       const dpr = Math.min(2, window.devicePixelRatio || 1);
-      const w = Math.max(1, wrap.clientWidth);
-      const h = 40;
-      canvas.width = Math.floor(w * dpr);
+      const { spans, total } = sectionSpans();
+      const pxPerSec = (140 / 60) * BEAT_PX;
+      const cssW = Math.max(wrap.clientWidth, Math.ceil(total * pxPerSec));
+      const h = 64;
+      canvas.style.width = `${cssW}px`;
+      canvas.style.height = `${h}px`;
+      canvas.width = Math.floor(cssW * dpr);
       canvas.height = Math.floor(h * dpr);
       const ctx = canvas.getContext("2d");
       if (!ctx) return;
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       const mid = canvas.height / 2;
-      const bars = Math.max(24, Math.floor(w / 3));
-      const gap = canvas.width / bars;
-      ctx.fillStyle = "rgba(245, 245, 245, 0.82)";
-      for (let i = 0; i < bars; i++) {
-        const idx = Math.min(peaks.length - 1, Math.floor((i / bars) * peaks.length));
-        const mag = Math.max(1, (peaks[idx] ?? 0) * canvas.height * 0.86);
-        ctx.fillRect(i * gap, mid - mag / 2, Math.max(1, gap * 0.7), mag);
-      }
+      const byId = new Map(sections.map((section) => [section.id, section]));
+
+      spans.forEach((span, index) => {
+        const x0 = (span.start / total) * canvas.width;
+        const x1 = ((span.start + span.hold) / total) * canvas.width;
+        const width = Math.max(1, x1 - x0);
+        if (span.id === editId) {
+          ctx.fillStyle = "rgba(245, 245, 245, 0.05)";
+          ctx.fillRect(x0, 0, width, canvas.height);
+        }
+        const peaks = span.loopPath ? peaksByPath.get(span.loopPath) : null;
+        if (!peaks) {
+          ctx.fillStyle = "rgba(255, 255, 255, 0.035)";
+          ctx.fillRect(x0, 0, width, canvas.height);
+        } else {
+          const repeatsInSpan = Math.max(1, Math.round(span.hold / Math.max(span.loopDur, 0.01)));
+          const slice = width / repeatsInSpan;
+          const bars = Math.max(8, Math.floor(slice / (2 * dpr)));
+          ctx.fillStyle = "rgba(245, 245, 245, 0.7)";
+          for (let repeat = 0; repeat < repeatsInSpan; repeat++) {
+            const origin = x0 + repeat * slice;
+            for (let i = 0; i < bars; i++) {
+              const idx = Math.min(peaks.length - 1, Math.floor((i / bars) * peaks.length));
+              const mag = Math.max(1, (peaks[idx] ?? 0) * canvas.height * 0.7);
+              const gap = slice / bars;
+              ctx.fillRect(origin + i * gap, mid - mag / 2, Math.max(1, gap * 0.62), mag);
+            }
+          }
+        }
+
+        const beats = Math.max(
+          1,
+          Math.round(span.hold / Math.max(span.loopDur, 0.01)) * beatsInDuration(span.loopDur),
+        );
+        for (let beat = 0; beat < beats; beat++) {
+          const x = x0 + (beat / beats) * width;
+          const bar = beat % 4 === 0;
+          ctx.fillStyle = bar ? "rgba(245, 245, 245, 0.55)" : "rgba(245, 245, 245, 0.2)";
+          ctx.fillRect(Math.round(x), 0, bar ? Math.max(1, dpr) : 1, canvas.height);
+        }
+        if (index > 0) {
+          ctx.fillStyle = "rgba(245, 245, 245, 0.9)";
+          ctx.fillRect(Math.round(x0), 0, Math.max(2, dpr), canvas.height);
+        }
+
+        const hits = byId.get(span.id)?.hits ?? [];
+        const repeatsInSpan = Math.max(1, Math.round(span.hold / Math.max(span.loopDur, 0.01)));
+        ctx.fillStyle = recording ? "rgba(248, 113, 113, 0.95)" : "rgba(245, 245, 245, 0.95)";
+        for (const hit of hits) {
+          for (let repeat = 0; repeat < repeatsInSpan; repeat++) {
+            const at = span.start + repeat * span.loopDur + hit.offset;
+            const x = (at / total) * canvas.width;
+            ctx.fillRect(x - dpr, canvas.height - 8 * dpr, Math.max(2, dpr * 1.5), 6 * dpr);
+          }
+        }
+      });
     };
 
-    void getPeaks(path, 180)
-      .then((peaks) => {
-        if (!cancelled) paint(peaks);
+    const paths = [...new Set(sections.map((section) => section.loopPath).filter((path): path is string => !!path))];
+    paint(new Map());
+    void Promise.all(paths.map(async (path) => [path, await getPeaks(path, 120)] as const))
+      .then((pairs) => {
+        if (!cancelled) paint(new Map(pairs));
       })
       .catch(() => null);
 
     return () => {
       cancelled = true;
     };
-  }, [path]);
+  }, [shape, sections, editId, recording]);
+
+  useEffect(() => {
+    const wrap = wrapRef.current;
+    if (!wrap || !editId) return;
+    const { spans, total } = sectionSpans();
+    const span = spans.find((item) => item.id === editId);
+    if (!span) return;
+    const x = (span.start / total) * wrap.scrollWidth;
+    wrap.scrollTo({ left: Math.max(0, x), behavior: "smooth" });
+  }, [editId, shape]);
 
   useEffect(() => {
     let raf = 0;
     const tick = () => {
       const wrap = wrapRef.current;
       const head = headRef.current;
-      if (wrap && head) head.style.transform = `translateX(${loopProgress() * wrap.clientWidth}px)`;
+      if (wrap && head) {
+        const width = Math.max(wrap.scrollWidth, wrap.clientWidth);
+        head.style.transform = `translateX(${arrangementProgress() * width}px)`;
+      }
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
@@ -693,11 +1083,11 @@ function LoopWave({ path, recording }: { path: string; recording: boolean }) {
   }, []);
 
   return (
-    <div ref={wrapRef} className="relative h-10 overflow-hidden">
-      <canvas ref={canvasRef} className="h-10 w-full" aria-hidden />
+    <div ref={wrapRef} className="relative h-16 overflow-x-auto overflow-y-hidden bg-[#080808]">
+      <canvas ref={canvasRef} className="h-16" aria-hidden />
       <div
         ref={headRef}
-        className={`absolute top-0 left-0 h-full w-px ${recording ? "bg-red-400" : "bg-paper"}`}
+        className={`pointer-events-none absolute top-0 left-0 z-10 h-full w-px ${recording ? "bg-red-400" : "bg-paper"}`}
       />
     </div>
   );

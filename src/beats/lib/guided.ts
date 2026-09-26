@@ -18,16 +18,62 @@ export const PERCUSSION: PadPick[] = [
   { name: "Trap Perc · Shkr 4", label: "Shaker" },
 ];
 
-/** Extra percussion. Shown on demand and decoded only when tapped. */
-export const MORE_PERCUSSION: PadPick[] = [
-  { name: "HipHop Hat · ClosedHH 11", label: "Closed 3" },
-  { name: "HipHop Hat · OpenHH 18", label: "Open 3" },
-  { name: "Trap Cymbal · Cym 03", label: "Cymbal 2" },
-  { name: "Trap Rim · Rim 02", label: "Rim" },
-  { name: "HipHop Clap · Clp 20", label: "Clap 2" },
-  { name: "Trap Snap · MX Push Snap 2", label: "Snap" },
-  { name: "HipHop Rim · NS_RIM_RastR", label: "Rim 2" },
-  { name: "HipHop Perc · BDWK Shk", label: "Shaker 2" },
+/** Four more of each base percussion sound. Shown under the base pads and decoded on tap. */
+export const EXTRA_PERCUSSION: { title: string; pads: PadPick[] }[] = [
+  {
+    title: "More closed hats",
+    pads: [
+      { name: "HipHop Hat · ClosedHH 05", label: "Closed 3" },
+      { name: "HipHop Hat · ClosedHH 10", label: "Closed 4" },
+      { name: "HipHop Hat · ClosedHH 12", label: "Closed 5" },
+      { name: "HipHop Hat · ClosedHH 14", label: "Closed 6" },
+    ],
+  },
+  {
+    title: "More open hats",
+    pads: [
+      { name: "HipHop Hat · OpenHH 07", label: "Open 3" },
+      { name: "HipHop Hat · OpenHH 10", label: "Open 4" },
+      { name: "HipHop Hat · OpenHH 14", label: "Open 5" },
+      { name: "HipHop Hat · OpenHH 20", label: "Open 6" },
+    ],
+  },
+  {
+    title: "More cymbals",
+    pads: [
+      { name: "HipHop Cymbal · Cym 08", label: "Cymbal 2" },
+      { name: "Trap Cymbal · Cym 01", label: "Cymbal 3" },
+      { name: "HipHop Cymbal · Cym 22", label: "Cymbal 4" },
+      { name: "HipHop Cymbal · Cym 12", label: "Cymbal 5" },
+    ],
+  },
+  {
+    title: "More rides",
+    pads: [
+      { name: "Trap Cymbal · Ride 08", label: "Ride 2" },
+      { name: "Trap Cymbal · Ride 14", label: "Ride 3" },
+      { name: "Trap Cymbal · Ride 17", label: "Ride 4" },
+      { name: "Trap Cymbal · Ride 19", label: "Ride 5" },
+    ],
+  },
+  {
+    title: "More claps",
+    pads: [
+      { name: "HipHop Clap · Clp 02", label: "Clap 2" },
+      { name: "HipHop Clap · Clp 04", label: "Clap 3" },
+      { name: "HipHop Clap · Clp 10", label: "Clap 4" },
+      { name: "Trap Clap · Clp 01", label: "Clap 5" },
+    ],
+  },
+  {
+    title: "More shakers",
+    pads: [
+      { name: "HipHop Shaker · Shkr 01", label: "Shaker 2" },
+      { name: "HipHop Shaker · Shkr 02", label: "Shaker 3" },
+      { name: "HipHop Shaker · Shkr 03", label: "Shaker 4" },
+      { name: "Trap Perc · BigBop Shaker", label: "Shaker 5" },
+    ],
+  },
 ];
 
 /** Eight short, thumpy bass one-shots. */
@@ -44,6 +90,14 @@ export const BASS: PadPick[] = [
   { name: "HipHop Bass · Cipher Bass 4", label: "Thump 4" },
   { name: "HipHop Bass · Raw Curfew Bass 1", label: "Raw" },
   { name: "Inst Bass · F9 Magma 808-058 Bb2", label: "Bb 808" },
+];
+
+/** Four more bass hits under the base bass pads. */
+export const EXTRA_BASS: PadPick[] = [
+  { name: "HipHop 808 · 808 3", label: "808 4" },
+  { name: "HipHop 808 · 808 24", label: "808 5" },
+  { name: "HipHop Bass · Raw Curfew Bass 2", label: "Raw 2" },
+  { name: "HipHop Bass · Raw Curfew Bass 3", label: "Raw 3" },
 ];
 
 export const SECTION_NAMES = ["Intro", "Groove", "Switch", "Outro", "Break", "Lift"] as const;
