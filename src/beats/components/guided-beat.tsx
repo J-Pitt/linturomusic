@@ -48,10 +48,6 @@ function newId() {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
 }
 
-function copyHits(hits: LoopHit[]) {
-  return hits.map((hit) => ({ ...hit, id: newId() }));
-}
-
 export function GuidedBeat({ items }: { items: SoundItem[] }) {
   const request = useRef(0);
   const [step, setStep] = useState<Step>("loop");
@@ -68,6 +64,7 @@ export function GuidedBeat({ items }: { items: SoundItem[] }) {
   const [loadingPath, setLoadingPath] = useState<string | null>(null);
   const [pickingLoop, setPickingLoop] = useState(false);
   const [pendingLoop, setPendingLoop] = useState<SoundItem | null>(null);
+  const [placing, setPlacing] = useState<{ loopPath: string | null } | null>(null);
   const [running, setRunning] = useState(true);
   const [samples, setSamples] = useState<CustomSample[]>([]);
   const [sampling, setSampling] = useState(false);
@@ -84,6 +81,7 @@ export function GuidedBeat({ items }: { items: SoundItem[] }) {
   const sectionsRef = useRef(sections);
   const scrollRef = useRef<HTMLDivElement>(null);
   const moreRef = useRef<HTMLDivElement>(null);
+  const pickerRef = useRef<HTMLDivElement>(null);
   sectionsRef.current = sections;
 
   const loops = useMemo(() => {
@@ -148,6 +146,11 @@ export function GuidedBeat({ items }: { items: SoundItem[] }) {
   }, [sections, repeats]);
 
   useEffect(() => {
+    if (!pickingLoop) return;
+    pickerRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [pickingLoop]);
+
+  useEffect(() => {
     const root = scrollRef.current;
     const target = moreRef.current;
     if (step !== "sections" || pickingLoop || !root || !target) {
@@ -207,6 +210,7 @@ export function GuidedBeat({ items }: { items: SoundItem[] }) {
     setRecordSnap(null);
     setRunning(true);
     setPickingLoop(false);
+    setPlacing(null);
     setStep("sections");
   }
 
@@ -224,35 +228,46 @@ export function GuidedBeat({ items }: { items: SoundItem[] }) {
     setRecordSnap(null);
     setRunning(true);
     setPickingLoop(false);
+    setPlacing(null);
     setStep("loop");
   }
 
-  async function addLoopSection(item: SoundItem) {
-    const ticket = ++request.current;
-    setBusyId(item.id);
-    try {
-      await getBuffer(item.path);
-      if (ticket !== request.current) return;
-      const current = sectionsRef.current.find((section) => section.id === editId);
-      if (current && !current.loopPath) {
-        setSections((prev) =>
-          prev.map((section) =>
-            section.id === current.id ? { ...section, loopPath: item.path } : section,
-          ),
-        );
-        setEditId(current.id);
-      } else {
-        const id = newId();
-        setSections((prev) => [...prev, { id, hits: [], loopPath: item.path }]);
-        setEditId(id);
+  function openLoopPicker() {
+    setPendingLoop(null);
+    setPlacing(null);
+    setPickingLoop(true);
+  }
+
+  async function beginPlace(path: string | null) {
+    if (path) {
+      const ticket = ++request.current;
+      setBusyId(pendingLoop?.id ?? "loop");
+      try {
+        await getBuffer(path);
+        if (ticket !== request.current) return;
+      } catch {
+        return;
+      } finally {
+        if (ticket === request.current) setBusyId(null);
       }
-      setPendingLoop(null);
-      setPickingLoop(false);
-    } catch {
-      /* leave the picker open so another loop can be chosen */
-    } finally {
-      if (ticket === request.current) setBusyId(null);
     }
+    setPlacing({ loopPath: path });
+    setPendingLoop(null);
+    setPickingLoop(false);
+  }
+
+  function placeSection(index: number) {
+    if (!placing) return;
+    const id = newId();
+    const loopPath = placing.loopPath;
+    setSections((prev) => {
+      const next = [...prev];
+      const at = Math.max(0, Math.min(index, next.length));
+      next.splice(at, 0, { id, hits: [], loopPath });
+      return next;
+    });
+    setEditId(id);
+    setPlacing(null);
   }
 
   async function onPad(path: string, record: boolean) {
@@ -397,17 +412,6 @@ export function GuidedBeat({ items }: { items: SoundItem[] }) {
     }
   }
 
-  function addSection(empty: boolean) {
-    const id = newId();
-    setSections((prev) => {
-      const source = prev.find((section) => section.id === editId) ?? prev[prev.length - 1];
-      const hits = empty || !source ? [] : copyHits(source.hits);
-      const loopPath = empty ? null : (source?.loopPath ?? null);
-      return [...prev, { id, hits, loopPath }];
-    });
-    setEditId(id);
-  }
-
   function clearSection() {
     if (!editId) return;
     setSections((prev) =>
@@ -495,7 +499,9 @@ export function GuidedBeat({ items }: { items: SoundItem[] }) {
         {step === "sections" && selected ? (
           <div className="sticky top-0 z-10 border-b border-hairline bg-ink px-4 py-2">
             <p className="mb-1 flex items-center gap-2 text-[10px] tracking-[0.16em] uppercase">
-              {mode === "record" ? (
+              {placing ? (
+                <span className="text-paper">Tap the grid where this section goes</span>
+              ) : mode === "record" ? (
                 <span className="inline-flex items-center gap-1.5 text-red-500">
                   <span className="size-2 animate-pulse rounded-full bg-red-500" />
                   Rec
@@ -503,26 +509,29 @@ export function GuidedBeat({ items }: { items: SoundItem[] }) {
               ) : (
                 <span className="text-mute-dim">{mode === "count" ? "Count-in" : "Play"}</span>
               )}
-              <span className="text-mute-dim">· whole beat</span>
+              {placing ? null : <span className="text-mute-dim">· whole beat</span>}
             </p>
             <ArrangementWave
               sections={sections}
               editId={editId}
               repeats={repeats}
               recording={mode === "record"}
-              nudge={!running && mode === "play"}
+              nudge={!running && mode === "play" && !placing}
+              placing={placing != null}
               onSelect={setEditId}
               onNudge={nudgeHit}
+              onPlace={placeSection}
             />
           </div>
         ) : null}
         <div className="px-4 py-4">
           {step === "loop" || pickingLoop ? (
+            <div ref={pickerRef} className="scroll-mt-28">
             <LoopStep
-              title={pickingLoop ? "Add a loop section" : "Choose your base loop"}
+              title={pickingLoop ? "Add a loop" : "Choose your base loop"}
               body={
                 pickingLoop
-                  ? "Choose a loop, then tap Add this loop. A blank section gets that loop. Otherwise it becomes the next section."
+                  ? "Choose a loop, or No loop. Then tap the beat grid where that section goes."
                   : `${listed.length} ${
                       group === "bass" ? "bass-heavy" : group === "custom" ? "Linturo Custom" : group
                     } loops. Each section is 8 beats. Duplicate it on the next screen.`
@@ -540,6 +549,15 @@ export function GuidedBeat({ items }: { items: SoundItem[] }) {
                 else void choose(item);
               }}
             />
+            </div>
+          ) : placing ? (
+            <div>
+              <h1 className="text-2xl font-light tracking-tight">Place the section</h1>
+              <p className="mt-2 text-sm leading-relaxed text-mute">
+                Tap the beat grid. The first half of a section places the new one before it. The second half places it after.
+                {placing.loopPath ? "" : " This one has no loop."}
+              </p>
+            </div>
           ) : (
             <SectionStep
               percussion={percussion}
@@ -588,10 +606,18 @@ export function GuidedBeat({ items }: { items: SoundItem[] }) {
             <button
               type="button"
               disabled={!pendingLoop || busyId != null}
-              onClick={() => pendingLoop && void addLoopSection(pendingLoop)}
+              onClick={() => pendingLoop && void beginPlace(pendingLoop.path)}
               className="w-full border border-paper bg-paper py-3.5 text-sm tracking-[0.18em] text-black uppercase disabled:opacity-30"
             >
               {busyId ? "Loading" : "Add this loop"}
+            </button>
+            <button
+              type="button"
+              disabled={busyId != null}
+              onClick={() => void beginPlace(null)}
+              className="w-full border border-paper py-3.5 text-sm tracking-[0.18em] text-paper uppercase disabled:opacity-30"
+            >
+              No loop
             </button>
             <button
               type="button"
@@ -612,6 +638,14 @@ export function GuidedBeat({ items }: { items: SoundItem[] }) {
             className="w-full border border-paper py-3.5 text-sm tracking-[0.18em] text-paper uppercase disabled:opacity-30"
           >
             Build sections
+          </button>
+        ) : placing ? (
+          <button
+            type="button"
+            onClick={() => setPlacing(null)}
+            className="w-full border border-paper py-3.5 text-sm tracking-[0.18em] text-paper uppercase"
+          >
+            Cancel
           </button>
         ) : (
           <div className="flex flex-col gap-2">
@@ -639,24 +673,14 @@ export function GuidedBeat({ items }: { items: SoundItem[] }) {
             <div className="flex gap-2">
               <button
                 type="button"
-                onClick={() => addSection(true)}
-                className="min-h-14 flex-1 touch-manipulation border border-paper py-3.5 text-sm tracking-[0.08em] text-paper uppercase active:bg-paper active:text-black"
-              >
-                Add a break
-              </button>
-              <button
-                type="button"
-                onClick={() => addSection(false)}
+                onClick={openLoopPicker}
                 className="min-h-14 flex-1 touch-manipulation border border-paper py-3.5 text-sm tracking-[0.08em] text-paper uppercase active:bg-paper active:text-black"
               >
                 Add section
               </button>
               <button
                 type="button"
-                onClick={() => {
-                  setPendingLoop(null);
-                  setPickingLoop(true);
-                }}
+                onClick={openLoopPicker}
                 className="min-h-14 flex-1 touch-manipulation border border-paper bg-paper py-3.5 text-sm tracking-[0.08em] text-black uppercase"
               >
                 Add loop
@@ -684,7 +708,7 @@ export function GuidedBeat({ items }: { items: SoundItem[] }) {
                 onClick={clearSection}
                 className="py-2 text-[11px] tracking-[0.16em] text-mute uppercase"
               >
-                Clear {sectionName(editIndex)}
+                Clear samples from section {editIndex + 1}
               </button>
               {sections.length > 1 ? (
                 <button
@@ -788,7 +812,7 @@ function SectionStep({
   } else if (mode === "count") {
     coach = "Count-in from the top. Recording starts when the loop does.";
   } else if (editIndex === 0 && hits > 0) {
-    coach = "That’s on the intro. Record again to add more, or add a section — it starts as a copy.";
+    coach = "That’s on the intro. Record again to add more, or add a section and choose its loop.";
   } else if (editIndex > 0 && !sections[editIndex]?.loopPath) {
     coach = `${name} is a blank. It stays in the waveform so you can hear the other sections around it.`;
   } else if (editIndex > 0 && hits === 0) {
@@ -1070,16 +1094,20 @@ function ArrangementWave({
   repeats,
   recording,
   nudge,
+  placing,
   onSelect,
   onNudge,
+  onPlace,
 }: {
   sections: LoopSection[];
   editId: string | null;
   repeats: number;
   recording: boolean;
   nudge: boolean;
+  placing: boolean;
   onSelect: (id: string) => void;
   onNudge: (sectionId: string, hitId: string, direction: -1 | 1) => void;
+  onPlace: (index: number) => void;
 }) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -1105,7 +1133,9 @@ function ArrangementWave({
       const dpr = Math.min(2, window.devicePixelRatio || 1);
       const { spans, total } = sectionSpans(sections, repeats);
       const pxPerSec = (140 / 60) * BEAT_PX;
-      const cssW = Math.max(wrap.clientWidth, Math.ceil(total * pxPerSec)) * 2;
+      const cssW = placing
+        ? Math.max(wrap.clientWidth, 1)
+        : Math.max(wrap.clientWidth, Math.ceil(total * pxPerSec)) * 2;
       const h = 64;
       canvas.style.width = `${cssW}px`;
       canvas.style.height = `${h}px`;
@@ -1199,7 +1229,7 @@ function ArrangementWave({
     return () => {
       cancelled = true;
     };
-  }, [shape, sections, editId, recording]);
+  }, [shape, sections, editId, recording, placing]);
 
   useEffect(() => {
     const wrap = wrapRef.current;
@@ -1246,7 +1276,7 @@ function ArrangementWave({
   return (
     <div
       ref={wrapRef}
-      className="relative cursor-pointer overflow-x-auto bg-[#080808]"
+      className={`relative cursor-pointer overflow-x-auto bg-[#080808] ${placing ? "ring-1 ring-paper" : ""}`}
       onPointerDown={(event) => {
         tapRef.current = { x: event.clientX, y: event.clientY };
       }}
@@ -1262,6 +1292,18 @@ function ArrangementWave({
         const { spans, total } = sectionSpans(sections, repeats);
         const width = Math.max(wrap.scrollWidth, 1);
         const time = (x / width) * total;
+        if (placing) {
+          let index = spans.length;
+          for (let i = 0; i < spans.length; i++) {
+            const mid = spans[i].start + spans[i].hold / 2;
+            if (time < mid) {
+              index = i;
+              break;
+            }
+          }
+          onPlace(index);
+          return;
+        }
         const span =
           spans.find((item) => time >= item.start && time < item.start + item.hold) ??
           spans[spans.length - 1];
