@@ -427,6 +427,14 @@ export function preview(path: string) {
   trigger(path, ctx.currentTime);
 }
 
+/** Audition a short pattern. Delays are seconds from now. */
+export function previewPattern(notes: { path: string; delay: number }[]) {
+  const ctx = getAudioContext();
+  if (ctx.state === "suspended") void ctx.resume();
+  const start = ctx.currentTime + 0.02;
+  for (const note of notes) trigger(note.path, start + note.delay);
+}
+
 export function watchPlayingSection(fn: ((index: number) => void) | null) {
   playingListener = fn;
 }

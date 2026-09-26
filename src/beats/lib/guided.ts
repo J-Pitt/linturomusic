@@ -104,6 +104,25 @@ export const EXTRA_BASS: PadPick[] = [
   { name: "HipHop Bass · Raw Curfew Bass 3", label: "Raw 3" },
 ];
 
+/** The bass and clap one-shots used by the beat-melody patterns. */
+export const MELODY_BASS: PadPick = BASS[0];
+export const MELODY_CLAP: PadPick = PERCUSSION.find((pad) => pad.label === "Clap") ?? PERCUSSION[6];
+
+export type MelodyStep = "bass" | "clap";
+export type BeatMelody = { id: string; label: string; steps: MelodyStep[] };
+
+/** Eight short patterns for the start of a section. Each word is one beat. */
+export const BEAT_MELODIES: BeatMelody[] = [
+  { id: "bass-bass-clap", label: "Bass bass clap", steps: ["bass", "bass", "clap"] },
+  { id: "clap-clap-bass", label: "Clap clap bass", steps: ["clap", "clap", "bass"] },
+  { id: "bass-clap-bass", label: "Bass clap bass", steps: ["bass", "clap", "bass"] },
+  { id: "clap-bass-clap", label: "Clap bass clap", steps: ["clap", "bass", "clap"] },
+  { id: "bass-bass-bass-clap", label: "Bass bass bass clap", steps: ["bass", "bass", "bass", "clap"] },
+  { id: "clap-clap-clap-bass", label: "Clap clap clap bass", steps: ["clap", "clap", "clap", "bass"] },
+  { id: "bass-clap-clap", label: "Bass clap clap", steps: ["bass", "clap", "clap"] },
+  { id: "clap-bass-bass", label: "Clap bass bass", steps: ["clap", "bass", "bass"] },
+];
+
 export const SECTION_NAMES = ["Intro", "Groove", "Switch", "Outro", "Break", "Lift"] as const;
 
 export function sectionName(index: number) {
