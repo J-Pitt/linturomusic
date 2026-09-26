@@ -116,12 +116,24 @@ export function loopBeats(item: SoundItem) {
   return (item.duration * bpm) / 60;
 }
 
+const DROPPED_PROJECT = /untitled|1stbeat|first\s*beat/i;
+
+/** Project names still offered as base loops. Untitled and first-beat sets are left out. */
+export function keptProjects(item: SoundItem) {
+  return (item.projects ?? []).filter((name) => !DROPPED_PROJECT.test(name));
+}
+
 /** Project loops long enough to be a base (8 beats or more). */
 export function isBaseLoop(item: SoundItem) {
   if (item.kind !== "loop") return false;
-  if (!item.projects?.length) return false;
+  if (!keptProjects(item).length) return false;
   const beats = loopBeats(item);
   return beats != null && beats >= MIN_BEATS;
+}
+
+/** Bass loops in this library are named LpBs (and the odd Bass / 808 loop). */
+export function isBassHeavy(item: SoundItem) {
+  return /\b(lpbs|bass|808)\b/i.test(item.name);
 }
 
 export function loopTitle(item: SoundItem) {

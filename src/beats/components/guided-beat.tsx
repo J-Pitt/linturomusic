@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { getBuffer, getPeaks, peekBuffer, putBuffer, unlockAudio } from "@/lib/audio-cache";
+import { getBuffer, getPeaks, peekBuffer, putBuffer, unlockAudio, usePunch } from "@/lib/audio-cache";
 import { downloadWav } from "@/lib/download-beat";
 import {
   BASS,
@@ -7,12 +7,13 @@ import {
   EXTRA_PERCUSSION,
   PERCUSSION,
   isBaseLoop,
-  loopBeats,
+  isBassHeavy,
   loopTitle,
   pickSounds,
   sectionName,
 } from "@/lib/guided";
 import {
+  SECTION_BEATS,
   arrangementProgress,
   beatsInDuration,
   countIn,
@@ -33,6 +34,7 @@ import { startSampleRecording } from "@/lib/sample-recorder";
 import type { SoundItem } from "@/lib/types";
 
 type Step = "loop" | "sections";
+type LoopGroup = "bass" | "other";
 type Mode = "play" | "count" | "record";
 type Pad = { item: SoundItem; label: string };
 type CustomSample = { id: string; name: string };
@@ -53,13 +55,13 @@ function copyHits(hits: LoopHit[]) {
 export function GuidedBeat({ items }: { items: SoundItem[] }) {
   const request = useRef(0);
   const [step, setStep] = useState<Step>("loop");
-  const [project, setProject] = useState("all");
+  const [group, setGroup] = useState<LoopGroup>("bass");
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<SoundItem | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [sections, setSections] = useState<LoopSection[]>([]);
   const [editId, setEditId] = useState<string | null>(null);
-  const [repeats, setRepeats] = useState(2);
+  const [repeats, setRepeats] = useState(1);
   const [playing, setPlaying] = useState(0);
   const [mode, setMode] = useState<Mode>("play");
   const [count, setCount] = useState<number | null>(null);
@@ -87,33 +89,16 @@ export function GuidedBeat({ items }: { items: SoundItem[] }) {
     return items.filter(isBaseLoop).sort((a, b) => a.name.localeCompare(b.name));
   }, [items]);
 
-  const projects = useMemo(() => {
-    const names = new Set<string>();
-    for (const loop of loops) {
-      for (const name of loop.projects ?? []) names.add(name);
-    }
-    return [...names].sort();
-  }, [loops]);
-
   const listed = useMemo(() => {
-    const counts = new Map<string, number>();
-    for (const loop of loops) {
-      for (const name of loop.projects ?? []) counts.set(name, (counts.get(name) ?? 0) + 1);
-    }
-    const sizes = [...counts.values()].sort((a, b) => a - b);
-    const cutoff = (sizes[Math.floor(sizes.length / 2)] ?? 0) * 1.5;
-    const pool = project === "all" ? loops : loops.filter((loop) => loop.projects?.includes(project));
-    const count = project === "all" ? loops.length : (counts.get(project) ?? pool.length);
-    if (count <= cutoff) return pool;
+    const pool = loops.filter((loop) => (group === "bass" ? isBassHeavy(loop) : !isBassHeavy(loop)));
+    if (pool.length <= 40) return pool;
     return pool.slice(0, Math.ceil((pool.length * 2) / 3));
-  }, [loops, project]);
+  }, [loops, group]);
 
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return listed;
-    return listed.filter((loop) =>
-      `${loop.name} ${loop.genre ?? ""} ${(loop.projects ?? []).join(" ")}`.toLowerCase().includes(q),
-    );
+    return listed.filter((loop) => `${loop.name} ${loop.genre ?? ""}`.toLowerCase().includes(q));
   }, [listed, query]);
 
   const percussion = useMemo(() => pickSounds(items, PERCUSSION), [items]);
@@ -123,6 +108,15 @@ export function GuidedBeat({ items }: { items: SoundItem[] }) {
   );
   const bass = useMemo(() => pickSounds(items, BASS), [items]);
   const extraBass = useMemo(() => pickSounds(items, EXTRA_BASS), [items]);
+
+  useEffect(() => {
+    const names = new Set(
+      [...BASS, ...EXTRA_BASS].filter((pick) => /808/i.test(pick.name)).map((pick) => pick.name),
+    );
+    for (const item of items) {
+      if (names.has(item.name)) usePunch(item.path, 0.12);
+    }
+  }, [items]);
   const editIndex = Math.max(0, sections.findIndex((section) => section.id === editId));
   const editing = sections[editIndex] ?? null;
 
@@ -201,7 +195,7 @@ export function GuidedBeat({ items }: { items: SoundItem[] }) {
     const id = newId();
     setSections([{ id, hits: [], loopPath: selected.path }]);
     setEditId(id);
-    setRepeats(2);
+    setRepeats(1);
     setPlaying(0);
     setMode("play");
     setCount(null);
@@ -265,7 +259,7 @@ export function GuidedBeat({ items }: { items: SoundItem[] }) {
 
   async function armRecord() {
     if (!selected) return;
-    const beats = Math.max(4, Math.round(loopBeats(selected) ?? 8));
+    const beats = SECTION_BEATS;
     setMode("count");
     setCount(null);
     setRunning(true);
@@ -485,17 +479,16 @@ export function GuidedBeat({ items }: { items: SoundItem[] }) {
               title={pickingLoop ? "Add a loop section" : "Choose your base loop"}
               body={
                 pickingLoop
-                  ? "This loop becomes the next section. The waveform keeps the blank space around it."
-                  : `${listed.length} project loops, 8 beats or longer. Play one, then build sections on it.`
+                  ? "This loop becomes the next section, eight beats long."
+                  : `${listed.length} ${group === "bass" ? "bass-heavy" : "other"} loops. Each section is 8 beats. Duplicate it on the next screen.`
               }
               loops={visible}
-              projects={projects}
-              project={project}
+              group={group}
               query={query}
               selectedId={pickingLoop ? null : (selected?.id ?? null)}
               busyId={busyId}
               action={pickingLoop ? "Add" : "Play"}
-              onProject={setProject}
+              onGroup={setGroup}
               onQuery={setQuery}
               onChoose={(item) => void (pickingLoop ? addLoopSection(item) : choose(item))}
             />
@@ -765,23 +758,27 @@ function SectionStep({
         })}
       </div>
 
-      {sections.length > 1 ? (
-        <div className="flex items-center gap-2">
-          <p className="text-[10px] tracking-[0.16em] text-mute-dim uppercase">Hold each</p>
-          {[1, 2].map((count) => (
-            <button
-              key={count}
-              type="button"
-              onClick={() => onRepeats(count)}
-              className={`border px-3 py-1.5 text-[11px] tracking-[0.12em] uppercase ${
-                repeats === count ? "border-paper text-paper" : "border-hairline text-mute-dim"
-              }`}
-            >
-              {count}× loop
-            </button>
-          ))}
-        </div>
-      ) : null}
+      <div className="flex items-center gap-2">
+        <p className="text-[10px] tracking-[0.16em] text-mute-dim uppercase">Section</p>
+        <button
+          type="button"
+          onClick={() => onRepeats(1)}
+          className={`border px-3 py-1.5 text-[11px] tracking-[0.12em] uppercase ${
+            repeats === 1 ? "border-paper text-paper" : "border-hairline text-mute-dim"
+          }`}
+        >
+          8 beats
+        </button>
+        <button
+          type="button"
+          onClick={() => onRepeats(2)}
+          className={`border px-3 py-1.5 text-[11px] tracking-[0.12em] uppercase ${
+            repeats === 2 ? "border-paper text-paper" : "border-hairline text-mute-dim"
+          }`}
+        >
+          Duplicate
+        </button>
+      </div>
 
       <div className="flex flex-col gap-3">
         <button
@@ -862,26 +859,24 @@ function LoopStep({
   title,
   body,
   loops,
-  projects,
-  project,
+  group,
   query,
   selectedId,
   busyId,
   action,
-  onProject,
+  onGroup,
   onQuery,
   onChoose,
 }: {
   title: string;
   body: string;
   loops: SoundItem[];
-  projects: string[];
-  project: string;
+  group: LoopGroup;
   query: string;
   selectedId: string | null;
   busyId: string | null;
   action: string;
-  onProject: (project: string) => void;
+  onGroup: (group: LoopGroup) => void;
   onQuery: (query: string) => void;
   onChoose: (item: SoundItem) => void;
 }) {
@@ -898,14 +893,12 @@ function LoopStep({
         className="h-10 border border-hairline bg-black px-3 text-sm text-paper outline-none placeholder:text-mute-dim focus:border-paper"
       />
       <div className="flex gap-2 overflow-x-auto pb-1">
-        <Chip active={project === "all"} onClick={() => onProject("all")}>
-          All
+        <Chip active={group === "bass"} onClick={() => onGroup("bass")}>
+          Bass heavy
         </Chip>
-        {projects.map((name) => (
-          <Chip key={name} active={project === name} onClick={() => onProject(name)}>
-            {name}
-          </Chip>
-        ))}
+        <Chip active={group === "other"} onClick={() => onGroup("other")}>
+          Other
+        </Chip>
       </div>
       {loops.length === 0 ? (
         <p className="text-sm text-mute">Nothing in this filter.</p>
@@ -913,7 +906,6 @@ function LoopStep({
         <div className="flex flex-col border-t border-hairline">
           {loops.map((loop) => {
             const on = selectedId === loop.id;
-            const beats = Math.round(loopBeats(loop) ?? 0);
             return (
               <button
                 key={loop.id}
@@ -926,9 +918,7 @@ function LoopStep({
                 <span className="min-w-0">
                   <span className="block truncate text-sm text-paper">{loopTitle(loop)}</span>
                   <span className="mt-0.5 block truncate text-[11px] text-mute-dim">
-                    {loop.genre ?? "Loop"}
-                    {loop.projects?.length ? ` · ${loop.projects.slice(0, 2).join(", ")}` : ""}
-                    {beats ? ` · ${beats} beats` : ""}
+                    {loop.genre ?? "Loop"} · {SECTION_BEATS} beats
                   </span>
                 </span>
                 <span className="shrink-0 text-[10px] tracking-[0.16em] uppercase">
@@ -1050,11 +1040,13 @@ function ArrangementWave({
           const repeatsInSpan = Math.max(1, Math.round(span.hold / Math.max(span.loopDur, 0.01)));
           const slice = width / repeatsInSpan;
           const bars = Math.max(8, Math.floor(slice / (2 * dpr)));
+          const fullDur = span.loopPath ? (peekBuffer(span.loopPath)?.duration ?? span.loopDur) : span.loopDur;
+          const portion = Math.min(1, span.loopDur / Math.max(fullDur, 0.01));
           ctx.fillStyle = "rgba(245, 245, 245, 0.7)";
           for (let repeat = 0; repeat < repeatsInSpan; repeat++) {
             const origin = x0 + repeat * slice;
             for (let i = 0; i < bars; i++) {
-              const idx = Math.min(peaks.length - 1, Math.floor((i / bars) * peaks.length));
+              const idx = Math.min(peaks.length - 1, Math.floor((i / bars) * peaks.length * portion));
               const mag = Math.max(1, (peaks[idx] ?? 0) * canvas.height * 0.7);
               const gap = slice / bars;
               ctx.fillRect(origin + i * gap, mid - mag / 2, Math.max(1, gap * 0.62), mag);

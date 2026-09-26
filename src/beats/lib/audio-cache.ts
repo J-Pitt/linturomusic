@@ -4,6 +4,38 @@ let ctx: AudioContext | null = null;
 const buffers = new Map<string, AudioBuffer>();
 const peakCache = new Map<string, Float32Array>();
 const inflight = new Map<string, Promise<AudioBuffer>>();
+const punchSeconds = new Map<string, number>();
+
+/** Keep only the attack of a long 808 so the tone does not ring. */
+function trimToPunch(buffer: AudioBuffer, seconds: number) {
+  const audio = getAudioContext();
+  const frames = Math.min(buffer.length, Math.max(1, Math.floor(seconds * buffer.sampleRate)));
+  const out = audio.createBuffer(buffer.numberOfChannels, frames, buffer.sampleRate);
+  const fadeStart = Math.floor(frames * 0.28);
+  for (let channel = 0; channel < buffer.numberOfChannels; channel++) {
+    const source = buffer.getChannelData(channel);
+    const target = out.getChannelData(channel);
+    for (let i = 0; i < frames; i++) {
+      let gain = 1;
+      if (i >= fadeStart) {
+        const t = (i - fadeStart) / Math.max(1, frames - fadeStart);
+        gain = Math.cos((t * Math.PI) / 2);
+      }
+      target[i] = (source[i] ?? 0) * gain;
+    }
+  }
+  return out;
+}
+
+export function usePunch(path: string, seconds: number) {
+  punchSeconds.set(path, seconds);
+  const existing = buffers.get(path);
+  if (!existing || existing.duration <= seconds + 0.02) return;
+  buffers.set(path, trimToPunch(existing, seconds));
+  for (const key of peakCache.keys()) {
+    if (key.startsWith(`${path}:`)) peakCache.delete(key);
+  }
+}
 
 export function getAudioContext() {
   if (!ctx) {
@@ -30,9 +62,11 @@ export async function getBuffer(path: string) {
     if (!res.ok) throw new Error(`Failed to load ${path}`);
     const arr = await res.arrayBuffer();
     const buf = await audio.decodeAudioData(arr.slice(0));
-    buffers.set(path, buf);
+    const punch = punchSeconds.get(path);
+    const stored = punch ? trimToPunch(buf, punch) : buf;
+    buffers.set(path, stored);
     inflight.delete(path);
-    return buf;
+    return stored;
   })();
   inflight.set(path, job);
   return job;

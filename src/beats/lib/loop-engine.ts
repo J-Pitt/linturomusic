@@ -13,6 +13,13 @@ export type SectionSpan = {
 /** Same assumed tempo as the guided loop list, so the grid and the snap share one beat. */
 const GRID_BPM = 140;
 
+/** Every section is eight beats. Duplicate on the sections screen plays that eight twice. */
+export const SECTION_BEATS = 8;
+
+export function sectionSeconds() {
+  return (SECTION_BEATS * 60) / GRID_BPM;
+}
+
 export function beatsInDuration(duration: number) {
   if (duration <= 0) return 1;
   return Math.max(1, Math.round((duration * GRID_BPM) / 60));
@@ -36,7 +43,7 @@ let loopPath: string | null = null;
 let arrangementStart = 0;
 let arrangementOn = false;
 let sections: LoopSection[] = [];
-let loopsPerSection = 2;
+let loopsPerSection = 1;
 let timer = 0;
 let seq = 0;
 let lastPlaying = -1;
@@ -98,12 +105,17 @@ function loopLength(path: string | null, fallback: number) {
   return peekBuffer(path)?.duration || fallback;
 }
 
+/** First eight beats of the loop. Shorter files stay as they are. */
+function windowLength(path: string | null, fallback: number) {
+  return Math.min(loopLength(path, fallback), sectionSeconds());
+}
+
 export function sectionSpans(): { spans: SectionSpan[]; total: number } {
   const first = sections.find((section) => section.loopPath && peekBuffer(section.loopPath));
   const fallback = first?.loopPath ? peekBuffer(first.loopPath)?.duration || loopDur || 4 : loopDur || 4;
   let cursor = 0;
   const spans: SectionSpan[] = sections.map((section) => {
-    const one = loopLength(section.loopPath, fallback);
+    const one = windowLength(section.loopPath, fallback);
     const hold = one * Math.max(1, loopsPerSection);
     const span = {
       id: section.id,
@@ -153,9 +165,12 @@ function scheduleArrangement(ctx: AudioContext, now: number) {
           const src = ctx.createBufferSource();
           src.buffer = buf;
           src.loop = true;
+          const window = Math.min(buf.duration, span.loopDur);
+          src.loopStart = 0;
+          src.loopEnd = window;
           src.connect(ctx.destination);
           const late = Math.max(0, now - sectionStart);
-          const offset = late % buf.duration;
+          const offset = late % window;
           const startAt = Math.max(sectionStart, now);
           try {
             src.start(startAt, offset);
@@ -461,6 +476,8 @@ export async function renderArrangement(): Promise<AudioBuffer | null> {
       const src = offline.createBufferSource();
       src.buffer = loop;
       src.loop = true;
+      src.loopStart = 0;
+      src.loopEnd = Math.min(loop.duration, span.loopDur);
       src.connect(offline.destination);
       src.start(span.start);
       src.stop(span.start + span.hold);
