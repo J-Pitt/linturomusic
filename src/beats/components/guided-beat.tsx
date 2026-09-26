@@ -34,7 +34,7 @@ import { startSampleRecording } from "@/lib/sample-recorder";
 import type { SoundItem } from "@/lib/types";
 
 type Step = "loop" | "sections";
-type LoopGroup = "bass" | "custom";
+type LoopGroup = "custom" | "bass" | "p2" | "s2";
 type Mode = "play" | "count" | "record";
 type Pad = { item: SoundItem; label: string };
 type CustomSample = { id: string; name: string };
@@ -67,6 +67,7 @@ export function GuidedBeat({ items }: { items: SoundItem[] }) {
   const [count, setCount] = useState<number | null>(null);
   const [loadingPath, setLoadingPath] = useState<string | null>(null);
   const [pickingLoop, setPickingLoop] = useState(false);
+  const [pendingLoop, setPendingLoop] = useState<SoundItem | null>(null);
   const [running, setRunning] = useState(true);
   const [samples, setSamples] = useState<CustomSample[]>([]);
   const [sampling, setSampling] = useState(false);
@@ -91,13 +92,18 @@ export function GuidedBeat({ items }: { items: SoundItem[] }) {
 
   const listed = useMemo(() => {
     if (group === "bass") return loops.filter(isBassHeavy);
+    if (group === "p2" || group === "s2") {
+      return loops.filter((loop) => loop.projects?.some((name) => name.toLowerCase() === group));
+    }
     return loops;
   }, [loops, group]);
 
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return listed;
-    return listed.filter((loop) => `${loop.name} ${loop.genre ?? ""}`.toLowerCase().includes(q));
+    return listed.filter((loop) =>
+      `${loop.name} ${loop.genre ?? ""} ${(loop.projects ?? []).join(" ")}`.toLowerCase().includes(q),
+    );
   }, [listed, query]);
 
   const percussion = useMemo(() => pickSounds(items, PERCUSSION), [items]);
@@ -227,10 +233,23 @@ export function GuidedBeat({ items }: { items: SoundItem[] }) {
     try {
       await getBuffer(item.path);
       if (ticket !== request.current) return;
-      const id = newId();
-      setSections((prev) => [...prev, { id, hits: [], loopPath: item.path }]);
-      setEditId(id);
+      const current = sectionsRef.current.find((section) => section.id === editId);
+      if (current && !current.loopPath) {
+        setSections((prev) =>
+          prev.map((section) =>
+            section.id === current.id ? { ...section, loopPath: item.path } : section,
+          ),
+        );
+        setEditId(current.id);
+      } else {
+        const id = newId();
+        setSections((prev) => [...prev, { id, hits: [], loopPath: item.path }]);
+        setEditId(id);
+      }
+      setPendingLoop(null);
       setPickingLoop(false);
+    } catch {
+      /* leave the picker open so another loop can be chosen */
     } finally {
       if (ticket === request.current) setBusyId(null);
     }
@@ -396,6 +415,29 @@ export function GuidedBeat({ items }: { items: SoundItem[] }) {
     );
   }
 
+  function nudgeHit(sectionId: string, hitId: string, direction: -1 | 1) {
+    setSections((prev) => {
+      const { spans } = sectionSpans(prev, repeats);
+      return prev.map((section) => {
+        if (section.id !== sectionId) return section;
+        const span = spans.find((item) => item.id === section.id);
+        const loopDur = span?.loopDur || 0;
+        if (loopDur <= 0) return section;
+        const beat = loopDur / beatsInDuration(loopDur);
+        return {
+          ...section,
+          hits: section.hits.map((hit) => {
+            if (hit.id !== hitId) return hit;
+            let next = hit.offset + direction * beat;
+            next = ((next % loopDur) + loopDur) % loopDur;
+            if (next < 1e-4 || next >= loopDur - 1e-4) next = 0;
+            return { ...hit, offset: next };
+          }),
+        };
+      });
+    });
+  }
+
   function removeSection() {
     if (sections.length < 2 || !editId) return;
     const index = sections.findIndex((section) => section.id === editId);
@@ -468,7 +510,9 @@ export function GuidedBeat({ items }: { items: SoundItem[] }) {
               editId={editId}
               repeats={repeats}
               recording={mode === "record"}
+              nudge={!running && mode === "play"}
               onSelect={setEditId}
+              onNudge={nudgeHit}
             />
           </div>
         ) : null}
@@ -478,18 +522,23 @@ export function GuidedBeat({ items }: { items: SoundItem[] }) {
               title={pickingLoop ? "Add a loop section" : "Choose your base loop"}
               body={
                 pickingLoop
-                  ? "This loop becomes the next section, eight beats long."
-                  : `${listed.length} ${group === "bass" ? "bass-heavy" : "Linturo Custom"} loops. Each section is 8 beats. Duplicate it on the next screen.`
+                  ? "Choose a loop, then tap Add this loop. A blank section gets that loop. Otherwise it becomes the next section."
+                  : `${listed.length} ${
+                      group === "bass" ? "bass-heavy" : group === "custom" ? "Linturo Custom" : group
+                    } loops. Each section is 8 beats. Duplicate it on the next screen.`
               }
               loops={visible}
               group={group}
               query={query}
-              selectedId={pickingLoop ? null : (selected?.id ?? null)}
+              selectedId={pickingLoop ? (pendingLoop?.id ?? null) : (selected?.id ?? null)}
               busyId={busyId}
-              action={pickingLoop ? "Add" : "Play"}
+              action={pickingLoop ? "Choose" : "Play"}
               onGroup={setGroup}
               onQuery={setQuery}
-              onChoose={(item) => void (pickingLoop ? addLoopSection(item) : choose(item))}
+              onChoose={(item) => {
+                if (pickingLoop) setPendingLoop(item);
+                else void choose(item);
+              }}
             />
           ) : (
             <SectionStep
@@ -534,14 +583,35 @@ export function GuidedBeat({ items }: { items: SoundItem[] }) {
       </div>
 
       <footer className="relative z-30 shrink-0 border-t border-hairline bg-ink px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-        {step === "loop" || pickingLoop ? (
+        {pickingLoop ? (
+          <div className="flex flex-col gap-2">
+            <button
+              type="button"
+              disabled={!pendingLoop || busyId != null}
+              onClick={() => pendingLoop && void addLoopSection(pendingLoop)}
+              className="w-full border border-paper bg-paper py-3.5 text-sm tracking-[0.18em] text-black uppercase disabled:opacity-30"
+            >
+              {busyId ? "Loading" : "Add this loop"}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setPendingLoop(null);
+                setPickingLoop(false);
+              }}
+              className="w-full border border-paper py-3 text-[11px] tracking-[0.16em] text-paper uppercase"
+            >
+              Back
+            </button>
+          </div>
+        ) : step === "loop" ? (
           <button
             type="button"
             disabled={!selected || busyId != null}
-            onClick={pickingLoop ? () => setPickingLoop(false) : beginSections}
+            onClick={beginSections}
             className="w-full border border-paper py-3.5 text-sm tracking-[0.18em] text-paper uppercase disabled:opacity-30"
           >
-            {pickingLoop ? "Back" : "Build sections"}
+            Build sections
           </button>
         ) : (
           <div className="flex flex-col gap-2">
@@ -583,7 +653,10 @@ export function GuidedBeat({ items }: { items: SoundItem[] }) {
               </button>
               <button
                 type="button"
-                onClick={() => setPickingLoop(true)}
+                onClick={() => {
+                  setPendingLoop(null);
+                  setPickingLoop(true);
+                }}
                 className="min-h-14 flex-1 touch-manipulation border border-paper bg-paper py-3.5 text-sm tracking-[0.08em] text-black uppercase"
               >
                 Add loop
@@ -898,6 +971,12 @@ function LoopStep({
         <Chip active={group === "bass"} onClick={() => onGroup("bass")}>
           Bass heavy
         </Chip>
+        <Chip active={group === "p2"} onClick={() => onGroup("p2")}>
+          p2
+        </Chip>
+        <Chip active={group === "s2"} onClick={() => onGroup("s2")}>
+          s2
+        </Chip>
       </div>
       {loops.length === 0 ? (
         <p className="text-sm text-mute">Nothing in this filter.</p>
@@ -909,7 +988,16 @@ function LoopStep({
               <button
                 key={loop.id}
                 type="button"
-                onClick={() => onChoose(loop)}
+                onPointerDown={(event) => {
+                  event.currentTarget.dataset.x = String(event.clientX);
+                  event.currentTarget.dataset.y = String(event.clientY);
+                }}
+                onPointerUp={(event) => {
+                  const x = Number(event.currentTarget.dataset.x);
+                  const y = Number(event.currentTarget.dataset.y);
+                  if (Math.hypot(event.clientX - x, event.clientY - y) > 10) return;
+                  onChoose(loop);
+                }}
                 className={`flex items-center justify-between gap-3 border-b border-hairline py-3 text-left ${
                   on ? "text-paper" : "text-mute"
                 }`}
@@ -921,7 +1009,7 @@ function LoopStep({
                   </span>
                 </span>
                 <span className="shrink-0 text-[10px] tracking-[0.16em] uppercase">
-                  {busyId === loop.id ? "Loading" : on ? "Playing" : action}
+                  {busyId === loop.id ? "Loading" : on ? (action === "Play" ? "Playing" : "Chosen") : action}
                 </span>
               </button>
             );
@@ -981,19 +1069,24 @@ function ArrangementWave({
   editId,
   repeats,
   recording,
+  nudge,
   onSelect,
+  onNudge,
 }: {
   sections: LoopSection[];
   editId: string | null;
   repeats: number;
   recording: boolean;
+  nudge: boolean;
   onSelect: (id: string) => void;
+  onNudge: (sectionId: string, hitId: string, direction: -1 | 1) => void;
 }) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const headRef = useRef<HTMLDivElement>(null);
   const tapRef = useRef<{ x: number; y: number } | null>(null);
   const peaksRef = useRef(new Map<string, Float32Array>());
+  const [trackW, setTrackW] = useState(0);
   const shape = `${editId}|${repeats}|${sections
     .map(
       (section) =>
@@ -1016,6 +1109,7 @@ function ArrangementWave({
       const h = 64;
       canvas.style.width = `${cssW}px`;
       canvas.style.height = `${h}px`;
+      setTrackW((width) => (width === cssW ? width : cssW));
       canvas.width = Math.floor(cssW * dpr);
       canvas.height = Math.floor(h * dpr);
       const ctx = canvas.getContext("2d");
@@ -1132,10 +1226,27 @@ function ArrangementWave({
     return () => cancelAnimationFrame(raf);
   }, []);
 
+  const markers = (() => {
+    if (!nudge) return [];
+    const { spans, total } = sectionSpans(sections, repeats);
+    const byId = new Map(sections.map((section) => [section.id, section]));
+    return spans.flatMap((span) => {
+      const section = byId.get(span.id);
+      if (!section || total <= 0) return [];
+      return section.hits.map((hit, index) => ({
+        key: hit.id,
+        sectionId: section.id,
+        hitId: hit.id,
+        index,
+        left: (span.start + hit.offset) / total,
+      }));
+    });
+  })();
+
   return (
     <div
       ref={wrapRef}
-      className="relative h-16 cursor-pointer overflow-x-auto overflow-y-hidden bg-[#080808]"
+      className="relative cursor-pointer overflow-x-auto bg-[#080808]"
       onPointerDown={(event) => {
         tapRef.current = { x: event.clientX, y: event.clientY };
       }}
@@ -1157,12 +1268,85 @@ function ArrangementWave({
         if (span) onSelect(span.id);
       }}
     >
-      <canvas ref={canvasRef} className="pointer-events-none h-16 max-w-none" aria-hidden />
-      <div
-        ref={headRef}
-        className={`pointer-events-none absolute top-0 left-0 z-10 h-full w-px ${recording ? "bg-red-400" : "bg-paper"}`}
-      />
+      {markers.length && trackW > 0 ? (
+        <div className="relative h-8" style={{ width: trackW }}>
+          {markers.map((marker) => (
+            <div
+              key={marker.key}
+              className="absolute top-1 flex -translate-x-1/2 gap-0.5"
+              style={{ left: `${marker.left * 100}%` }}
+            >
+              <NudgeButton
+                glyph="‹"
+                label={`Move sound ${marker.index + 1} one beat back`}
+                onStep={() => onNudge(marker.sectionId, marker.hitId, -1)}
+              />
+              <NudgeButton
+                glyph="›"
+                label={`Move sound ${marker.index + 1} one beat forward`}
+                onStep={() => onNudge(marker.sectionId, marker.hitId, 1)}
+              />
+            </div>
+          ))}
+        </div>
+      ) : null}
+      <div className="relative h-16" style={trackW ? { width: trackW } : undefined}>
+        <canvas ref={canvasRef} className="pointer-events-none h-16 max-w-none" aria-hidden />
+        <div
+          ref={headRef}
+          className={`pointer-events-none absolute top-0 left-0 z-10 h-full w-px ${recording ? "bg-red-400" : "bg-paper"}`}
+        />
+      </div>
     </div>
+  );
+}
+
+function NudgeButton({
+  glyph,
+  label,
+  onStep,
+}: {
+  glyph: string;
+  label: string;
+  onStep: () => void;
+}) {
+  const delay = useRef(0);
+  const repeat = useRef(0);
+  function clear() {
+    window.clearTimeout(delay.current);
+    window.clearInterval(repeat.current);
+    delay.current = 0;
+    repeat.current = 0;
+  }
+  useEffect(() => clear, []);
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      className="flex h-6 w-6 touch-manipulation items-center justify-center border border-paper/60 bg-ink text-sm leading-none text-paper select-none"
+      onPointerDown={(event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        onStep();
+        clear();
+        try {
+          event.currentTarget.setPointerCapture(event.pointerId);
+        } catch {
+          /* capture is optional; the first step already landed */
+        }
+        delay.current = window.setTimeout(() => {
+          repeat.current = window.setInterval(onStep, 280);
+        }, 320);
+      }}
+      onPointerUp={(event) => {
+        event.stopPropagation();
+        clear();
+      }}
+      onLostPointerCapture={clear}
+      onContextMenu={(event) => event.preventDefault()}
+    >
+      {glyph}
+    </button>
   );
 }
 
