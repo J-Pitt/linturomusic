@@ -83,7 +83,7 @@ const FEATURED_VIDEOS = [
     /** Shareable hash: linturomusic.com/#abstract */
     slug: 'abstract',
     title: 'Abstract',
-    subtitle: 'Visual mix',
+    subtitle: 'Visual mix · one hour',
     src: config.VIDEO_FILES.REC002_ABSTRACT,
     poster: config.VIDEO_FILES.REC002_ABSTRACT_POSTER,
   },
