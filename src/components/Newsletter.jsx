@@ -25,9 +25,9 @@ export default function Newsletter() {
       } else {
         const result = await subscribeList({ email, phone, company })
         if (result.email && result.phone) {
-          setNote("You're on both lists. Email for new sets and videos. A text only when the stream starts.")
+          setNote("You're on both lists. Email for new sets and videos. A text goes out only when a livestream starts.")
         } else if (result.phone) {
-          setNote("You'll get a text when linturo goes live.")
+          setNote('A text goes out only when a livestream starts.')
         } else {
           setNote("You'll get an email for new sets and videos.")
         }
@@ -51,7 +51,7 @@ export default function Newsletter() {
         <p className="text-sm sm:text-base text-mute max-w-xl mb-8">
           {leaving
             ? 'Use the same email or number you signed up with.'
-            : 'Email is for a new set or video. A text goes out only when the stream starts.'}
+            : 'Email is for a new set or video. A text goes out only when a livestream starts.'}
         </p>
         <form onSubmit={onSubmit} className="space-y-4 max-w-lg">
           <label className="block">
