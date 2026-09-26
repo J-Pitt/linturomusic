@@ -52,6 +52,15 @@ const RECENT_MIXES = [
 
 const FEATURED_VIDEOS = [
   {
+    id: 'soundsOfTomorrow',
+    /** Shareable hash: linturomusic.com/#sounds-of-tomorrow */
+    slug: 'sounds-of-tomorrow',
+    title: 'Sounds of Tomorrow',
+    subtitle: 'Visual mix · one hour',
+    src: config.VIDEO_FILES.SOUNDS_OF_TOMORROW,
+    poster: config.VIDEO_FILES.SOUNDS_OF_TOMORROW_POSTER,
+  },
+  {
     id: 'colorsWithin',
     /** Shareable hash: linturomusic.com/#the-colors-within */
     slug: 'the-colors-within',

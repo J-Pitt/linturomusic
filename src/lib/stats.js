@@ -19,6 +19,7 @@ export const STAT_IDS = [
   'septLoop',
   'cube',
   'abstract',
+  'soundsOfTomorrow',
 ]
 
 const LIKE_ADMIN_KEYS = {
