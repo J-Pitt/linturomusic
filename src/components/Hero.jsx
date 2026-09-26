@@ -79,6 +79,15 @@ const FEATURED_VIDEOS = [
     poster: config.VIDEO_FILES.REC092_CUBE_POSTER,
   },
   {
+    id: 'abstract',
+    /** Shareable hash: linturomusic.com/#abstract */
+    slug: 'abstract',
+    title: 'Abstract',
+    subtitle: 'Visual mix',
+    src: config.VIDEO_FILES.REC002_ABSTRACT,
+    poster: config.VIDEO_FILES.REC002_ABSTRACT_POSTER,
+  },
+  {
     id: 'beginning',
     /** Shareable hash: linturomusic.com/#the-beginning */
     slug: 'the-beginning',
