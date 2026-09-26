@@ -64,7 +64,6 @@ export function GuidedBeat({ items }: { items: SoundItem[] }) {
   const [loadingPath, setLoadingPath] = useState<string | null>(null);
   const [pickingLoop, setPickingLoop] = useState(false);
   const [pendingLoop, setPendingLoop] = useState<SoundItem | null>(null);
-  const [placing, setPlacing] = useState<{ loopPath: string | null } | null>(null);
   const [running, setRunning] = useState(true);
   const [samples, setSamples] = useState<CustomSample[]>([]);
   const [sampling, setSampling] = useState(false);
@@ -210,7 +209,6 @@ export function GuidedBeat({ items }: { items: SoundItem[] }) {
     setRecordSnap(null);
     setRunning(true);
     setPickingLoop(false);
-    setPlacing(null);
     setStep("sections");
   }
 
@@ -228,19 +226,40 @@ export function GuidedBeat({ items }: { items: SoundItem[] }) {
     setRecordSnap(null);
     setRunning(true);
     setPickingLoop(false);
-    setPlacing(null);
     setStep("loop");
   }
 
   function openLoopPicker() {
     setPendingLoop(null);
-    setPlacing(null);
     setPickingLoop(true);
   }
 
-  async function beginPlace(path: string | null) {
+  function closeLoopPicker() {
+    request.current += 1;
+    setPendingLoop(null);
+    setPickingLoop(false);
+    if (running) setArrangement(sectionsRef.current, repeats);
+    else {
+      pausePlayback();
+      setArrangement(sectionsRef.current, repeats);
+    }
+  }
+
+  async function auditionSectionLoop(item: SoundItem) {
+    const ticket = ++request.current;
+    setPendingLoop(item);
+    setBusyId(item.id);
+    try {
+      await startLoop(item.path);
+    } finally {
+      if (ticket === request.current) setBusyId(null);
+    }
+  }
+
+  async function addPickedSection(path: string | null) {
+    const ticket = ++request.current;
+    const wasRunning = running;
     if (path) {
-      const ticket = ++request.current;
       setBusyId(pendingLoop?.id ?? "loop");
       try {
         await getBuffer(path);
@@ -251,23 +270,13 @@ export function GuidedBeat({ items }: { items: SoundItem[] }) {
         if (ticket === request.current) setBusyId(null);
       }
     }
-    setPlacing({ loopPath: path });
+    stopLoop();
+    if (!wasRunning) pausePlayback();
+    const id = newId();
+    setSections((prev) => [{ id, hits: [], loopPath: path }, ...prev]);
+    setEditId(id);
     setPendingLoop(null);
     setPickingLoop(false);
-  }
-
-  function placeSection(index: number) {
-    if (!placing) return;
-    const id = newId();
-    const loopPath = placing.loopPath;
-    setSections((prev) => {
-      const next = [...prev];
-      const at = Math.max(0, Math.min(index, next.length));
-      next.splice(at, 0, { id, hits: [], loopPath });
-      return next;
-    });
-    setEditId(id);
-    setPlacing(null);
   }
 
   async function onPad(path: string, record: boolean) {
@@ -499,9 +508,7 @@ export function GuidedBeat({ items }: { items: SoundItem[] }) {
         {step === "sections" && selected ? (
           <div className="sticky top-0 z-10 border-b border-hairline bg-ink px-4 py-2">
             <p className="mb-1 flex items-center gap-2 text-[10px] tracking-[0.16em] uppercase">
-              {placing ? (
-                <span className="text-paper">Tap the grid where this section goes</span>
-              ) : mode === "record" ? (
+              {mode === "record" ? (
                 <span className="inline-flex items-center gap-1.5 text-red-500">
                   <span className="size-2 animate-pulse rounded-full bg-red-500" />
                   Rec
@@ -509,18 +516,16 @@ export function GuidedBeat({ items }: { items: SoundItem[] }) {
               ) : (
                 <span className="text-mute-dim">{mode === "count" ? "Count-in" : "Play"}</span>
               )}
-              {placing ? null : <span className="text-mute-dim">· whole beat</span>}
+              <span className="text-mute-dim">· whole beat</span>
             </p>
             <ArrangementWave
               sections={sections}
               editId={editId}
               repeats={repeats}
               recording={mode === "record"}
-              nudge={!running && mode === "play" && !placing}
-              placing={placing != null}
+              nudge={!running && mode === "play"}
               onSelect={setEditId}
               onNudge={nudgeHit}
-              onPlace={placeSection}
             />
           </div>
         ) : null}
@@ -531,7 +536,7 @@ export function GuidedBeat({ items }: { items: SoundItem[] }) {
               title={pickingLoop ? "Add a loop" : "Choose your base loop"}
               body={
                 pickingLoop
-                  ? "Choose a loop, or No loop. Then tap the beat grid where that section goes."
+                  ? "Tap a loop to hear it, then Add. It starts at the beginning."
                   : `${listed.length} ${
                       group === "bass" ? "bass-heavy" : group === "custom" ? "Linturo Custom" : group
                     } loops. Each section is 8 beats. Duplicate it on the next screen.`
@@ -541,22 +546,14 @@ export function GuidedBeat({ items }: { items: SoundItem[] }) {
               query={query}
               selectedId={pickingLoop ? (pendingLoop?.id ?? null) : (selected?.id ?? null)}
               busyId={busyId}
-              action={pickingLoop ? "Choose" : "Play"}
+              action="Play"
               onGroup={setGroup}
               onQuery={setQuery}
               onChoose={(item) => {
-                if (pickingLoop) setPendingLoop(item);
+                if (pickingLoop) void auditionSectionLoop(item);
                 else void choose(item);
               }}
             />
-            </div>
-          ) : placing ? (
-            <div>
-              <h1 className="text-2xl font-light tracking-tight">Place the section</h1>
-              <p className="mt-2 text-sm leading-relaxed text-mute">
-                Tap the beat grid. The first half of a section places the new one before it. The second half places it after.
-                {placing.loopPath ? "" : " This one has no loop."}
-              </p>
             </div>
           ) : (
             <SectionStep
@@ -606,25 +603,22 @@ export function GuidedBeat({ items }: { items: SoundItem[] }) {
             <button
               type="button"
               disabled={!pendingLoop || busyId != null}
-              onClick={() => pendingLoop && void beginPlace(pendingLoop.path)}
+              onClick={() => pendingLoop && void addPickedSection(pendingLoop.path)}
               className="w-full border border-paper bg-paper py-3.5 text-sm tracking-[0.18em] text-black uppercase disabled:opacity-30"
             >
-              {busyId ? "Loading" : "Add this loop"}
+              {busyId ? "Loading" : "Add"}
             </button>
             <button
               type="button"
               disabled={busyId != null}
-              onClick={() => void beginPlace(null)}
+              onClick={() => void addPickedSection(null)}
               className="w-full border border-paper py-3.5 text-sm tracking-[0.18em] text-paper uppercase disabled:opacity-30"
             >
               No loop
             </button>
             <button
               type="button"
-              onClick={() => {
-                setPendingLoop(null);
-                setPickingLoop(false);
-              }}
+              onClick={closeLoopPicker}
               className="w-full border border-paper py-3 text-[11px] tracking-[0.16em] text-paper uppercase"
             >
               Back
@@ -638,14 +632,6 @@ export function GuidedBeat({ items }: { items: SoundItem[] }) {
             className="w-full border border-paper py-3.5 text-sm tracking-[0.18em] text-paper uppercase disabled:opacity-30"
           >
             Build sections
-          </button>
-        ) : placing ? (
-          <button
-            type="button"
-            onClick={() => setPlacing(null)}
-            className="w-full border border-paper py-3.5 text-sm tracking-[0.18em] text-paper uppercase"
-          >
-            Cancel
           </button>
         ) : (
           <div className="flex flex-col gap-2">
@@ -1094,20 +1080,16 @@ function ArrangementWave({
   repeats,
   recording,
   nudge,
-  placing,
   onSelect,
   onNudge,
-  onPlace,
 }: {
   sections: LoopSection[];
   editId: string | null;
   repeats: number;
   recording: boolean;
   nudge: boolean;
-  placing: boolean;
   onSelect: (id: string) => void;
   onNudge: (sectionId: string, hitId: string, direction: -1 | 1) => void;
-  onPlace: (index: number) => void;
 }) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -1133,9 +1115,7 @@ function ArrangementWave({
       const dpr = Math.min(2, window.devicePixelRatio || 1);
       const { spans, total } = sectionSpans(sections, repeats);
       const pxPerSec = (140 / 60) * BEAT_PX;
-      const cssW = placing
-        ? Math.max(wrap.clientWidth, 1)
-        : Math.max(wrap.clientWidth, Math.ceil(total * pxPerSec)) * 2;
+      const cssW = Math.max(wrap.clientWidth, Math.ceil(total * pxPerSec)) * 2;
       const h = 64;
       canvas.style.width = `${cssW}px`;
       canvas.style.height = `${h}px`;
@@ -1229,7 +1209,7 @@ function ArrangementWave({
     return () => {
       cancelled = true;
     };
-  }, [shape, sections, editId, recording, placing]);
+  }, [shape, sections, editId, recording]);
 
   useEffect(() => {
     const wrap = wrapRef.current;
@@ -1276,7 +1256,7 @@ function ArrangementWave({
   return (
     <div
       ref={wrapRef}
-      className={`relative cursor-pointer overflow-x-auto bg-[#080808] ${placing ? "ring-1 ring-paper" : ""}`}
+      className="relative cursor-pointer overflow-x-auto bg-[#080808]"
       onPointerDown={(event) => {
         tapRef.current = { x: event.clientX, y: event.clientY };
       }}
@@ -1292,18 +1272,6 @@ function ArrangementWave({
         const { spans, total } = sectionSpans(sections, repeats);
         const width = Math.max(wrap.scrollWidth, 1);
         const time = (x / width) * total;
-        if (placing) {
-          let index = spans.length;
-          for (let i = 0; i < spans.length; i++) {
-            const mid = spans[i].start + spans[i].hold / 2;
-            if (time < mid) {
-              index = i;
-              break;
-            }
-          }
-          onPlace(index);
-          return;
-        }
         const span =
           spans.find((item) => time >= item.start && time < item.start + item.hold) ??
           spans[spans.length - 1];
