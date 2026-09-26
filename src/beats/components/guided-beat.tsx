@@ -21,6 +21,7 @@ import {
   renderArrangement,
   resumeLoop,
   pausePlayback,
+  playFromSection,
   sectionSpans,
   setArrangement,
   startLoop,
@@ -279,6 +280,21 @@ export function GuidedBeat({ items }: { items: SoundItem[] }) {
     setPickingLoop(false);
   }
 
+  function selectSection(id: string) {
+    setEditId(id);
+    if (mode !== "play") return;
+    const section = sectionsRef.current.find((item) => item.id === id);
+    const start = () => {
+      playFromSection(id);
+      setRunning(true);
+    };
+    if (section?.loopPath && !peekBuffer(section.loopPath)) {
+      void getBuffer(section.loopPath).then(start).catch(() => null);
+      return;
+    }
+    start();
+  }
+
   async function onPad(path: string, record: boolean) {
     if (!peekBuffer(path)) {
       setLoadingPath(path);
@@ -524,7 +540,7 @@ export function GuidedBeat({ items }: { items: SoundItem[] }) {
               repeats={repeats}
               recording={mode === "record"}
               nudge={!running && mode === "play"}
-              onSelect={setEditId}
+              onSelect={selectSection}
               onNudge={nudgeHit}
             />
           </div>
@@ -553,6 +569,7 @@ export function GuidedBeat({ items }: { items: SoundItem[] }) {
                 if (pickingLoop) void auditionSectionLoop(item);
                 else void choose(item);
               }}
+              hearOnClick={pickingLoop}
             />
             </div>
           ) : (
@@ -569,7 +586,7 @@ export function GuidedBeat({ items }: { items: SoundItem[] }) {
               hits={editing?.hits.length ?? 0}
               mode={mode}
               loadingPath={loadingPath}
-              onEdit={setEditId}
+              onEdit={selectSection}
               onRepeats={setRepeats}
               onTap={(path) => void onPad(path, mode === "record")}
               samples={samples}
@@ -949,6 +966,7 @@ function LoopStep({
   onGroup,
   onQuery,
   onChoose,
+  hearOnClick = false,
 }: {
   title: string;
   body: string;
@@ -961,6 +979,7 @@ function LoopStep({
   onGroup: (group: LoopGroup) => void;
   onQuery: (query: string) => void;
   onChoose: (item: SoundItem) => void;
+  hearOnClick?: boolean;
 }) {
   return (
     <div className="flex flex-col gap-4">
@@ -1007,6 +1026,9 @@ function LoopStep({
                   const y = Number(event.currentTarget.dataset.y);
                   if (Math.hypot(event.clientX - x, event.clientY - y) > 10) return;
                   onChoose(loop);
+                }}
+                onClick={() => {
+                  if (hearOnClick) onChoose(loop);
                 }}
                 className={`flex items-center justify-between gap-3 border-b border-hairline py-3 text-left ${
                   on ? "text-paper" : "text-mute"

@@ -347,6 +347,22 @@ export function resumeLoop() {
   arm();
 }
 
+/** Jump playback to the start of one section and play its loop. */
+export function playFromSection(sectionId: string) {
+  const { spans } = sectionSpans();
+  const span = spans.find((item) => item.id === sectionId);
+  if (!span) return;
+  const ctx = getAudioContext();
+  if (ctx.state === "suspended") void ctx.resume();
+  paused = false;
+  stopVoices();
+  fired.clear();
+  lastPlaying = -1;
+  arrangementOn = true;
+  arrangementStart = ctx.currentTime + 0.05 - span.start;
+  arm();
+}
+
 function clickAt(when: number, accent: boolean) {
   const ctx = getAudioContext();
   const osc = ctx.createOscillator();
