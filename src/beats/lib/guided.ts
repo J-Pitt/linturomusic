@@ -84,12 +84,16 @@ export const BASS: PadPick[] = [
   { name: "HipHop 808 · 808 5", label: "808 2" },
   { name: "HipHop 808 · 808 10", label: "808 3" },
   { name: "Trap 808 · BigBop 808", label: "Big 808" },
-  { name: "Inst Bass · F9 Magma 808-060 C3", label: "Magma" },
-  { name: "Inst Bass · F9 Magma 808-052 E2", label: "Low 808" },
-  { name: "HipHop Bass · Cipher Bass 3", label: "Thump 3" },
-  { name: "HipHop Bass · Cipher Bass 4", label: "Thump 4" },
+  { name: "HipHop Bass · NS1014_JBS", label: "Knock" },
+  { name: "HipHop Bass · NS4413_JBS", label: "Knock 2" },
+  { name: "Trap Bass · Sub 13", label: "Sub 3" },
+  { name: "Trap Bass · LBass3", label: "Warm" },
   { name: "HipHop Bass · Raw Curfew Bass 1", label: "Raw" },
   { name: "Inst Bass · F9 Magma 808-058 Bb2", label: "Bb 808" },
+  { name: "HipHop Bass · Raw Curfew Bass 4", label: "Raw 4" },
+  { name: "HipHop Bass · RiDDL Bass 02", label: "Riddle" },
+  { name: "HipHop Bass · NS4416_JBS", label: "Sub" },
+  { name: "HipHop Bass · NS0316_JBS", label: "Sub 2" },
 ];
 
 /** Four more bass hits under the base bass pads. */

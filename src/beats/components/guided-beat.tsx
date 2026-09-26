@@ -72,6 +72,7 @@ export function GuidedBeat({ items }: { items: SoundItem[] }) {
   const [sampleError, setSampleError] = useState<string | null>(null);
   const [focusSample, setFocusSample] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
+  const [beatName, setBeatName] = useState("");
   const sampleTake = useRef<{ stop: () => AudioBuffer } | null>(null);
   const sampleTimer = useRef(0);
   const resumeAfterSample = useRef(false);
@@ -174,6 +175,7 @@ export function GuidedBeat({ items }: { items: SoundItem[] }) {
       request.current += 1;
       stopLoop();
       setSelected(null);
+      setBeatName("");
       setBusyId(null);
       setSections([]);
       setEditId(null);
@@ -185,6 +187,7 @@ export function GuidedBeat({ items }: { items: SoundItem[] }) {
       await startLoop(item.path);
       if (ticket !== request.current) return;
       setSelected(item);
+      setBeatName(loopTitle(item));
       setSections([]);
       setEditId(null);
       setPlaying(0);
@@ -212,6 +215,7 @@ export function GuidedBeat({ items }: { items: SoundItem[] }) {
     request.current += 1;
     stopLoop();
     setSelected(null);
+    setBeatName("");
     setBusyId(null);
     setSections([]);
     setEditId(null);
@@ -373,7 +377,7 @@ export function GuidedBeat({ items }: { items: SoundItem[] }) {
     try {
       const buffer = await renderArrangement();
       if (!buffer) return;
-      const title = selected ? loopTitle(selected) : "beat";
+      const title = beatName.trim() || (selected ? loopTitle(selected) : "beat");
       const safe = title.replace(/[^\w\- ]+/g, "").trim().replace(/\s+/g, "-") || "beat";
       downloadWav(buffer, `linturo-${safe}`);
     } finally {
@@ -428,11 +432,26 @@ export function GuidedBeat({ items }: { items: SoundItem[] }) {
           })}
         </div>
         {selected && step !== "loop" ? (
-          <p className="mt-2 truncate text-xs text-mute">
-            {loopTitle(selected)}
-            {selected.genre ? ` · ${selected.genre}` : ""}
-            {sections.length > 1 ? ` · ${sections.length} sections` : ""}
-          </p>
+          <div className="mt-2">
+            <input
+              value={beatName}
+              onChange={(event) => setBeatName(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") event.currentTarget.blur();
+              }}
+              enterKeyHint="done"
+              autoComplete="off"
+              autoCorrect="off"
+              spellCheck={false}
+              aria-label="Loop name"
+              className="w-full bg-transparent text-paper outline-none"
+              style={{ fontSize: 16 }}
+            />
+            <p className="truncate text-xs text-mute">
+              {selected.genre ? `${selected.genre}` : "Loop"}
+              {sections.length > 1 ? ` · ${sections.length} sections` : ""}
+            </p>
+          </div>
         ) : null}
       </header>
 
@@ -456,6 +475,7 @@ export function GuidedBeat({ items }: { items: SoundItem[] }) {
               editId={editId}
               repeats={repeats}
               recording={mode === "record"}
+              onSelect={setEditId}
             />
           </div>
         ) : null}
@@ -521,7 +541,7 @@ export function GuidedBeat({ items }: { items: SoundItem[] }) {
         ) : null}
       </div>
 
-      <footer className="shrink-0 border-t border-hairline px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+      <footer className="relative z-30 shrink-0 border-t border-hairline bg-ink px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
         {step === "loop" || pickingLoop ? (
           <button
             type="button"
@@ -558,21 +578,21 @@ export function GuidedBeat({ items }: { items: SoundItem[] }) {
               <button
                 type="button"
                 onClick={() => addSection(true)}
-                className="flex-1 border border-hairline py-3.5 text-sm tracking-[0.14em] text-mute uppercase"
+                className="min-h-14 flex-1 touch-manipulation border border-paper py-3.5 text-sm tracking-[0.08em] text-paper uppercase active:bg-paper active:text-black"
               >
                 Add a break
               </button>
               <button
                 type="button"
                 onClick={() => addSection(false)}
-                className="flex-1 border border-hairline py-3.5 text-sm tracking-[0.14em] text-mute uppercase"
+                className="min-h-14 flex-1 touch-manipulation border border-paper py-3.5 text-sm tracking-[0.08em] text-paper uppercase active:bg-paper active:text-black"
               >
                 Add section
               </button>
               <button
                 type="button"
                 onClick={() => setPickingLoop(true)}
-                className="flex-1 border border-paper bg-paper py-3.5 text-sm tracking-[0.14em] text-black uppercase"
+                className="min-h-14 flex-1 touch-manipulation border border-paper bg-paper py-3.5 text-sm tracking-[0.08em] text-black uppercase"
               >
                 Add loop
               </button>
@@ -689,6 +709,13 @@ function SectionStep({
 }) {
   const editIndex = Math.max(0, sections.findIndex((section) => section.id === editId));
   const name = sectionName(editIndex);
+  const sectionRowRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const row = sectionRowRef.current;
+    const current = row?.querySelector<HTMLButtonElement>("[data-editing='true']");
+    current?.scrollIntoView({ inline: "nearest", block: "nearest" });
+  }, [editId, sections.length]);
 
   let coach = "Play mode. Tap until the rhythm feels right, then Record. You get a 4-count, then it writes over the loop.";
   if (mode === "record") {
@@ -712,7 +739,7 @@ function SectionStep({
         <p className="mt-2 text-sm leading-relaxed text-mute">{coach}</p>
       </div>
 
-      <div className="flex gap-2 overflow-x-auto pb-1">
+      <div ref={sectionRowRef} className="flex gap-2 overflow-x-auto pb-1">
         {sections.map((section, index) => {
           const editing = section.id === editId;
           const live = index === playing;
@@ -720,6 +747,7 @@ function SectionStep({
             <button
               key={section.id}
               type="button"
+              data-editing={editing ? "true" : "false"}
               onClick={() => onEdit(section.id)}
               className={`shrink-0 border px-3 py-1.5 text-[11px] tracking-[0.12em] uppercase ${
                 editing
@@ -787,9 +815,24 @@ function SectionStep({
                   <input
                     value={sample.name}
                     autoFocus={sample.id === focusSample}
+                    enterKeyHint="done"
+                    autoComplete="off"
+                    autoCorrect="off"
+                    spellCheck={false}
+                    aria-label="Sample name"
+                    onPointerDown={(event) => event.stopPropagation()}
+                    onFocus={(event) => {
+                      window.setTimeout(() => {
+                        event.currentTarget.scrollIntoView({ block: "center", behavior: "smooth" });
+                      }, 250);
+                    }}
                     onChange={(event) => onRename(sample.id, event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") event.currentTarget.blur();
+                    }}
                     placeholder="Name this sample"
-                    className="h-8 border border-hairline bg-black px-2 text-xs text-paper outline-none placeholder:text-mute-dim focus:border-paper"
+                    className="h-11 w-full border border-paper bg-black px-2 text-paper outline-none placeholder:text-mute-dim"
+                    style={{ fontSize: 16 }}
                   />
                 </div>
               ))}
@@ -949,15 +992,18 @@ function ArrangementWave({
   editId,
   repeats,
   recording,
+  onSelect,
 }: {
   sections: LoopSection[];
   editId: string | null;
   repeats: number;
   recording: boolean;
+  onSelect: (id: string) => void;
 }) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const headRef = useRef<HTMLDivElement>(null);
+  const tapRef = useRef<{ x: number; y: number } | null>(null);
   const shape = `${editId}|${repeats}|${sections
     .map(
       (section) =>
@@ -1083,8 +1129,31 @@ function ArrangementWave({
   }, []);
 
   return (
-    <div ref={wrapRef} className="relative h-16 overflow-x-auto overflow-y-hidden bg-[#080808]">
-      <canvas ref={canvasRef} className="h-16" aria-hidden />
+    <div
+      ref={wrapRef}
+      className="relative h-16 cursor-pointer overflow-x-auto overflow-y-hidden bg-[#080808]"
+      onPointerDown={(event) => {
+        tapRef.current = { x: event.clientX, y: event.clientY };
+      }}
+      onPointerUp={(event) => {
+        const start = tapRef.current;
+        tapRef.current = null;
+        if (!start) return;
+        if (Math.hypot(event.clientX - start.x, event.clientY - start.y) > 10) return;
+        const wrap = wrapRef.current;
+        if (!wrap) return;
+        const rect = wrap.getBoundingClientRect();
+        const x = event.clientX - rect.left + wrap.scrollLeft;
+        const { spans, total } = sectionSpans();
+        const width = Math.max(wrap.scrollWidth, 1);
+        const time = (x / width) * total;
+        const span =
+          spans.find((item) => time >= item.start && time < item.start + item.hold) ??
+          spans[spans.length - 1];
+        if (span) onSelect(span.id);
+      }}
+    >
+      <canvas ref={canvasRef} className="pointer-events-none h-16" aria-hidden />
       <div
         ref={headRef}
         className={`pointer-events-none absolute top-0 left-0 z-10 h-full w-px ${recording ? "bg-red-400" : "bg-paper"}`}
