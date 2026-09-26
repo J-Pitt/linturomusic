@@ -64,10 +64,28 @@ const FEATURED_VIDEOS = [
     id: 'septLoop',
     /** Shareable hash: linturomusic.com/#sept-loop */
     slug: 'sept-loop',
-    title: 'Sept Loop',
+    title: 'Loops',
     subtitle: 'Visual mix · one hour',
     src: config.VIDEO_FILES.REC084_SEPT_LOOP,
     poster: config.VIDEO_FILES.REC084_SEPT_LOOP_POSTER,
+  },
+  {
+    id: 'cube',
+    /** Shareable hash: linturomusic.com/#cube */
+    slug: 'cube',
+    title: 'Cube',
+    subtitle: 'Visual mix · one hour',
+    src: config.VIDEO_FILES.REC092_CUBE,
+    poster: config.VIDEO_FILES.REC092_CUBE_POSTER,
+  },
+  {
+    id: 'abstractCity',
+    /** Shareable hash: linturomusic.com/#abstract-city */
+    slug: 'abstract-city',
+    title: 'Abstract City',
+    subtitle: 'Visual mix · one hour',
+    src: config.VIDEO_FILES.REC085_ABSTRACT_CITY,
+    poster: config.VIDEO_FILES.REC085_ABSTRACT_CITY_POSTER,
   },
   {
     id: 'beginning',

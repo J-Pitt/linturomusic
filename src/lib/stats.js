@@ -17,6 +17,8 @@ export const STAT_IDS = [
   'rec059',
   'linturo',
   'septLoop',
+  'cube',
+  'abstractCity',
 ]
 
 const LIKE_ADMIN_KEYS = {
