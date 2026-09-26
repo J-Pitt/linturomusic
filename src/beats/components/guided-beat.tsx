@@ -3,18 +3,14 @@ import { getBuffer, getPeaks, peekBuffer, peekPeaks, putBuffer, unlockAudio, use
 import { downloadWav } from "@/lib/download-beat";
 import {
   BASS,
-  BEAT_MELODIES,
   EXTRA_BASS,
   EXTRA_PERCUSSION,
-  MELODY_BASS,
-  MELODY_CLAP,
   PERCUSSION,
   isBaseLoop,
   isBassHeavy,
   loopTitle,
   pickSounds,
   sectionName,
-  type BeatMelody,
 } from "@/lib/guided";
 import {
   SECTION_BEATS,
@@ -22,11 +18,9 @@ import {
   beatsInDuration,
   countIn,
   preview,
-  previewPattern,
   renderArrangement,
   resumeLoop,
   pausePlayback,
-  sectionSeconds,
   sectionSpans,
   setArrangement,
   startLoop,
@@ -70,7 +64,7 @@ export function GuidedBeat({ items }: { items: SoundItem[] }) {
   const [loadingPath, setLoadingPath] = useState<string | null>(null);
   const [pickingLoop, setPickingLoop] = useState(false);
   const [pendingLoop, setPendingLoop] = useState<SoundItem | null>(null);
-  const [placing, setPlacing] = useState<{ loopPath: string | null; melodyId: string | null } | null>(null);
+  const [placing, setPlacing] = useState<{ loopPath: string | null } | null>(null);
   const [running, setRunning] = useState(true);
   const [samples, setSamples] = useState<CustomSample[]>([]);
   const [sampling, setSampling] = useState(false);
@@ -117,11 +111,6 @@ export function GuidedBeat({ items }: { items: SoundItem[] }) {
   );
   const bass = useMemo(() => pickSounds(items, BASS), [items]);
   const extraBass = useMemo(() => pickSounds(items, EXTRA_BASS), [items]);
-  const melodyVoices = useMemo(() => {
-    const bassHit = pickSounds(items, [MELODY_BASS])[0];
-    const clapHit = pickSounds(items, [MELODY_CLAP])[0];
-    return { bass: bassHit?.item.path ?? null, clap: clapHit?.item.path ?? null };
-  }, [items]);
 
   useEffect(() => {
     const names = new Set(
@@ -262,76 +251,19 @@ export function GuidedBeat({ items }: { items: SoundItem[] }) {
         if (ticket === request.current) setBusyId(null);
       }
     }
-    setPlacing({ loopPath: path, melodyId: null });
+    setPlacing({ loopPath: path });
     setPendingLoop(null);
     setPickingLoop(false);
-  }
-
-  function melodyNotes(melody: BeatMelody) {
-    return melody.steps.flatMap((step, index) => {
-      const path = step === "bass" ? melodyVoices.bass : melodyVoices.clap;
-      return path ? [{ path, delay: index * (60 / 140) }] : [];
-    });
-  }
-
-  function melodyHits(melody: BeatMelody, loopDur: number): LoopHit[] {
-    const beat = loopDur / beatsInDuration(loopDur);
-    return melody.steps.flatMap((step, index) => {
-      const path = step === "bass" ? melodyVoices.bass : melodyVoices.clap;
-      const offset = index * beat;
-      if (!path || offset >= loopDur - 1e-3) return [];
-      return [{ id: newId(), path, offset }];
-    });
-  }
-
-  function windowFor(path: string | null) {
-    if (path) {
-      const duration = peekBuffer(path)?.duration;
-      if (duration) return Math.min(duration, sectionSeconds());
-    }
-    const { spans } = sectionSpans(sectionsRef.current, repeats);
-    return spans[0]?.loopDur || sectionSeconds();
-  }
-
-  async function auditionMelody(melody: BeatMelody) {
-    const paths = [...new Set(melodyNotes(melody).map((note) => note.path))];
-    await Promise.all(paths.map((path) => getBuffer(path).catch(() => null)));
-    previewPattern(melodyNotes(melody));
-  }
-
-  async function useMelody(melody: BeatMelody) {
-    const duringPlace = placing != null;
-    await auditionMelody(melody);
-    if (duringPlace) {
-      setPlacing((current) =>
-        current ? { ...current, melodyId: current.melodyId === melody.id ? null : melody.id } : current,
-      );
-      return;
-    }
-    if (!editId) return;
-    const loopDur = windowFor(sectionsRef.current.find((section) => section.id === editId)?.loopPath ?? null);
-    const hits = melodyHits(melody, loopDur);
-    const beat = loopDur / beatsInDuration(loopDur);
-    const end = Math.max(0, hits.length - 0.5) * beat;
-    setSections((prev) =>
-      prev.map((section) =>
-        section.id === editId
-          ? { ...section, hits: [...hits, ...section.hits.filter((hit) => hit.offset >= end)] }
-          : section,
-      ),
-    );
   }
 
   function placeSection(index: number) {
     if (!placing) return;
     const id = newId();
     const loopPath = placing.loopPath;
-    const melody = BEAT_MELODIES.find((item) => item.id === placing.melodyId);
-    const hits = melody ? melodyHits(melody, windowFor(loopPath)) : [];
     setSections((prev) => {
       const next = [...prev];
       const at = Math.max(0, Math.min(index, next.length));
-      next.splice(at, 0, { id, hits, loopPath });
+      next.splice(at, 0, { id, hits: [], loopPath });
       return next;
     });
     setEditId(id);
@@ -619,18 +551,12 @@ export function GuidedBeat({ items }: { items: SoundItem[] }) {
             />
             </div>
           ) : placing ? (
-            <div className="flex flex-col gap-4">
-              <div>
-                <h1 className="text-2xl font-light tracking-tight">Place the section</h1>
-                <p className="mt-2 text-sm leading-relaxed text-mute">
-                  Pick a beat melody for the beginning, then tap the beat grid. The first half of a section places the new one before it. The second half places it after.
-                  {placing.loopPath ? "" : " This one has no loop."}
-                </p>
-              </div>
-              <MelodyList
-                activeId={placing.melodyId}
-                onPick={(melody) => void useMelody(melody)}
-              />
+            <div>
+              <h1 className="text-2xl font-light tracking-tight">Place the section</h1>
+              <p className="mt-2 text-sm leading-relaxed text-mute">
+                Tap the beat grid. The first half of a section places the new one before it. The second half places it after.
+                {placing.loopPath ? "" : " This one has no loop."}
+              </p>
             </div>
           ) : (
             <SectionStep
@@ -656,7 +582,6 @@ export function GuidedBeat({ items }: { items: SoundItem[] }) {
               focusSample={focusSample}
               onRecordSample={() => void toggleSample()}
               onRename={renameSample}
-              onMelody={(melody) => void useMelody(melody)}
             />
           )}
         </div>
@@ -847,7 +772,6 @@ function SectionStep({
   focusSample,
   onRecordSample,
   onRename,
-  onMelody,
 }: {
   percussion: Pad[];
   extraPercussion: { title: string; pads: Pad[] }[];
@@ -871,7 +795,6 @@ function SectionStep({
   focusSample: string | null;
   onRecordSample: () => void;
   onRename: (id: string, name: string) => void;
-  onMelody: (melody: BeatMelody) => void;
 }) {
   const editIndex = Math.max(0, sections.findIndex((section) => section.id === editId));
   const name = sectionName(editIndex);
@@ -1010,10 +933,6 @@ function SectionStep({
           </div>
         ) : null}
       </div>
-      <div className="flex flex-col gap-4">
-        <p className="text-[10px] tracking-[0.18em] text-mute-dim uppercase">Sounds</p>
-        <MelodyList onPick={onMelody} />
-      </div>
       <PadGrid title="Percussion" pads={percussion} loadingPath={loadingPath} onTap={onTap} />
       <PadGrid title="Bass" pads={bass} loadingPath={loadingPath} onTap={onTap} />
       <div ref={moreRef} className="flex flex-col gap-4 pt-2">
@@ -1121,37 +1040,6 @@ function LoopStep({
           })}
         </div>
       )}
-    </div>
-  );
-}
-
-function MelodyList({
-  activeId = null,
-  onPick,
-}: {
-  activeId?: string | null;
-  onPick: (melody: BeatMelody) => void;
-}) {
-  return (
-    <div>
-      <p className="mb-2 text-[10px] tracking-[0.18em] text-mute-dim uppercase">Beat melodies</p>
-      <div className="flex flex-col border-t border-hairline">
-        {BEAT_MELODIES.map((melody) => {
-          const on = melody.id === activeId;
-          return (
-            <button
-              key={melody.id}
-              type="button"
-              onClick={() => onPick(melody)}
-              className={`border-b border-hairline py-3 text-left text-sm tracking-[0.04em] uppercase ${
-                on ? "text-paper" : "text-mute"
-              }`}
-            >
-              {melody.label}
-            </button>
-          );
-        })}
-      </div>
     </div>
   );
 }
