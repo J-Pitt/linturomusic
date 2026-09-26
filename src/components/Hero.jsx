@@ -79,15 +79,6 @@ const FEATURED_VIDEOS = [
     poster: config.VIDEO_FILES.REC092_CUBE_POSTER,
   },
   {
-    id: 'abstractCity',
-    /** Shareable hash: linturomusic.com/#abstract-city */
-    slug: 'abstract-city',
-    title: 'Abstract City',
-    subtitle: 'Visual mix · one hour',
-    src: config.VIDEO_FILES.REC085_ABSTRACT_CITY,
-    poster: config.VIDEO_FILES.REC085_ABSTRACT_CITY_POSTER,
-  },
-  {
     id: 'beginning',
     /** Shareable hash: linturomusic.com/#the-beginning */
     slug: 'the-beginning',
