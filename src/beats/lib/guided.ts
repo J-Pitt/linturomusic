@@ -40,6 +40,10 @@ export const BASS: PadPick[] = [
   { name: "Trap 808 · BigBop 808", label: "Big 808" },
   { name: "Inst Bass · F9 Magma 808-060 C3", label: "Magma" },
   { name: "Inst Bass · F9 Magma 808-052 E2", label: "Low 808" },
+  { name: "HipHop Bass · Cipher Bass 3", label: "Thump 3" },
+  { name: "HipHop Bass · Cipher Bass 4", label: "Thump 4" },
+  { name: "HipHop Bass · Raw Curfew Bass 1", label: "Raw" },
+  { name: "Inst Bass · F9 Magma 808-058 Bb2", label: "Bb 808" },
 ];
 
 export const SECTION_NAMES = ["Intro", "Groove", "Switch", "Outro", "Break", "Lift"] as const;

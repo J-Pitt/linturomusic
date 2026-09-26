@@ -146,9 +146,35 @@ export function stopLoop() {
   lastPlaying = -1;
 }
 
+function restartLoopAt(when: number) {
+  if (!loopPath) return;
+  const buf = peekBuffer(loopPath);
+  if (!buf) return;
+  stopSource();
+  const ctx = getAudioContext();
+  const src = ctx.createBufferSource();
+  src.buffer = buf;
+  src.loop = true;
+  src.connect(ctx.destination);
+  const at = Math.max(when, ctx.currentTime);
+  src.start(at);
+  loopSrc = src;
+  loopStart = at;
+  loopDur = buf.duration;
+  fired.clear();
+  lastPlaying = -1;
+  arm();
+}
+
+/** Bring the loop back from the top if count-in stopped it. */
+export function resumeLoop() {
+  if (loopSrc || !loopPath) return;
+  restartLoopAt(getAudioContext().currentTime + 0.03);
+}
+
 /** 0–1 position inside the current pass of the base loop. */
 export function loopProgress() {
-  if (!loopDur || !loopPath) return 0;
+  if (!loopDur || !loopPath || !loopSrc) return 0;
   const elapsed = getAudioContext().currentTime - loopStart;
   let progress = elapsed / loopDur;
   progress -= Math.floor(progress);
@@ -169,22 +195,21 @@ function clickAt(when: number, accent: boolean) {
 }
 
 /**
- * Four clicks into the next downbeat of the loop.
- * Calls onBeat with 1–4, then resolves when recording should start.
+ * Stop the loop, play a 1–2–3–4 count, then start it again from the top.
+ * Resolves when recording should begin, on that downbeat.
  */
 export function countIn(beatsInLoop: number, onBeat: (beat: number | null) => void) {
   const ticket = ++countTicket;
   clearCountTimers();
-  if (!loopDur || !loopPath) {
+  if (!loopDur || !loopPath || !peekBuffer(loopPath)) {
     onBeat(null);
     return Promise.resolve(false);
   }
+  stopSource();
   const ctx = getAudioContext();
   const beat = loopDur / Math.max(4, beatsInLoop);
   const now = ctx.currentTime;
-  const elapsed = Math.max(0, now - loopStart);
-  let startAt = loopStart + Math.ceil((elapsed + 0.03) / loopDur) * loopDur;
-  while (startAt - ctx.currentTime < beat * 4 - 0.01) startAt += loopDur;
+  const startAt = now + beat * 4;
 
   for (let i = 0; i < 4; i++) {
     const when = startAt - (4 - i) * beat;
@@ -203,6 +228,7 @@ export function countIn(beatsInLoop: number, onBeat: (beat: number | null) => vo
         resolve(false);
         return;
       }
+      restartLoopAt(startAt);
       onBeat(null);
       resolve(true);
     }, Math.max(0, (startAt - now) * 1000));

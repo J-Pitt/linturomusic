@@ -15,6 +15,7 @@ import {
   countIn,
   loopProgress,
   preview,
+  resumeLoop,
   setArrangement,
   startLoop,
   stopLoop,
@@ -184,6 +185,7 @@ export function GuidedBeat({ items }: { items: SoundItem[] }) {
 
   function stopRecord() {
     cancelCountIn();
+    resumeLoop();
     setCount(null);
     setMode("play");
   }
@@ -245,8 +247,16 @@ export function GuidedBeat({ items }: { items: SoundItem[] }) {
       <div className="min-h-0 flex-1 overflow-y-auto">
         {step === "sections" && selected ? (
           <div className="sticky top-0 z-10 border-b border-hairline bg-ink px-4 py-2">
-            <p className="mb-1 text-[10px] tracking-[0.16em] text-mute-dim uppercase">
-              {mode === "record" ? "Recording" : mode === "count" ? "Count-in" : "Play"} · loop
+            <p className="mb-1 flex items-center gap-2 text-[10px] tracking-[0.16em] uppercase">
+              {mode === "record" ? (
+                <span className="inline-flex items-center gap-1.5 text-red-500">
+                  <span className="size-2 animate-pulse rounded-full bg-red-500" />
+                  Rec
+                </span>
+              ) : (
+                <span className="text-mute-dim">{mode === "count" ? "Count-in" : "Play"}</span>
+              )}
+              <span className="text-mute-dim">· loop</span>
             </p>
             <LoopWave path={selected.path} recording={mode === "record"} />
           </div>
@@ -299,31 +309,28 @@ export function GuidedBeat({ items }: { items: SoundItem[] }) {
           </button>
         ) : (
           <div className="flex flex-col gap-2">
-            {mode === "record" ? (
+            <div className="flex gap-2">
               <button
                 type="button"
-                onClick={stopRecord}
-                className="w-full border border-paper bg-paper py-3.5 text-sm tracking-[0.18em] text-black uppercase"
-              >
-                Stop
-              </button>
-            ) : mode === "count" ? (
-              <button
-                type="button"
-                onClick={stopRecord}
-                className="w-full border border-hairline py-3.5 text-sm tracking-[0.18em] text-mute uppercase"
-              >
-                Cancel
-              </button>
-            ) : (
-              <button
-                type="button"
+                disabled={mode !== "play"}
                 onClick={() => void armRecord()}
-                className="w-full border border-paper py-3.5 text-sm tracking-[0.18em] text-paper uppercase"
+                className="flex-1 border border-paper py-3.5 text-sm tracking-[0.18em] text-paper uppercase disabled:opacity-30"
               >
                 Record
               </button>
-            )}
+              <button
+                type="button"
+                disabled={mode === "play"}
+                onClick={stopRecord}
+                className={`flex-1 border py-3.5 text-sm tracking-[0.18em] uppercase disabled:opacity-30 ${
+                  mode === "record"
+                    ? "border-red-500 text-red-500"
+                    : "border-hairline text-mute"
+                }`}
+              >
+                Stop
+              </button>
+            </div>
             <div className="flex gap-2">
               <button
                 type="button"
@@ -427,7 +434,7 @@ function SectionStep({
   if (mode === "record") {
     coach = `Recording onto ${name}. Taps stay on this section.`;
   } else if (mode === "count") {
-    coach = "Count-in. Recording starts on the next downbeat.";
+    coach = "Count-in from the top. Recording starts when the loop does.";
   } else if (editIndex === 0 && hits > 0) {
     coach = "That’s on the intro. Record again to add more, or add a section — it starts as a copy.";
   } else if (editIndex > 0 && hits === 0) {
