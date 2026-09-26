@@ -34,7 +34,9 @@ import {
 } from '../lib/liveChat'
 import LiveChat from './LiveChat'
 import LiveRecordingReview from './LiveRecordingReview'
+import { ListAnnounce } from './Newsletter'
 import { useAuth } from '../context/AuthContext'
+import { notifyLiveList } from '../lib/newsletter'
 
 const fieldClass =
   'w-full accent-paper h-1.5 bg-hairline rounded-full appearance-none cursor-pointer'
@@ -922,6 +924,7 @@ export default function Live() {
       if (!token) throw new Error('Sign in to go live.')
       try {
         await setLivePresence({ accessToken: token, live: true, peerId })
+        notifyLiveList({ accessToken: token }).catch(() => {})
         clearInterval(presenceTimerRef.current)
         presenceTimerRef.current = setInterval(() => {
           setLivePresence({ accessToken: token, live: true, peerId }).catch(() => {})
@@ -1679,6 +1682,10 @@ export default function Live() {
                   Refresh
                 </button>
               </div>
+
+              {isAuthenticated && accessToken ? (
+                <ListAnnounce accessToken={accessToken} />
+              ) : null}
 
               {status === 'live' && (
                 <div className="space-y-3 pt-2 border-t border-hairline">

@@ -29,6 +29,13 @@ function json(statusCode, body) {
 }
 
 const { loginAdmin, assertAuthorized } = require('./auth')
+const {
+  subscribe,
+  unsubscribe,
+  announce,
+  notifyLive,
+  stopPhone,
+} = require('./newsletter')
 
 function slugify(title) {
   return String(title || 'live-set')
@@ -66,14 +73,45 @@ async function writeManifest(manifest) {
   )
 }
 
+function header(event, name) {
+  const headers = event.headers || {}
+  const found = Object.keys(headers).find((key) => key.toLowerCase() === name)
+  return found ? headers[found] : ''
+}
+
 exports.handler = async (event) => {
   if (event.requestContext?.http?.method === 'OPTIONS' || event.httpMethod === 'OPTIONS') {
     return { statusCode: 204, headers: responseHeaders, body: '' }
   }
 
   try {
+    const contentType = String(header(event, 'content-type'))
+    if (contentType.includes('application/x-www-form-urlencoded')) {
+      const raw = event.isBase64Encoded
+        ? Buffer.from(event.body || '', 'base64').toString()
+        : event.body || ''
+      const params = new URLSearchParams(raw)
+      const msg = String(params.get('Body') || '').trim().toUpperCase()
+      if (['STOP', 'STOPALL', 'UNSUBSCRIBE', 'CANCEL', 'END', 'QUIT'].includes(msg)) {
+        await stopPhone(params.get('From'))
+      }
+      return {
+        statusCode: 200,
+        headers: { 'Content-Type': 'text/xml' },
+        body: '<Response></Response>',
+      }
+    }
+
     const body = typeof event.body === 'string' ? JSON.parse(event.body || '{}') : event.body || {}
     const action = body.action
+
+    if (action === 'subscribe') {
+      return json(200, await subscribe(body))
+    }
+
+    if (action === 'unsubscribe') {
+      return json(200, await unsubscribe(body))
+    }
 
     if (action === 'login') {
       const session = loginAdmin({
@@ -155,6 +193,16 @@ exports.handler = async (event) => {
         })
       )
       return json(200, { ok: true, presence })
+    }
+
+    if (action === 'announce') {
+      assertAuthorized(body)
+      return json(200, await announce(body))
+    }
+
+    if (action === 'notify-live') {
+      assertAuthorized(body)
+      return json(200, await notifyLive())
     }
 
     if (action === 'list') {

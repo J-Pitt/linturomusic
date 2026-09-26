@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-route
 import Hero from './components/Hero'
 import About from './components/About'
 import Contact from './components/Contact'
+import Newsletter from './components/Newsletter'
 import Clips from './components/Clips'
 import Mixes from './components/Mixes'
 import Zoe from './components/Zoe'
@@ -34,6 +35,7 @@ function AppShell() {
               <>
                 <Hero />
                 <About />
+                <Newsletter />
                 <Contact />
               </>
             }
