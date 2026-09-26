@@ -79,6 +79,8 @@ export const config = {
     REC084_SEPT_LOOP_POSTER: import.meta.env.VITE_VIDEO_REC084_SEPT_LOOP_POSTER || 'https://linturomusic.s3.us-west-2.amazonaws.com/rec084-sept-loop.jpg',
     REC092_CUBE: import.meta.env.VITE_VIDEO_REC092_CUBE || 'https://linturomusic.s3.us-west-2.amazonaws.com/rec092-cube.mp4',
     REC092_CUBE_POSTER: import.meta.env.VITE_VIDEO_REC092_CUBE_POSTER || 'https://linturomusic.s3.us-west-2.amazonaws.com/rec092-cube.jpg',
+    REC002_ABSTRACT: import.meta.env.VITE_VIDEO_REC002_ABSTRACT || 'https://linturomusic.s3.us-west-2.amazonaws.com/rec002-abstract.mp4',
+    REC002_ABSTRACT_POSTER: import.meta.env.VITE_VIDEO_REC002_ABSTRACT_POSTER || 'https://linturomusic.s3.us-west-2.amazonaws.com/rec002-abstract.jpg',
     THE_COLORS_WITHIN: import.meta.env.VITE_VIDEO_THE_COLORS_WITHIN || 'https://linturomusic.s3.us-west-2.amazonaws.com/the-colors-within.mp4',
     THE_COLORS_WITHIN_POSTER: import.meta.env.VITE_VIDEO_THE_COLORS_WITHIN_POSTER || 'https://linturomusic.s3.us-west-2.amazonaws.com/the-colors-within.jpg',
   },
