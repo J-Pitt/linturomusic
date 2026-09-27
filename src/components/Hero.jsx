@@ -737,8 +737,8 @@ const Hero = () => {
             <video
               ref={splashLogoRef}
               className="splash-logo-video w-full h-auto block select-none"
-              src={config.VIDEO_FILES.LINTURO_GLITCH}
-              poster={config.VIDEO_FILES.LINTURO_GLITCH_POSTER}
+              src={config.VIDEO_FILES.LINTURO_SPLASH}
+              poster={config.VIDEO_FILES.LINTURO_SPLASH_POSTER}
               muted
               loop
               playsInline

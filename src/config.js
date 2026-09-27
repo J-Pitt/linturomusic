@@ -75,6 +75,8 @@ export const config = {
     REC059_SMILE_GLITCH_POSTER: import.meta.env.VITE_VIDEO_REC059_SMILE_GLITCH_POSTER || 'https://linturomusic.s3.us-west-2.amazonaws.com/rec059-smile-glitch.jpg',
     LINTURO_GLITCH: import.meta.env.VITE_VIDEO_LINTURO_GLITCH || 'https://linturomusic.s3.us-west-2.amazonaws.com/linturo-glitch.mp4',
     LINTURO_GLITCH_POSTER: import.meta.env.VITE_VIDEO_LINTURO_GLITCH_POSTER || 'https://linturomusic.s3.us-west-2.amazonaws.com/linturo-glitch.jpg',
+    LINTURO_SPLASH: import.meta.env.VITE_VIDEO_LINTURO_SPLASH || 'https://linturomusic.s3.us-west-2.amazonaws.com/linturo-splash.mp4',
+    LINTURO_SPLASH_POSTER: import.meta.env.VITE_VIDEO_LINTURO_SPLASH_POSTER || 'https://linturomusic.s3.us-west-2.amazonaws.com/linturo-splash.jpg',
     REC084_SEPT_LOOP: import.meta.env.VITE_VIDEO_REC084_SEPT_LOOP || 'https://linturomusic.s3.us-west-2.amazonaws.com/rec084-sept-loop.mp4',
     REC084_SEPT_LOOP_POSTER: import.meta.env.VITE_VIDEO_REC084_SEPT_LOOP_POSTER || 'https://linturomusic.s3.us-west-2.amazonaws.com/rec084-sept-loop.jpg',
     REC092_CUBE: import.meta.env.VITE_VIDEO_REC092_CUBE || 'https://linturomusic.s3.us-west-2.amazonaws.com/rec092-cube.mp4',
