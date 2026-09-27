@@ -91,6 +91,8 @@ export const config = {
     WHISPERS_POSTER: import.meta.env.VITE_VIDEO_WHISPERS_POSTER || 'https://linturomusic.s3.us-west-2.amazonaws.com/whispers.jpg',
     DEEP_DARK_DUB: import.meta.env.VITE_VIDEO_DEEP_DARK_DUB || 'https://linturomusic.s3.us-west-2.amazonaws.com/deep-dark-dub.mp4',
     DEEP_DARK_DUB_POSTER: import.meta.env.VITE_VIDEO_DEEP_DARK_DUB_POSTER || 'https://linturomusic.s3.us-west-2.amazonaws.com/deep-dark-dub.jpg',
+    DEEP_DARK_WUBS: import.meta.env.VITE_VIDEO_DEEP_DARK_WUBS || 'https://linturomusic.s3.us-west-2.amazonaws.com/deep-dark-wubs.mp4',
+    DEEP_DARK_WUBS_POSTER: import.meta.env.VITE_VIDEO_DEEP_DARK_WUBS_POSTER || 'https://linturomusic.s3.us-west-2.amazonaws.com/deep-dark-wubs.jpg',
   },
   
   // App metadata
