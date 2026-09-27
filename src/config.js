@@ -85,6 +85,8 @@ export const config = {
     THE_COLORS_WITHIN_POSTER: import.meta.env.VITE_VIDEO_THE_COLORS_WITHIN_POSTER || 'https://linturomusic.s3.us-west-2.amazonaws.com/the-colors-within.jpg',
     SOUNDS_OF_TOMORROW: import.meta.env.VITE_VIDEO_SOUNDS_OF_TOMORROW || 'https://linturomusic.s3.us-west-2.amazonaws.com/sounds-of-tomorrow.mp4',
     SOUNDS_OF_TOMORROW_POSTER: import.meta.env.VITE_VIDEO_SOUNDS_OF_TOMORROW_POSTER || 'https://linturomusic.s3.us-west-2.amazonaws.com/sounds-of-tomorrow.jpg',
+    WHISPERS: import.meta.env.VITE_VIDEO_WHISPERS || 'https://linturomusic.s3.us-west-2.amazonaws.com/whispers.mp4',
+    WHISPERS_POSTER: import.meta.env.VITE_VIDEO_WHISPERS_POSTER || 'https://linturomusic.s3.us-west-2.amazonaws.com/whispers.jpg',
   },
   
   // App metadata

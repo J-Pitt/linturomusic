@@ -52,6 +52,15 @@ const RECENT_MIXES = [
 
 const FEATURED_VIDEOS = [
   {
+    id: 'whispers',
+    /** Shareable hash: linturomusic.com/#whispers */
+    slug: 'whispers',
+    title: 'Whispers',
+    subtitle: 'Visual mix · one hour',
+    src: config.VIDEO_FILES.WHISPERS,
+    poster: config.VIDEO_FILES.WHISPERS_POSTER,
+  },
+  {
     id: 'soundsOfTomorrow',
     /** Shareable hash: linturomusic.com/#sounds-of-tomorrow */
     slug: 'sounds-of-tomorrow',
