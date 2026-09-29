@@ -72,11 +72,9 @@ function AppShell() {
           <Route
             path="/beats"
             element={
-              <FriendsGate title="Linturo Beats">
-                <Suspense fallback={<div className="min-h-[100dvh] bg-ink" />}>
-                  <BeatsPage />
-                </Suspense>
-              </FriendsGate>
+              <Suspense fallback={<div className="min-h-[100dvh] bg-ink" />}>
+                <BeatsPage />
+              </Suspense>
             }
           />
           <Route path="/live" element={<Live />} />

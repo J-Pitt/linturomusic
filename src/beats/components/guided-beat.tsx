@@ -22,7 +22,11 @@ import {
   resumeLoop,
   pausePlayback,
   playFromSection,
+  arrangementWidthPx,
+  DEFAULT_WAVE_ZOOM_BEATS,
+  WAVE_ZOOM_BEATS,
   sectionSpans,
+  stepWaveZoom,
   setArrangement,
   startLoop,
   stopLoop,
@@ -1094,8 +1098,6 @@ function PadGrid({
   );
 }
 
-const BEAT_PX = 16;
-
 function ArrangementWave({
   sections,
   editId,
@@ -1119,6 +1121,9 @@ function ArrangementWave({
   const tapRef = useRef<{ x: number; y: number } | null>(null);
   const peaksRef = useRef(new Map<string, Float32Array>());
   const [trackW, setTrackW] = useState(0);
+  const [boxW, setBoxW] = useState(0);
+  const [visibleBeats, setVisibleBeats] = useState(DEFAULT_WAVE_ZOOM_BEATS);
+  const trackWRef = useRef(0);
   const shape = `${editId}|${repeats}|${sections
     .map(
       (section) =>
@@ -1127,20 +1132,30 @@ function ArrangementWave({
     .join("|")}`;
 
   useEffect(() => {
+    const wrap = wrapRef.current;
+    if (!wrap) return;
+    const measure = () => setBoxW(wrap.clientWidth);
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(wrap);
+    return () => ro.disconnect();
+  }, []);
+
+  useEffect(() => {
     const canvas = canvasRef.current;
     const wrap = wrapRef.current;
-    if (!canvas || !wrap) return;
+    if (!canvas || !wrap || boxW < 8) return;
     let cancelled = false;
 
     const paint = (peaksByPath: Map<string, Float32Array>) => {
       if (cancelled) return;
       const dpr = Math.min(2, window.devicePixelRatio || 1);
       const { spans, total } = sectionSpans(sections, repeats);
-      const pxPerSec = (140 / 60) * BEAT_PX;
-      const cssW = Math.max(wrap.clientWidth, Math.ceil(total * pxPerSec)) * 2;
+      const cssW = arrangementWidthPx(total, visibleBeats, boxW);
       const h = 64;
       canvas.style.width = `${cssW}px`;
       canvas.style.height = `${h}px`;
+      trackWRef.current = cssW;
       setTrackW((width) => (width === cssW ? width : cssW));
       canvas.width = Math.floor(cssW * dpr);
       canvas.height = Math.floor(h * dpr);
@@ -1231,7 +1246,7 @@ function ArrangementWave({
     return () => {
       cancelled = true;
     };
-  }, [shape, sections, editId, recording]);
+  }, [shape, sections, editId, recording, boxW, visibleBeats]);
 
   useEffect(() => {
     const wrap = wrapRef.current;
@@ -1249,7 +1264,7 @@ function ArrangementWave({
       const wrap = wrapRef.current;
       const head = headRef.current;
       if (wrap && head) {
-        const width = Math.max(wrap.scrollWidth, wrap.clientWidth);
+        const width = Math.max(trackWRef.current, 1);
         head.style.transform = `translateX(${arrangementProgress() * width}px)`;
       }
       raf = requestAnimationFrame(tick);
@@ -1275,10 +1290,37 @@ function ArrangementWave({
     });
   })();
 
+  const canZoomIn = visibleBeats > WAVE_ZOOM_BEATS[0]!;
+  const canZoomOut = visibleBeats < WAVE_ZOOM_BEATS[WAVE_ZOOM_BEATS.length - 1]!;
+
   return (
+    <div className="bg-[#080808]">
+      <div className="flex items-center justify-end gap-1 px-2 py-1">
+        <button
+          type="button"
+          disabled={!canZoomOut}
+          aria-label="Zoom out"
+          className="flex h-7 w-7 items-center justify-center border border-hairline bg-ink text-sm text-paper disabled:opacity-30"
+          onClick={() => setVisibleBeats((beats) => stepWaveZoom(beats, 1))}
+        >
+          −
+        </button>
+        <span className="min-w-12 text-center font-mono text-[10px] tracking-wider text-mute-dim uppercase">
+          {visibleBeats} beats
+        </span>
+        <button
+          type="button"
+          disabled={!canZoomIn}
+          aria-label="Zoom in"
+          className="flex h-7 w-7 items-center justify-center border border-hairline bg-ink text-sm text-paper disabled:opacity-30"
+          onClick={() => setVisibleBeats((beats) => stepWaveZoom(beats, -1))}
+        >
+          +
+        </button>
+      </div>
     <div
       ref={wrapRef}
-      className="relative cursor-pointer overflow-x-auto bg-[#080808]"
+      className="relative cursor-pointer overflow-x-auto"
       onPointerDown={(event) => {
         tapRef.current = { x: event.clientX, y: event.clientY };
       }}
@@ -1292,8 +1334,8 @@ function ArrangementWave({
         const rect = wrap.getBoundingClientRect();
         const x = event.clientX - rect.left + wrap.scrollLeft;
         const { spans, total } = sectionSpans(sections, repeats);
-        const width = Math.max(wrap.scrollWidth, 1);
-        const time = (x / width) * total;
+        if (x > trackW && trackW > 0) return;
+        const time = (x / Math.max(trackW, 1)) * total;
         const span =
           spans.find((item) => time >= item.start && time < item.start + item.hold) ??
           spans[spans.length - 1];
@@ -1329,6 +1371,7 @@ function ArrangementWave({
           className={`pointer-events-none absolute top-0 left-0 z-10 h-full w-px ${recording ? "bg-red-400" : "bg-paper"}`}
         />
       </div>
+    </div>
     </div>
   );
 }

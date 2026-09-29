@@ -16,6 +16,24 @@ const GRID_BPM = 140;
 /** Every section is eight beats. Duplicate on the sections screen plays that eight twice. */
 export const SECTION_BEATS = 8;
 
+/** Visible beats in the arrangement box. 8 fills the box; zooming out shows more. */
+export const WAVE_ZOOM_BEATS = [4, 6, 8, 12, 16, 24, 32, 48, 64] as const;
+export const DEFAULT_WAVE_ZOOM_BEATS = SECTION_BEATS;
+
+export function stepWaveZoom(current: number, direction: 1 | -1): number {
+  const beats = WAVE_ZOOM_BEATS;
+  let i = beats.indexOf(current as (typeof beats)[number]);
+  if (i < 0) i = beats.indexOf(DEFAULT_WAVE_ZOOM_BEATS);
+  return beats[Math.max(0, Math.min(beats.length - 1, i + direction))]!;
+}
+
+/** Width of the whole arrangement at this zoom. Default (8 beats) equals the box. */
+export function arrangementWidthPx(totalSec: number, visibleBeats: number, boxW: number): number {
+  if (!(boxW > 0) || !(visibleBeats > 0)) return 1;
+  const totalBeats = (totalSec * GRID_BPM) / 60;
+  return Math.max(1, totalBeats * (boxW / visibleBeats));
+}
+
 export function sectionSeconds() {
   return (SECTION_BEATS * 60) / GRID_BPM;
 }
