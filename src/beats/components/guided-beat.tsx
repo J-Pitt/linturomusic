@@ -559,7 +559,7 @@ export function GuidedBeat({ items }: { items: SoundItem[] }) {
                   ? "Tap a loop to hear it, then Add. It starts at the beginning."
                   : `${listed.length} ${
                       group === "bass" ? "bass-heavy" : group === "custom" ? "Linturo Custom" : group
-                    } loops. Each section is 8 beats. Duplicate it on the next screen.`
+                    } loops. Each section is 8 beats. Repeat the last 8 on the next screen.`
               }
               loops={visible}
               group={group}
@@ -874,12 +874,12 @@ function SectionStep({
         </button>
         <button
           type="button"
-          onClick={() => onRepeats(2)}
+          onClick={() => onRepeats(repeats + 1)}
           className={`border px-3 py-1.5 text-[11px] tracking-[0.12em] uppercase ${
-            repeats === 2 ? "border-paper text-paper" : "border-hairline text-mute-dim"
+            repeats > 1 ? "border-paper text-paper" : "border-hairline text-mute-dim"
           }`}
         >
-          Duplicate
+          Repeat last 8 beats{repeats > 1 ? ` ×${repeats}` : ""}
         </button>
       </div>
 

@@ -13,7 +13,7 @@ export type SectionSpan = {
 /** Same assumed tempo as the guided loop list, so the grid and the snap share one beat. */
 const GRID_BPM = 140;
 
-/** Every section is eight beats. Duplicate on the sections screen plays that eight twice. */
+/** Every section is eight beats. Repeat last 8 beats stacks extra plays of the final section. */
 export const SECTION_BEATS = 8;
 
 /** Visible beats in the arrangement box. 8 fills the box; zooming out shows more. */
@@ -137,9 +137,11 @@ export function sectionSpans(
   const first = source.find((section) => section.loopPath && peekBuffer(section.loopPath));
   const fallback = first?.loopPath ? peekBuffer(first.loopPath)?.duration || loopDur || 4 : loopDur || 4;
   let cursor = 0;
-  const spans: SectionSpan[] = source.map((section) => {
+  const times = Math.max(1, repeats);
+  const spans: SectionSpan[] = source.map((section, index) => {
     const one = windowLength(section.loopPath, fallback);
-    const hold = one * Math.max(1, repeats);
+    const copies = index === source.length - 1 ? times : 1;
+    const hold = one * copies;
     const span = {
       id: section.id,
       loopPath: section.loopPath,

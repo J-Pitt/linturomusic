@@ -123,9 +123,17 @@ export function keptProjects(item: SoundItem) {
   return (item.projects ?? []).filter((name) => !DROPPED_PROJECT.test(name));
 }
 
+/** Loops for this page are hip-hop and trap. Future bass, EDM, and similar stay out. */
+export function isRapOrHipHopLoop(item: SoundItem) {
+  const genre = (item.genre ?? "").toLowerCase().replace(/[^a-z0-9]/g, "");
+  if (genre) return genre === "hiphop" || genre === "trap";
+  return /^(hiphop|trap)\b/i.test(item.name.replace(/[^a-z0-9]+/g, " ").trim());
+}
+
 /** Project loops long enough to be a base (8 beats or more). */
 export function isBaseLoop(item: SoundItem) {
   if (item.kind !== "loop") return false;
+  if (!isRapOrHipHopLoop(item)) return false;
   if (!keptProjects(item).length) return false;
   const beats = loopBeats(item);
   return beats != null && beats >= MIN_BEATS;
