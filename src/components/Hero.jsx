@@ -52,6 +52,24 @@ const RECENT_MIXES = [
 
 const FEATURED_VIDEOS = [
   {
+    id: 'closingTime',
+    /** Shareable hash: linturomusic.com/#closing-time */
+    slug: 'closing-time',
+    title: 'Closing Time',
+    subtitle: 'Visual mix · 62 min',
+    src: config.VIDEO_FILES.CLOSING_TIME,
+    poster: config.VIDEO_FILES.CLOSING_TIME_POSTER,
+  },
+  {
+    id: 'sunrise',
+    /** Shareable hash: linturomusic.com/#sunrise */
+    slug: 'sunrise',
+    title: 'Sunrise',
+    subtitle: 'Visual mix · 64 min',
+    src: config.VIDEO_FILES.SUNRISE,
+    poster: config.VIDEO_FILES.SUNRISE_POSTER,
+  },
+  {
     id: 'whispers',
     /** Shareable hash: linturomusic.com/#whispers */
     slug: 'whispers',

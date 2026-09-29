@@ -86,6 +86,27 @@ function pickPreferredCamera(videoDevices, prevId) {
   return usb?.deviceId || videoDevices[0]?.deviceId || ''
 }
 
+/** DJ input: processing off. Applied with applyConstraints when a track is already live. */
+const MUSIC_AUDIO = {
+  echoCancellation: false,
+  noiseSuppression: false,
+  autoGainControl: false,
+}
+
+function isPermissionDenied(err) {
+  const name = err?.name || ''
+  return name === 'NotAllowedError' || name === 'PermissionDeniedError' || name === 'SecurityError'
+}
+
+function liveKindTrack(stream, kind) {
+  const tracks = kind === 'audio' ? stream?.getAudioTracks?.() : stream?.getVideoTracks?.()
+  return tracks?.find((track) => track.readyState === 'live') || null
+}
+
+function permissionDeniedError() {
+  return new Error('Microphone permission was blocked. Allow the mic, then try again.')
+}
+
 function EffectSlider({ label, value, onChange, min = 0, max = 1, step = 0.01 }) {
   return (
     <label className="block space-y-1.5">
@@ -170,6 +191,12 @@ export default function Live() {
   const inputGainRef = useRef(1.4)
   const gainNodeRef = useRef(null)
   const chatNameRef = useRef(chatName)
+  /** Granted mic stream. Reused so Allow does not schedule another getUserMedia. */
+  const audioStreamRef = useRef(null)
+  const gumTailRef = useRef(Promise.resolve())
+  const gumDepthRef = useRef(0)
+  const capturingRef = useRef(false)
+  const startingRef = useRef(false)
 
   useEffect(() => {
     effectsRef.current = effects
@@ -294,32 +321,126 @@ export default function Live() {
 
   const refreshDevices = useCallback(async ({ preferNewUsb = false } = {}) => {
     try {
-      if (!navigator.mediaDevices?.enumerateDevices) return
+      if (!navigator.mediaDevices?.enumerateDevices) return { audioId: '', videoId: '' }
       const list = await navigator.mediaDevices.enumerateDevices()
       const video = list.filter((d) => d.kind === 'videoinput')
       const audio = list.filter((d) => d.kind === 'audioinput')
       setDevices({ video, audio })
 
+      let nextAudio = ''
+      let nextVideo = ''
       setAudioDeviceId((prev) => {
-        if (prev && audio.some((d) => d.deviceId === prev)) return prev
-        const xdj =
-          audio.find((d) => /xdj|pioneer|az|dj|usb|line/i.test(d.label)) ||
-          audio.find((d) => !/macbook|built-in|default|communications/i.test(d.label))
-        return xdj?.deviceId || audio[0]?.deviceId || ''
+        if (prev && audio.some((d) => d.deviceId === prev)) nextAudio = prev
+        else {
+          const xdj =
+            audio.find((d) => /xdj|pioneer|az|dj|usb|line/i.test(d.label)) ||
+            audio.find((d) => !/macbook|built-in|default|communications/i.test(d.label))
+          nextAudio = xdj?.deviceId || audio[0]?.deviceId || ''
+        }
+        return nextAudio
       })
       setVideoDeviceId((prev) => {
-        if (!preferNewUsb && prev && video.some((d) => d.deviceId === prev)) return prev
+        if (prev && video.some((d) => d.deviceId === prev)) {
+          if (!preferNewUsb || video.some((d) => d.deviceId === prev && isExternalCamera(d))) {
+            nextVideo = prev
+            return prev
+          }
+        }
         if (preferNewUsb) {
           const external = video.filter((d) => isExternalCamera(d))
-          const newlyPreferred = external.find((d) => d.deviceId !== prev)
-          if (newlyPreferred) return newlyPreferred.deviceId
+          const newlyPreferred = external[0]
+          if (newlyPreferred) {
+            nextVideo = newlyPreferred.deviceId
+            return nextVideo
+          }
         }
-        return pickPreferredCamera(video, preferNewUsb ? '' : prev)
+        nextVideo = pickPreferredCamera(video, preferNewUsb ? '' : prev)
+        return nextVideo
       })
+      return { audioId: nextAudio, videoId: nextVideo }
     } catch (err) {
       console.error(err)
+      return { audioId: '', videoId: '' }
     }
   }, [])
+
+  /**
+   * Serialize getUserMedia. A second caller waits, then reuses a live track
+   * instead of opening another permission prompt.
+   */
+  const runGum = useCallback((request) => {
+    gumDepthRef.current += 1
+    capturingRef.current = true
+    const run = gumTailRef.current.then(request, request)
+    gumTailRef.current = run.then(
+      () => {},
+      () => {}
+    )
+    return run.finally(() => {
+      gumDepthRef.current = Math.max(0, gumDepthRef.current - 1)
+      if (gumDepthRef.current === 0) capturingRef.current = false
+    })
+  }, [])
+
+  const labelsUnlocked = useCallback(async () => {
+    try {
+      const list = await navigator.mediaDevices.enumerateDevices()
+      return list.some(
+        (d) => d.label && (d.kind === 'audioinput' || d.kind === 'videoinput')
+      )
+    } catch {
+      return false
+    }
+  }, [])
+
+  const tuneGrantedAudio = async (track, deviceId) => {
+    const currentId = track.getSettings?.().deviceId || ''
+    try {
+      if (deviceId && currentId && currentId !== deviceId) {
+        await track.applyConstraints({ ...MUSIC_AUDIO, deviceId: { exact: deviceId } })
+      } else {
+        await track.applyConstraints(MUSIC_AUDIO)
+      }
+    } catch {
+      try {
+        await track.applyConstraints(MUSIC_AUDIO)
+      } catch {
+        /* Keep the granted track. Another getUserMedia would re-prompt. */
+      }
+    }
+    try {
+      await track.applyConstraints({ channelCount: 2 })
+    } catch {
+      /* Mono inputs stay mono. Do not open a new capture for this. */
+    }
+    track.enabled = true
+    try {
+      track.contentHint = 'music'
+    } catch {
+      /* ignore */
+    }
+    return track
+  }
+
+  const storeGrantedStream = (stream) => {
+    if (!stream) return
+    const audioTrack = liveKindTrack(stream, 'audio')
+    const videoTrack = liveKindTrack(stream, 'video')
+    if (audioTrack) {
+      audioStreamRef.current = new MediaStream([audioTrack])
+      audioTrack.enabled = true
+      try {
+        audioTrack.contentHint = 'music'
+      } catch {
+        /* ignore */
+      }
+    }
+    if (videoTrack && !liveKindTrack(localStreamRef.current, 'video')) {
+      const local = localStreamRef.current || new MediaStream()
+      if (!local.getVideoTracks().some((t) => t.id === videoTrack.id)) local.addTrack(videoTrack)
+      localStreamRef.current = local
+    }
+  }
 
   useEffect(() => {
     if (location.state?.openHost && isAuthenticated) {
@@ -332,14 +453,36 @@ export default function Live() {
   }, [location.state?.openHost, isAuthenticated, navigate, refreshDevices])
 
   const requestDeviceAccess = useCallback(async () => {
-    // Permission prompt so USB camera labels appear in the list
-    const warm = await navigator.mediaDevices.getUserMedia({
-      video: true,
-      audio: true,
-    })
-    warm.getTracks().forEach((t) => t.stop())
-    await refreshDevices({ preferNewUsb: true })
-  }, [refreshDevices])
+    // Listing devices must not stop a granted stream and request it again.
+    if (
+      liveKindTrack(audioStreamRef.current, 'audio') ||
+      liveKindTrack(localStreamRef.current, 'video') ||
+      (await labelsUnlocked())
+    ) {
+      return refreshDevices({ preferNewUsb: true })
+    }
+
+    try {
+      const warm = await runGum(async () => {
+        if (
+          liveKindTrack(audioStreamRef.current, 'audio') ||
+          liveKindTrack(localStreamRef.current, 'video')
+        ) {
+          return null
+        }
+        return navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: true,
+        })
+      })
+      // Allow resolved: keep the tracks. Do not call getUserMedia again here.
+      storeGrantedStream(warm)
+    } catch (err) {
+      if (isPermissionDenied(err)) throw permissionDeniedError()
+      throw err
+    }
+    return refreshDevices({ preferNewUsb: true })
+  }, [labelsUnlocked, refreshDevices, runGum])
 
   useEffect(() => {
     if (mode !== 'host') return undefined
@@ -356,39 +499,76 @@ export default function Live() {
   const applyCameraStream = useCallback(async (deviceId) => {
     if (!deviceId) throw new Error('No camera selected')
 
-    const videoConstraints = {
-      deviceId: { exact: deviceId },
-      width: { ideal: 1920 },
-      height: { ideal: 1080 },
-      frameRate: { ideal: 30 },
+    const already = liveKindTrack(localStreamRef.current, 'video')
+    const alreadyId = already?.getSettings?.().deviceId || ''
+    if (already && (!alreadyId || alreadyId === deviceId)) {
+      if (previewVideoRef.current) {
+        previewVideoRef.current.srcObject = localStreamRef.current
+        await previewVideoRef.current.play().catch(() => {})
+      }
+      return already
     }
 
     let videoOnly
     try {
-      videoOnly = await navigator.mediaDevices.getUserMedia({
-        video: videoConstraints,
-        audio: false,
+      videoOnly = await runGum(async () => {
+        const again = liveKindTrack(localStreamRef.current, 'video')
+        const againId = again?.getSettings?.().deviceId || ''
+        if (again && (!againId || againId === deviceId)) return null
+        // Video only — never re-request the microphone from the camera path.
+        return navigator.mediaDevices.getUserMedia({
+          audio: false,
+          video: {
+            deviceId: { ideal: deviceId },
+            width: { ideal: 1920 },
+            height: { ideal: 1080 },
+            frameRate: { ideal: 30 },
+          },
+        })
       })
-    } catch {
-      // Fall back if exact id fails (some USB cams renegotiate slowly)
-      videoOnly = await navigator.mediaDevices.getUserMedia({
-        video: {
-          deviceId: { ideal: deviceId },
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-        },
-        audio: false,
-      })
+    } catch (err) {
+      if (isPermissionDenied(err)) throw permissionDeniedError()
+      throw err
+    }
+
+    if (!videoOnly) {
+      const again = liveKindTrack(localStreamRef.current, 'video')
+      if (!again) throw new Error('Could not open camera')
+      if (previewVideoRef.current) {
+        previewVideoRef.current.srcObject = localStreamRef.current
+        await previewVideoRef.current.play().catch(() => {})
+      }
+      return again
+    }
+
+    const granted = videoOnly.getVideoTracks()[0]
+    if (
+      granted &&
+      deviceId &&
+      granted.getSettings?.().deviceId &&
+      granted.getSettings().deviceId !== deviceId
+    ) {
+      try {
+        await granted.applyConstraints({
+          deviceId: { exact: deviceId },
+          width: { ideal: 1920 },
+          height: { ideal: 1080 },
+        })
+      } catch {
+        /* Keep this camera. A second getUserMedia would prompt again. */
+      }
     }
 
     const newTrack = videoOnly.getVideoTracks()[0]
+    if (!newTrack) throw new Error('Could not open camera')
     const local = localStreamRef.current
     if (local) {
       local.getVideoTracks().forEach((t) => {
+        if (t.id === newTrack.id) return
         local.removeTrack(t)
         t.stop()
       })
-      local.addTrack(newTrack)
+      if (!local.getVideoTracks().some((t) => t.id === newTrack.id)) local.addTrack(newTrack)
     } else {
       localStreamRef.current = new MediaStream([newTrack])
     }
@@ -399,14 +579,57 @@ export default function Live() {
     }
 
     return newTrack
-  }, [])
+  }, [runGum])
+
+  /** One mic capture per intentional start. A live track is reused, never re-requested. */
+  const acquireBroadcastAudio = useCallback(async (deviceId) => {
+    const existing = liveKindTrack(audioStreamRef.current, 'audio')
+    if (existing) {
+      await tuneGrantedAudio(existing, deviceId)
+      return existing
+    }
+
+    let stream
+    try {
+      stream = await runGum(async () => {
+        const again = liveKindTrack(audioStreamRef.current, 'audio')
+        if (again) return audioStreamRef.current
+        return navigator.mediaDevices.getUserMedia({
+          video: false,
+          audio: {
+            ...MUSIC_AUDIO,
+            ...(deviceId ? { deviceId: { ideal: deviceId } } : {}),
+          },
+        })
+      })
+    } catch (err) {
+      const granted = liveKindTrack(audioStreamRef.current, 'audio')
+      if (granted) return granted
+      if (isPermissionDenied(err)) throw permissionDeniedError()
+      throw err
+    }
+
+    const track = liveKindTrack(stream, 'audio')
+    if (!track) throw new Error('No audio input — pick the XDJ-AZ and try again.')
+    if (audioStreamRef.current !== stream) audioStreamRef.current = stream
+    track.enabled = true
+    try {
+      track.contentHint = 'music'
+    } catch {
+      /* ignore */
+    }
+    return track
+  }, [runGum])
 
   const openCameraPreview = useCallback(async () => {
+    if (startingRef.current) return
+    startingRef.current = true
     try {
       setStatus('connecting')
       setStatusDetail('Opening camera…')
-      await requestDeviceAccess()
+      const listed = await requestDeviceAccess()
       const id =
+        listed?.videoId ||
         videoDeviceId ||
         pickPreferredCamera(
           (await navigator.mediaDevices.enumerateDevices()).filter((d) => d.kind === 'videoinput'),
@@ -414,7 +637,16 @@ export default function Live() {
         )
       if (!id) throw new Error('No camera found — plug in the USB cam and hit Refresh.')
       setVideoDeviceId(id)
-      await applyCameraStream(id)
+      const liveVideo = liveKindTrack(localStreamRef.current, 'video')
+      const liveVideoId = liveVideo?.getSettings?.().deviceId || ''
+      if (liveVideo && (!liveVideoId || liveVideoId === id)) {
+        if (previewVideoRef.current) {
+          previewVideoRef.current.srcObject = localStreamRef.current
+          await previewVideoRef.current.play().catch(() => {})
+        }
+      } else {
+        await applyCameraStream(id)
+      }
       startEffectLoop()
       setStatus('preview')
       setStatusDetail('USB / laptop camera preview. Pick the right cam, then Go live.')
@@ -422,12 +654,17 @@ export default function Live() {
       console.error(err)
       setStatus('error')
       setStatusDetail(err?.message || 'Could not open camera')
+    } finally {
+      startingRef.current = false
     }
   }, [applyCameraStream, requestDeviceAccess, videoDeviceId])
 
   const onCameraChange = async (deviceId) => {
     setVideoDeviceId(deviceId)
+    if (startingRef.current || capturingRef.current) return
     if (status !== 'live' && status !== 'preview' && status !== 'connecting') return
+    const liveVideo = liveKindTrack(localStreamRef.current, 'video')
+    if (liveVideo && liveVideo.getSettings?.().deviceId === deviceId) return
     try {
       setStatusDetail('Switching camera…')
       await applyCameraStream(deviceId)
@@ -476,8 +713,10 @@ export default function Live() {
     peerRef.current = null
     stopTracks(localStreamRef.current)
     stopTracks(outboundStreamRef.current)
+    stopTracks(audioStreamRef.current)
     localStreamRef.current = null
     outboundStreamRef.current = null
+    audioStreamRef.current = null
     if (previewVideoRef.current) previewVideoRef.current.srcObject = null
     stopBroadcastAudio()
   }, [stopBroadcastAudio])
@@ -782,6 +1021,8 @@ export default function Live() {
   }
 
   const goLive = async () => {
+    if (startingRef.current) return
+    startingRef.current = true
     callsRef.current.forEach((call) => {
       try {
         call.close()
@@ -797,16 +1038,18 @@ export default function Live() {
     clearInterval(viewerPruneTimerRef.current)
     peerRef.current?.destroy()
     peerRef.current = null
-    stopTracks(outboundStreamRef.current)
+    // Drop the canvas track only. Stopping the mic here makes the next getUserMedia prompt again.
+    outboundStreamRef.current?.getVideoTracks?.().forEach((track) => track.stop())
     outboundStreamRef.current = null
 
     setStatus('connecting')
     setStatusDetail('Requesting camera + audio…')
 
     try {
-      await requestDeviceAccess()
+      const listed = await requestDeviceAccess()
 
       const camId =
+        listed?.videoId ||
         videoDeviceId ||
         pickPreferredCamera(
           (await navigator.mediaDevices.enumerateDevices()).filter((d) => d.kind === 'videoinput'),
@@ -815,38 +1058,26 @@ export default function Live() {
       if (!camId) throw new Error('No camera found — connect the USB camera and Refresh.')
       setVideoDeviceId(camId)
 
-      // Prefer the selected USB/external camera exactly
-      await applyCameraStream(camId)
-
-      const audioConstraints = {
-        echoCancellation: false,
-        noiseSuppression: false,
-        autoGainControl: false,
-        channelCount: 2,
-      }
-      if (audioDeviceId) {
-        audioConstraints.deviceId = { exact: audioDeviceId }
-      }
-
-      let audioStream
-      try {
-        audioStream = await navigator.mediaDevices.getUserMedia({
-          video: false,
-          audio: audioConstraints,
-        })
-      } catch {
-        audioStream = await navigator.mediaDevices.getUserMedia({
-          video: false,
-          audio: {
-            ...audioConstraints,
-            deviceId: audioDeviceId ? { ideal: audioDeviceId } : undefined,
-          },
-        })
+      const liveVideo = liveKindTrack(localStreamRef.current, 'video')
+      const liveVideoId = liveVideo?.getSettings?.().deviceId || ''
+      if (!liveVideo) {
+        await applyCameraStream(camId)
+      } else if (liveVideoId && liveVideoId !== camId) {
+        try {
+          await liveVideo.applyConstraints({
+            deviceId: { exact: camId },
+            width: { ideal: 1920 },
+            height: { ideal: 1080 },
+          })
+        } catch {
+          /* Keep the camera from the grant. Switching is an explicit dropdown change. */
+        }
       }
 
-      const audioTrack = audioStream.getAudioTracks()[0]
-      if (!audioTrack) throw new Error('No audio input — pick the XDJ-AZ and try again.')
-      audioTrack.enabled = true
+      const audioId = listed?.audioId || audioDeviceId
+      if (audioId) setAudioDeviceId(audioId)
+      // Reuses the track from requestDeviceAccess. Does not call getUserMedia when that track is live.
+      const audioTrack = await acquireBroadcastAudio(audioId)
 
       const local = localStreamRef.current
       if (local) {
@@ -1028,6 +1259,8 @@ export default function Live() {
       teardownBroadcast()
       setStatus('error')
       setStatusDetail(err?.message || 'Could not start broadcast')
+    } finally {
+      startingRef.current = false
     }
   }
 
