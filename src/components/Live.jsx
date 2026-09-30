@@ -26,12 +26,15 @@ import {
 } from '../lib/liveRecord'
 import {
   defaultGuestName,
+  isLiveBan,
   isValidDisplayName,
+  liveClientId,
   makeChatMessage,
   normalizeDisplayName,
   parseLivePayload,
   saveGuestName,
 } from '../lib/liveChat'
+import LiveAudienceGrid from './LiveAudienceGrid'
 import LiveChat from './LiveChat'
 import LiveRecordingReview from './LiveRecordingReview'
 import { ListAnnounce } from './Newsletter'
@@ -44,7 +47,7 @@ const fieldClass =
 const BUILTIN_CAM_RE = /facetime|built-?in|macbook|integrated|default|iphone|continuity/i
 const USB_CAM_RE = /usb|logitech|elgato|capture|cam link|obsbot|insta360|brio|c920|c922|c930|external|hd webcam|webcam/i
 
-function LiveViewerList({ viewers }) {
+function LiveViewerList({ viewers, onKick }) {
   return (
     <div className="space-y-1.5">
       <div className="flex items-center justify-between gap-2">
@@ -56,8 +59,20 @@ function LiveViewerList({ viewers }) {
       ) : (
         <ul className="border border-hairline bg-black/60 px-2.5 py-2 space-y-1 max-h-28 overflow-y-auto">
           {viewers.map((v) => (
-            <li key={v.peerId} className="text-xs text-paper/90 truncate">
-              {v.name}
+            <li key={v.peerId} className="flex items-center justify-between gap-2 text-xs text-paper/90">
+              <span className="truncate">
+                {v.name}
+                {v.camera ? <span className="text-mute"> · cam</span> : null}
+              </span>
+              {onKick ? (
+                <button
+                  type="button"
+                  onClick={() => onKick(v.peerId)}
+                  className="shrink-0 uppercase tracking-[0.14em] text-[10px] text-mute hover:text-paper"
+                >
+                  Kick
+                </button>
+              ) : null}
             </li>
           ))}
         </ul>
@@ -158,9 +173,18 @@ export default function Live() {
   const [chatConnected, setChatConnected] = useState(false)
   const [viewerWantsJoin, setViewerWantsJoin] = useState(false)
   const [roomLocked, setRoomLocked] = useState(false)
+  const [removedViewers, setRemovedViewers] = useState([])
   const [audioLevel, setAudioLevel] = useState(0)
   const [audioBroadcasting, setAudioBroadcasting] = useState(false)
   const [inputGain, setInputGain] = useState(1.4)
+  const [audienceStreams, setAudienceStreams] = useState({})
+  const [myPeerId, setMyPeerId] = useState('')
+  const [localStream, setLocalStream] = useState(null)
+  const [camOn, setCamOn] = useState(false)
+  const [micOn, setMicOn] = useState(false)
+  const [mediaBusy, setMediaBusy] = useState(false)
+  const [mediaError, setMediaError] = useState('')
+  const [audioKick, setAudioKick] = useState(0)
   const accessTokenRef = useRef('')
 
   const viewerVideoRef = useRef(null)
@@ -189,11 +213,19 @@ export default function Live() {
   const hostPeerIdRef = useRef('')
   const roomLockedRef = useRef(false)
   const viewerLockedRef = useRef(false)
+  const viewerKickedRef = useRef(false)
+  const bannedNamesRef = useRef([])
+  const bannedClientIdsRef = useRef([])
   const audioMeterRef = useRef(null)
   const audioMeterRafRef = useRef(0)
   const inputGainRef = useRef(1.4)
   const gainNodeRef = useRef(null)
   const chatNameRef = useRef(chatName)
+  const localMediaRef = useRef(null)
+  const camOnRef = useRef(false)
+  const micOnRef = useRef(false)
+  const viewerHostIdRef = useRef('')
+  const mediaTokenRef = useRef(0)
   /** Granted mic stream. Reused so Allow does not schedule another getUserMedia. */
   const audioStreamRef = useRef(null)
   const gumTailRef = useRef(Promise.resolve())
@@ -692,6 +724,9 @@ export default function Live() {
     hostPeerIdRef.current = ''
     roomLockedRef.current = false
     setRoomLocked(false)
+    bannedNamesRef.current = []
+    bannedClientIdsRef.current = []
+    setRemovedViewers([])
     callsRef.current.forEach((call) => {
       try {
         call.close()
@@ -711,6 +746,7 @@ export default function Live() {
     viewersMapRef.current.clear()
     setViewerCount(0)
     setViewerList([])
+    setAudienceStreams({})
     setChatMessages([])
     chatHistoryRef.current = []
     setChatConnected(false)
@@ -748,6 +784,19 @@ export default function Live() {
     setChatConnected(false)
     setViewerCount(0)
     setViewerList([])
+    setAudienceStreams({})
+    setMyPeerId('')
+    mediaTokenRef.current += 1
+    camOnRef.current = false
+    micOnRef.current = false
+    setCamOn(false)
+    setMicOn(false)
+    setMediaBusy(false)
+    setMediaError('')
+    viewerHostIdRef.current = ''
+    stopTracks(localMediaRef.current)
+    localMediaRef.current = null
+    setLocalStream(null)
     peerRef.current?.destroy()
     peerRef.current = null
     handshakeRef.current?.dispose?.()
@@ -805,7 +854,7 @@ export default function Live() {
 
   const publishViewerRoster = useCallback(() => {
     const viewers = Array.from(viewersMapRef.current.values())
-      .map(({ peerId, name }) => ({ peerId, name }))
+      .map(({ peerId, name, camera }) => ({ peerId, name, camera: !!camera }))
       .sort((a, b) => a.name.localeCompare(b.name))
     setViewerList(viewers)
     setViewerCount(viewers.length)
@@ -826,24 +875,81 @@ export default function Live() {
       }
       callsRef.current.delete(peerId)
       dataConnsRef.current.delete(peerId)
+      setAudienceStreams((prev) => {
+        if (!prev[peerId]) return prev
+        const next = { ...prev }
+        delete next[peerId]
+        return next
+      })
       if (hadViewer || hadCall || hadConn) publishViewerRoster()
     },
     [publishViewerRoster]
   )
 
   const upsertViewer = useCallback(
-    (peerId, name) => {
+    (peerId, name, camera, clientId) => {
       const clean = normalizeDisplayName(name)
       if (!peerId || !isValidDisplayName(clean)) return
       const prev = viewersMapRef.current.get(peerId)
+      const nextCamera = typeof camera === 'boolean' ? camera : !!prev?.camera
+      const nextClientId = clientId || prev?.clientId || ''
       viewersMapRef.current.set(peerId, {
         peerId,
         name: clean,
+        camera: nextCamera,
+        clientId: nextClientId,
         lastSeen: Date.now(),
       })
-      if (!prev || prev.name !== clean) publishViewerRoster()
+      if (!prev || prev.name !== clean || !!prev.camera !== nextCamera) publishViewerRoster()
     },
     [publishViewerRoster]
+  )
+
+  const dropViewerConnection = useCallback(
+    (peerId) => {
+      const conn = dataConnsRef.current.get(peerId)
+      try {
+        if (conn?.open) conn.send(JSON.stringify({ type: 'kicked' }))
+      } catch {
+        /* ignore */
+      }
+      setTimeout(() => {
+        try {
+          callsRef.current.get(peerId)?.close()
+        } catch {
+          /* ignore */
+        }
+        try {
+          conn?.close()
+        } catch {
+          /* ignore */
+        }
+        removeViewer(peerId)
+      }, 200)
+    },
+    [removeViewer]
+  )
+
+  const kickViewer = useCallback(
+    (peerId) => {
+      const entry = viewersMapRef.current.get(peerId)
+      if (!entry) return
+      const nameKey = entry.name.toLowerCase()
+      if (!bannedNamesRef.current.includes(nameKey)) {
+        bannedNamesRef.current = [...bannedNamesRef.current, nameKey]
+      }
+      if (entry.clientId && !bannedClientIdsRef.current.includes(entry.clientId)) {
+        bannedClientIdsRef.current = [...bannedClientIdsRef.current, entry.clientId]
+      }
+      setRemovedViewers((prev) =>
+        prev.some((viewer) => viewer.name.toLowerCase() === nameKey)
+          ? prev
+          : [...prev, { name: entry.name }]
+      )
+      dropViewerConnection(peerId)
+      setStatusDetail(`${entry.name} was removed for this set.`)
+    },
+    [dropViewerConnection]
   )
 
   const pruneViewers = useCallback(() => {
@@ -1030,6 +1136,9 @@ export default function Live() {
     startingRef.current = true
     roomLockedRef.current = false
     setRoomLocked(false)
+    bannedNamesRef.current = []
+    bannedClientIdsRef.current = []
+    setRemovedViewers([])
     callsRef.current.forEach((call) => {
       try {
         call.close()
@@ -1042,6 +1151,7 @@ export default function Live() {
     viewersMapRef.current.clear()
     setViewerList([])
     setViewerCount(0)
+    setAudienceStreams({})
     clearInterval(viewerPruneTimerRef.current)
     peerRef.current?.destroy()
     peerRef.current = null
@@ -1198,8 +1308,21 @@ export default function Live() {
         })
         call.answer(stream)
         callsRef.current.set(call.peer, call)
+        call.on('stream', (remote) => {
+          if (remote) {
+            setAudienceStreams((prev) =>
+              prev[call.peer] === remote ? prev : { ...prev, [call.peer]: remote }
+            )
+          }
+        })
         call.on('close', () => {
           callsRef.current.delete(call.peer)
+          setAudienceStreams((prev) => {
+            if (!prev[call.peer]) return prev
+            const next = { ...prev }
+            delete next[call.peer]
+            return next
+          })
           // Drop from roster if their data channel is also gone
           const conn = dataConnsRef.current.get(call.peer)
           if (!conn?.open) removeViewer(call.peer)
@@ -1234,7 +1357,7 @@ export default function Live() {
               })
             )
             const viewers = Array.from(viewersMapRef.current.values()).map(
-              ({ peerId, name }) => ({ peerId, name })
+              ({ peerId, name, camera }) => ({ peerId, name, camera: !!camera })
             )
             conn.send(JSON.stringify({ type: 'viewer-list', viewers }))
             conn.send(JSON.stringify({ type: 'viewers', count: viewers.length }))
@@ -1246,7 +1369,27 @@ export default function Live() {
           const msg = parseLivePayload(raw)
           if (!msg) return
           if (msg.type === 'hello') {
-            upsertViewer(conn.peer, msg.name)
+            const banned = isLiveBan(
+              msg.name,
+              msg.clientId,
+              bannedNamesRef.current,
+              bannedClientIdsRef.current
+            )
+            const clientBanned = msg.clientId && bannedClientIdsRef.current.includes(msg.clientId)
+            const alreadyHere = viewersMapRef.current.has(conn.peer)
+            if (clientBanned || (banned && !alreadyHere)) {
+              dropViewerConnection(conn.peer)
+              return
+            }
+            upsertViewer(conn.peer, msg.name, msg.camera, msg.clientId)
+            return
+          }
+          if (msg.type === 'camera') {
+            const entry = viewersMapRef.current.get(conn.peer)
+            if (entry && !!entry.camera !== !!msg.on) {
+              entry.camera = !!msg.on
+              publishViewerRoster()
+            }
             return
           }
           if (msg.type === 'ping') {
@@ -1303,6 +1446,82 @@ export default function Live() {
     setStatusDetail('Broadcast ended.')
   }
 
+  const upsertAudienceStream = useCallback((peerId, stream) => {
+    if (!peerId || !stream) return
+    setAudienceStreams((prev) => (prev[peerId] === stream ? prev : { ...prev, [peerId]: stream }))
+  }, [])
+
+  const removeAudienceStream = useCallback((peerId) => {
+    if (!peerId) return
+    setAudienceStreams((prev) => {
+      if (!prev[peerId]) return prev
+      const next = { ...prev }
+      delete next[peerId]
+      return next
+    })
+  }, [])
+
+  const currentOutboundStream = useCallback(() => {
+    const handshake = handshakeRef.current?.stream || null
+    const local = localMediaRef.current
+    if (!local) return handshake
+    const video =
+      (camOnRef.current ? local.getVideoTracks()[0] : null) || handshake?.getVideoTracks?.()[0]
+    const audio = local.getAudioTracks()[0] || handshake?.getAudioTracks?.()[0]
+    const tracks = [video, audio].filter(Boolean)
+    return tracks.length ? new MediaStream(tracks) : handshake
+  }, [])
+
+  const pushOutboundTracks = useCallback(async () => {
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      const stream = currentOutboundStream()
+      if (!stream) return
+      const tasks = []
+      let pending = 0
+      callsRef.current.forEach((call) => {
+        const pc = call?.peerConnection
+        if (!pc?.getSenders) {
+          pending += 1
+          return
+        }
+        const senders = pc.getSenders()
+        for (const track of stream.getTracks()) {
+          const sender = senders.find((s) => s.track?.kind === track.kind)
+          if (!sender) continue
+          tasks.push(sender.replaceTrack(track).catch(() => {}))
+        }
+      })
+      await Promise.all(tasks)
+      if (!pending) return
+      await new Promise((resolve) => setTimeout(resolve, 400))
+    }
+  }, [currentOutboundStream])
+
+  const attachMeshCall = useCallback(
+    (call) => {
+      if (!call?.peer || call.peer === viewerHostIdRef.current) return
+      const peerId = call.peer
+      const prev = callsRef.current.get(peerId)
+      if (prev && prev !== call) {
+        try {
+          prev.close()
+        } catch {
+          /* ignore */
+        }
+      }
+      callsRef.current.set(peerId, call)
+      call.on('stream', (remote) => upsertAudienceStream(peerId, remote))
+      call.on('close', () => {
+        if (callsRef.current.get(peerId) === call) callsRef.current.delete(peerId)
+        removeAudienceStream(peerId)
+      })
+      call.on('error', () => {
+        if (callsRef.current.get(peerId) === call) callsRef.current.delete(peerId)
+      })
+    },
+    [upsertAudienceStream, removeAudienceStream]
+  )
+
   const connectAsViewer = useCallback(async () => {
     const name = normalizeDisplayName(chatNameRef.current)
     if (!isValidDisplayName(name)) {
@@ -1317,6 +1536,7 @@ export default function Live() {
 
     teardownViewer()
     viewerLockedRef.current = false
+    viewerKickedRef.current = false
     const session = viewerSessionRef.current
     setStatus('connecting')
     setStatusDetail('Looking for the live set…')
@@ -1328,7 +1548,7 @@ export default function Live() {
     const stillCurrent = () => session === viewerSessionRef.current
 
     const scheduleReconnect = () => {
-      if (viewerLockedRef.current) return
+      if (viewerLockedRef.current || viewerKickedRef.current) return
       clearTimeout(reconnectTimerRef.current)
       reconnectTimerRef.current = setTimeout(() => {
         if (viewerWantsJoin) connectAsViewer()
@@ -1337,7 +1557,14 @@ export default function Live() {
 
     const sendHello = (conn) => {
       try {
-        conn.send(JSON.stringify({ type: 'hello', name: chatNameRef.current }))
+        conn.send(
+          JSON.stringify({
+            type: 'hello',
+            name: chatNameRef.current,
+            camera: camOnRef.current,
+            clientId: liveClientId(),
+          })
+        )
       } catch {
         /* ignore */
       }
@@ -1352,6 +1579,7 @@ export default function Live() {
         scheduleReconnect()
         return
       }
+      viewerHostIdRef.current = presence.peerId
 
       const peer = new Peer(LIVE_PEER_OPTIONS)
       if (!stillCurrent()) {
@@ -1360,7 +1588,7 @@ export default function Live() {
       }
       peerRef.current = peer
 
-      await new Promise((resolve, reject) => {
+      const openedId = await new Promise((resolve, reject) => {
         const onOpen = (id) => {
           peer.off('open', onOpen)
           peer.off('error', onError)
@@ -1376,9 +1604,33 @@ export default function Live() {
       })
 
       if (!stillCurrent()) return
+      setMyPeerId(openedId || peer.id || '')
 
       const handshake = createHandshakeStream()
       handshakeRef.current = handshake
+
+      peer.on('call', (incoming) => {
+        if (!stillCurrent()) return
+        if (incoming.peer === viewerHostIdRef.current) {
+          try {
+            incoming.close()
+          } catch {
+            /* ignore */
+          }
+          return
+        }
+        const outbound = currentOutboundStream()
+        if (!outbound) {
+          try {
+            incoming.close()
+          } catch {
+            /* ignore */
+          }
+          return
+        }
+        incoming.answer(outbound)
+        attachMeshCall(incoming)
+      })
 
       // Data channel first — confirms host is reachable
       const dataConn = peer.connect(presence.peerId, { reliable: true })
@@ -1437,6 +1689,14 @@ export default function Live() {
           setStatus('offline')
           setStatusDetail('This set is locked.')
         }
+        if (msg.type === 'kicked') {
+          viewerKickedRef.current = true
+          clearTimeout(reconnectTimerRef.current)
+          setViewerWantsJoin(false)
+          teardownViewer()
+          setStatus('offline')
+          setStatusDetail('The host removed you from this set.')
+        }
       })
       dataConn.on('close', () => {
         if (!stillCurrent()) return
@@ -1483,6 +1743,7 @@ export default function Live() {
         try {
           await el.play()
           setStatus('live')
+          setAudioKick((n) => n + 1)
           setStatusDetail(
             audioTracks.length ? 'Connected' : 'Connected — no audio track from host'
           )
@@ -1506,7 +1767,7 @@ export default function Live() {
         if (!stillCurrent()) return
         clearTimeout(timeout)
         setTimeout(() => {
-          if (!stillCurrent() || viewerLockedRef.current) return
+          if (!stillCurrent() || viewerLockedRef.current || viewerKickedRef.current) return
           const wasLive = hadRemoteStreamRef.current
           hadRemoteStreamRef.current = false
           if (viewerVideoRef.current) viewerVideoRef.current.srcObject = null
@@ -1525,7 +1786,7 @@ export default function Live() {
         if (!stillCurrent()) return
         clearTimeout(timeout)
         setTimeout(() => {
-          if (!stillCurrent() || viewerLockedRef.current) return
+          if (!stillCurrent() || viewerLockedRef.current || viewerKickedRef.current) return
           setViewerCount(0)
           setViewerList([])
           setStatus('offline')
@@ -1546,7 +1807,7 @@ export default function Live() {
       )
       scheduleReconnect()
     }
-  }, [teardownViewer, appendChat, viewerWantsJoin])
+  }, [teardownViewer, appendChat, viewerWantsJoin, currentOutboundStream, attachMeshCall])
 
   useEffect(() => {
     if (mode !== 'viewer') {
@@ -1563,6 +1824,51 @@ export default function Live() {
     }
   }, [mode, teardownViewer])
 
+  useEffect(() => {
+    if (mode !== 'viewer' || status !== 'live') return undefined
+    const peer = peerRef.current
+    const myId = peer?.id
+    if (!peer || !myId) return undefined
+
+    const dial = () => {
+      const stream = currentOutboundStream()
+      if (!stream) return
+      const hostId = viewerHostIdRef.current
+      const others = viewerList.filter(
+        (viewer) => viewer.peerId && viewer.peerId !== myId && viewer.peerId !== hostId
+      )
+      const otherIds = new Set(others.map((viewer) => viewer.peerId))
+
+      for (const [id, call] of [...callsRef.current.entries()]) {
+        if (id === 'host') continue
+        if (otherIds.has(id)) continue
+        try {
+          call.close()
+        } catch {
+          /* ignore */
+        }
+        callsRef.current.delete(id)
+        removeAudienceStream(id)
+      }
+
+      for (const other of others) {
+        if (callsRef.current.has(other.peerId)) continue
+        if (myId > other.peerId) continue
+        try {
+          const call = peer.call(other.peerId, currentOutboundStream() || stream)
+          if (!call) continue
+          attachMeshCall(call)
+        } catch {
+          callsRef.current.delete(other.peerId)
+        }
+      }
+    }
+
+    dial()
+    const timer = setInterval(dial, 2500)
+    return () => clearInterval(timer)
+  }, [mode, status, viewerList, currentOutboundStream, attachMeshCall, removeAudienceStream])
+
   const unmuteViewer = async () => {
     const el = viewerVideoRef.current
     if (!el) return
@@ -1575,6 +1881,7 @@ export default function Live() {
     el.muted = false
     setMuted(false)
     setNeedsGesture(false)
+    setAudioKick((n) => n + 1)
     try {
       await el.play()
       setStatusDetail('Sound on')
@@ -1582,6 +1889,105 @@ export default function Live() {
       console.error(err)
       setStatusDetail('Could not unmute — check phone silent switch')
       setNeedsGesture(true)
+    }
+  }
+
+  const ensureLocalMedia = async () => {
+    if (localMediaRef.current) return localMediaRef.current
+    const token = mediaTokenRef.current
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+      video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
+    })
+    if (token !== mediaTokenRef.current) {
+      stream.getTracks().forEach((track) => track.stop())
+      return null
+    }
+    stream.getAudioTracks().forEach((track) => {
+      track.enabled = micOnRef.current
+    })
+    stream.getVideoTracks().forEach((track) => {
+      track.enabled = camOnRef.current
+    })
+    localMediaRef.current = stream
+    setLocalStream(stream)
+    return stream
+  }
+
+  const sendCameraFlag = (on) => {
+    try {
+      viewerDataConnRef.current?.send(JSON.stringify({ type: 'camera', on }))
+    } catch {
+      /* ignore */
+    }
+  }
+
+  const toggleCamera = async () => {
+    if (mediaBusy) return
+    setMediaBusy(true)
+    setMediaError('')
+    const next = !camOnRef.current
+    try {
+      if (next) {
+        const stream = await ensureLocalMedia()
+        if (!stream) return
+        stream.getVideoTracks().forEach((track) => {
+          track.enabled = true
+        })
+      } else {
+        localMediaRef.current?.getVideoTracks?.().forEach((track) => {
+          track.enabled = false
+        })
+      }
+      camOnRef.current = next
+      setCamOn(next)
+      await pushOutboundTracks()
+      sendCameraFlag(next)
+    } catch (err) {
+      console.error(err)
+      camOnRef.current = false
+      setCamOn(false)
+      setMediaError(
+        isPermissionDenied(err)
+          ? 'Camera permission was blocked. Allow the camera, then try again.'
+          : err?.message || 'Could not start the camera.'
+      )
+    } finally {
+      setMediaBusy(false)
+    }
+  }
+
+  const toggleMic = async () => {
+    if (mediaBusy) return
+    setMediaBusy(true)
+    setMediaError('')
+    const next = !micOnRef.current
+    try {
+      if (next) {
+        const stream = await ensureLocalMedia()
+        if (!stream) return
+        stream.getAudioTracks().forEach((track) => {
+          track.enabled = true
+        })
+      } else {
+        localMediaRef.current?.getAudioTracks?.().forEach((track) => {
+          track.enabled = false
+        })
+      }
+      micOnRef.current = next
+      setMicOn(next)
+      await pushOutboundTracks()
+    } catch (err) {
+      console.error(err)
+      micOnRef.current = false
+      setMicOn(false)
+      setMediaError(
+        isPermissionDenied(err)
+          ? 'Microphone permission was blocked. Allow the mic, then try again.'
+          : err?.message || 'Could not start the microphone.'
+      )
+    } finally {
+      setMediaBusy(false)
     }
   }
 
@@ -1595,6 +2001,29 @@ export default function Live() {
     if (!preset) return
     setPresetId(id)
     setEffects({ ...preset.effects })
+  }
+
+  const audienceTiles = []
+  if (mode === 'viewer' && status === 'live') {
+    audienceTiles.push({
+      key: 'local',
+      label: `${chatName || 'You'} (You)`,
+      stream: localStream,
+      isLocal: true,
+      cameraOn: camOn,
+    })
+  }
+  if ((mode === 'viewer' || mode === 'host') && status === 'live') {
+    for (const viewer of viewerList) {
+      if (mode === 'viewer' && viewer.peerId === myPeerId) continue
+      audienceTiles.push({
+        key: viewer.peerId,
+        label: viewer.name,
+        stream: audienceStreams[viewer.peerId] || null,
+        isLocal: false,
+        cameraOn: !!viewer.camera,
+      })
+    }
   }
 
   return (
@@ -1623,7 +2052,7 @@ export default function Live() {
           <div className="relative flex-1 bg-black flex items-center justify-center min-h-[40dvh]">
             <video
               ref={viewerVideoRef}
-              className="w-full h-full max-h-[70dvh] object-contain bg-black"
+              className="w-full h-full max-h-[52dvh] object-contain bg-black"
               playsInline
               autoPlay
               muted={muted}
@@ -1693,8 +2122,46 @@ export default function Live() {
               </button>
             )}
           </div>
+          {status === 'live' && (
+            <>
+              <LiveAudienceGrid tiles={audienceTiles} audioKick={audioKick} />
+              <div className="px-4 sm:px-6 py-2.5 border-t border-hairline flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={toggleCamera}
+                  disabled={mediaBusy}
+                  className={`px-3 py-2 border text-xs uppercase tracking-[0.16em] disabled:opacity-40 ${
+                    camOn
+                      ? 'border-paper bg-paper text-ink'
+                      : 'border-hairline text-mute hover:text-paper'
+                  }`}
+                >
+                  {camOn ? 'Camera on' : 'Camera off'}
+                </button>
+                <button
+                  type="button"
+                  onClick={toggleMic}
+                  disabled={mediaBusy}
+                  className={`px-3 py-2 border text-xs uppercase tracking-[0.16em] disabled:opacity-40 ${
+                    micOn
+                      ? 'border-paper bg-paper text-ink'
+                      : 'border-hairline text-mute hover:text-paper'
+                  }`}
+                >
+                  {micOn ? 'Mic on' : 'Mic off'}
+                </button>
+                {mediaError ? (
+                  <p className="w-full text-xs text-paper/80">{mediaError}</p>
+                ) : (
+                  <p className="w-full text-[11px] text-mute">
+                    Camera and mic stay off until you turn them on. Your mic is heard in the room,
+                    not in the recording.
+                  </p>
+                )}
+              </div>
+            </>
+          )}
           <div className="px-4 sm:px-6 py-3 border-t border-hairline space-y-3">
-            {status === 'live' && <LiveViewerList viewers={viewerList} />}
             <LiveChat
               messages={chatMessages}
               onSend={sendViewerChat}
@@ -1706,7 +2173,9 @@ export default function Live() {
             />
           </div>
           <div className="px-4 sm:px-6 py-3 border-t border-hairline flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <p className="text-xs sm:text-sm text-mute">Watch the set in your browser.</p>
+            <p className="text-xs sm:text-sm text-mute">
+              The set stays on top. Everyone else is in the grid below.
+            </p>
             <button
               type="button"
               onClick={() => {
@@ -1791,22 +2260,27 @@ export default function Live() {
 
       {mode === 'host' ? (
         <div className="flex-1 flex flex-col lg:flex-row min-h-0">
-          <div className="relative flex-1 bg-black min-h-[42dvh] lg:min-h-0 flex items-center justify-center">
-            <video
-              ref={previewVideoRef}
-              className="absolute opacity-0 pointer-events-none w-px h-px"
-              playsInline
-              muted
-              autoPlay
-            />
-            <canvas
-              ref={canvasRef}
-              className="w-full h-full max-h-[70dvh] lg:max-h-none object-contain"
-            />
-            {status !== 'live' && status !== 'preview' && (
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <p className="text-sm text-mute px-6 text-center">{statusDetail}</p>
-              </div>
+          <div className="flex-1 flex flex-col min-h-0 min-w-0">
+            <div className="relative flex-1 bg-black min-h-[36dvh] lg:min-h-0 flex items-center justify-center">
+              <video
+                ref={previewVideoRef}
+                className="absolute opacity-0 pointer-events-none w-px h-px"
+                playsInline
+                muted
+                autoPlay
+              />
+              <canvas
+                ref={canvasRef}
+                className="w-full h-full max-h-[52dvh] lg:max-h-none object-contain"
+              />
+              {status !== 'live' && status !== 'preview' && (
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                  <p className="text-sm text-mute px-6 text-center">{statusDetail}</p>
+                </div>
+              )}
+            </div>
+            {status === 'live' && (
+              <LiveAudienceGrid tiles={audienceTiles} audioKick={audioKick} />
             )}
           </div>
 
@@ -2045,7 +2519,13 @@ export default function Live() {
                   <p className="text-xs uppercase tracking-[0.24em] text-mute">Room</p>
                   <p className="text-xs text-mute tabular-nums">{viewerCount} watching</p>
                 </div>
-                <LiveViewerList viewers={viewerList} />
+                <LiveViewerList viewers={viewerList} onKick={status === 'live' ? kickViewer : undefined} />
+                {removedViewers.length > 0 && (
+                  <p className="text-[11px] text-mute leading-relaxed">
+                    Removed this set: {removedViewers.map((viewer) => viewer.name).join(', ')}. They
+                    stay out until you end the stream.
+                  </p>
+                )}
                 <LiveChat
                   messages={chatMessages}
                   onSend={sendHostChat}
