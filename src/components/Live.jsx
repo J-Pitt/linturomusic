@@ -157,6 +157,7 @@ export default function Live() {
   const [joinNameError, setJoinNameError] = useState('')
   const [chatConnected, setChatConnected] = useState(false)
   const [viewerWantsJoin, setViewerWantsJoin] = useState(false)
+  const [roomLocked, setRoomLocked] = useState(false)
   const [audioLevel, setAudioLevel] = useState(0)
   const [audioBroadcasting, setAudioBroadcasting] = useState(false)
   const [inputGain, setInputGain] = useState(1.4)
@@ -186,6 +187,8 @@ export default function Live() {
   const viewerPruneTimerRef = useRef(null)
   const viewerPingTimerRef = useRef(null)
   const hostPeerIdRef = useRef('')
+  const roomLockedRef = useRef(false)
+  const viewerLockedRef = useRef(false)
   const audioMeterRef = useRef(null)
   const audioMeterRafRef = useRef(0)
   const inputGainRef = useRef(1.4)
@@ -687,6 +690,8 @@ export default function Live() {
     const token = accessTokenRef.current
     if (token) setLivePresence({ accessToken: token, live: false }).catch(() => {})
     hostPeerIdRef.current = ''
+    roomLockedRef.current = false
+    setRoomLocked(false)
     callsRef.current.forEach((call) => {
       try {
         call.close()
@@ -1023,6 +1028,8 @@ export default function Live() {
   const goLive = async () => {
     if (startingRef.current) return
     startingRef.current = true
+    roomLockedRef.current = false
+    setRoomLocked(false)
     callsRef.current.forEach((call) => {
       try {
         call.close()
@@ -1167,7 +1174,19 @@ export default function Live() {
         )
       }
 
+      const alreadyInRoom = (peerId) =>
+        viewersMapRef.current.has(peerId) ||
+        dataConnsRef.current.has(peerId) ||
+        callsRef.current.has(peerId)
+
+      const refuseNewcomer = (peerId) =>
+        roomLockedRef.current && !alreadyInRoom(peerId)
+
       peer.on('call', (call) => {
+        if (refuseNewcomer(call.peer)) {
+          call.close()
+          return
+        }
         const stream = outboundStreamRef.current
         if (!stream?.getTracks?.().length) {
           call.close()
@@ -1193,6 +1212,17 @@ export default function Live() {
       })
 
       peer.on('connection', (conn) => {
+        if (refuseNewcomer(conn.peer)) {
+          conn.on('open', () => {
+            try {
+              conn.send(JSON.stringify({ type: 'locked' }))
+            } catch {
+              /* ignore */
+            }
+            conn.close()
+          })
+          return
+        }
         dataConnsRef.current.set(conn.peer, conn)
         conn.on('open', () => {
           setChatConnected(true)
@@ -1286,6 +1316,7 @@ export default function Live() {
     setChatName(name)
 
     teardownViewer()
+    viewerLockedRef.current = false
     const session = viewerSessionRef.current
     setStatus('connecting')
     setStatusDetail('Looking for the live set…')
@@ -1297,6 +1328,7 @@ export default function Live() {
     const stillCurrent = () => session === viewerSessionRef.current
 
     const scheduleReconnect = () => {
+      if (viewerLockedRef.current) return
       clearTimeout(reconnectTimerRef.current)
       reconnectTimerRef.current = setTimeout(() => {
         if (viewerWantsJoin) connectAsViewer()
@@ -1398,6 +1430,13 @@ export default function Live() {
         if (msg.type === 'viewers') setViewerCount(msg.count)
         if (msg.type === 'chat') appendChat(msg)
         if (msg.type === 'history') msg.messages.forEach((m) => appendChat(m))
+        if (msg.type === 'locked') {
+          viewerLockedRef.current = true
+          clearTimeout(reconnectTimerRef.current)
+          setViewerWantsJoin(false)
+          setStatus('offline')
+          setStatusDetail('This set is locked.')
+        }
       })
       dataConn.on('close', () => {
         if (!stillCurrent()) return
@@ -1466,27 +1505,33 @@ export default function Live() {
       call.on('close', () => {
         if (!stillCurrent()) return
         clearTimeout(timeout)
-        const wasLive = hadRemoteStreamRef.current
-        hadRemoteStreamRef.current = false
-        if (viewerVideoRef.current) viewerVideoRef.current.srcObject = null
-        setViewerCount(0)
-        setViewerList([])
-        setChatConnected(false)
-        setStatus('offline')
-        setStatusDetail(
-          wasLive ? 'Connection dropped — retrying…' : 'Could not start video — retrying…'
-        )
-        scheduleReconnect()
+        setTimeout(() => {
+          if (!stillCurrent() || viewerLockedRef.current) return
+          const wasLive = hadRemoteStreamRef.current
+          hadRemoteStreamRef.current = false
+          if (viewerVideoRef.current) viewerVideoRef.current.srcObject = null
+          setViewerCount(0)
+          setViewerList([])
+          setChatConnected(false)
+          setStatus('offline')
+          setStatusDetail(
+            wasLive ? 'Connection dropped — retrying…' : 'Could not start video — retrying…'
+          )
+          scheduleReconnect()
+        }, 700)
       })
 
       call.on('error', () => {
         if (!stillCurrent()) return
         clearTimeout(timeout)
-        setViewerCount(0)
-        setViewerList([])
-        setStatus('offline')
-        setStatusDetail('Connection issue — retrying…')
-        scheduleReconnect()
+        setTimeout(() => {
+          if (!stillCurrent() || viewerLockedRef.current) return
+          setViewerCount(0)
+          setViewerList([])
+          setStatus('offline')
+          setStatusDetail('Connection issue — retrying…')
+          scheduleReconnect()
+        }, 700)
       })
     } catch (err) {
       console.error(err)
@@ -1919,6 +1964,37 @@ export default function Live() {
               {isAuthenticated && accessToken ? (
                 <ListAnnounce accessToken={accessToken} />
               ) : null}
+
+              {status === 'live' && (
+                <div className="space-y-3 pt-2 border-t border-hairline">
+                  <p className="text-xs uppercase tracking-[0.24em] text-mute">Room</p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const next = !roomLockedRef.current
+                      roomLockedRef.current = next
+                      setRoomLocked(next)
+                      setStatusDetail(
+                        next
+                          ? 'Room locked. People already in stay. No one new can join.'
+                          : 'Room unlocked. New viewers can join.'
+                      )
+                    }}
+                    className={`w-full px-4 py-2.5 border text-sm font-medium ${
+                      roomLocked
+                        ? 'border-paper bg-paper text-ink'
+                        : 'border-hairline text-paper hover:border-paper'
+                    }`}
+                  >
+                    {roomLocked ? 'Unlock room' : 'Lock room'}
+                  </button>
+                  <p className="text-[11px] text-mute leading-relaxed">
+                    {roomLocked
+                      ? 'Locked. Viewers already connected stay. New joins are refused.'
+                      : 'Open. Anyone can join the set.'}
+                  </p>
+                </div>
+              )}
 
               {status === 'live' && (
                 <div className="space-y-3 pt-2 border-t border-hairline">

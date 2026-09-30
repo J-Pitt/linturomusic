@@ -67,6 +67,10 @@ export function parseLivePayload(raw) {
       return { type: 'ping' }
     }
 
+    if (data.type === 'locked') {
+      return { type: 'locked' }
+    }
+
     if (data.type === 'chat' && data.text) {
       return {
         type: 'chat',
