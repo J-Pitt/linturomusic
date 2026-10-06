@@ -79,24 +79,6 @@ const FEATURED_VIDEOS = [
     poster: config.VIDEO_FILES.WHISPERS_POSTER,
   },
   {
-    id: 'deepDarkDub',
-    /** Shareable hash: linturomusic.com/#deep-dark-dub */
-    slug: 'deep-dark-dub',
-    title: 'Deep dark dub',
-    subtitle: 'DJ set · 32 min',
-    src: config.VIDEO_FILES.DEEP_DARK_DUB,
-    poster: config.VIDEO_FILES.DEEP_DARK_DUB_POSTER,
-  },
-  {
-    id: 'deepDarkWubs',
-    /** Shareable hash: linturomusic.com/#deep-dark-wubs */
-    slug: 'deep-dark-wubs',
-    title: 'Deep dark wubs',
-    subtitle: 'DJ set · 3 min',
-    src: config.VIDEO_FILES.DEEP_DARK_WUBS,
-    poster: config.VIDEO_FILES.DEEP_DARK_WUBS_POSTER,
-  },
-  {
     id: 'soundsOfTomorrow',
     /** Shareable hash: linturomusic.com/#sounds-of-tomorrow */
     slug: 'sounds-of-tomorrow',
