@@ -52,6 +52,15 @@ const RECENT_MIXES = [
 
 const FEATURED_VIDEOS = [
   {
+    id: 'whispers',
+    /** Shareable hash: linturomusic.com/#whispers */
+    slug: 'whispers',
+    title: 'Whispers',
+    subtitle: 'Visual mix · one hour',
+    src: config.VIDEO_FILES.WHISPERS,
+    poster: config.VIDEO_FILES.WHISPERS_POSTER,
+  },
+  {
     id: 'closingTime',
     /** Shareable hash: linturomusic.com/#closing-time */
     slug: 'closing-time',
@@ -68,15 +77,6 @@ const FEATURED_VIDEOS = [
     subtitle: 'Visual mix · 64 min',
     src: config.VIDEO_FILES.SUNRISE,
     poster: config.VIDEO_FILES.SUNRISE_POSTER,
-  },
-  {
-    id: 'whispers',
-    /** Shareable hash: linturomusic.com/#whispers */
-    slug: 'whispers',
-    title: 'Whispers',
-    subtitle: 'Visual mix · one hour',
-    src: config.VIDEO_FILES.WHISPERS,
-    poster: config.VIDEO_FILES.WHISPERS_POSTER,
   },
   {
     id: 'soundsOfTomorrow',
@@ -109,7 +109,7 @@ const FEATURED_VIDEOS = [
     id: 'cube',
     /** Shareable hash: linturomusic.com/#cube */
     slug: 'cube',
-    title: 'Cube',
+    title: "It's all a cube",
     subtitle: 'Visual mix · one hour',
     src: config.VIDEO_FILES.REC092_CUBE,
     poster: config.VIDEO_FILES.REC092_CUBE_POSTER,
@@ -118,7 +118,7 @@ const FEATURED_VIDEOS = [
     id: 'abstract',
     /** Shareable hash: linturomusic.com/#abstract */
     slug: 'abstract',
-    title: 'Abstract',
+    title: 'Abstract Life',
     subtitle: 'Visual mix · one hour',
     src: config.VIDEO_FILES.REC002_ABSTRACT,
     poster: config.VIDEO_FILES.REC002_ABSTRACT_POSTER,
@@ -153,7 +153,7 @@ const FEATURED_VIDEOS = [
   {
     id: 'clubSet',
     slug: 'club-set',
-    title: 'Club Set',
+    title: 'Club Clip',
     subtitle: 'Live set highlight',
     src: config.VIDEO_FILES.VIDEO2,
   },

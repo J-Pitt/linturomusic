@@ -48,9 +48,9 @@ const About = () => {
               calls for it.
             </p>
             <p className="text-sm sm:text-base text-mute leading-relaxed">
-              I&apos;m based in Brooklyn and working on building my presence in New York&apos;s
-              venue-driven scene. Open for bookings, residencies, and collaborations — get in
-              touch if you&apos;re looking for a DJ.
+              I&apos;m based in Brooklyn and working on building my presence in New York. Open
+              for bookings, residencies, and collaborations — get in touch if you&apos;re
+              looking for a DJ or just someone to mix with.
             </p>
           </div>
 
