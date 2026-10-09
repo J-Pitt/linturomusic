@@ -56,7 +56,7 @@ const FEATURED_VIDEOS = [
     /** Shareable hash: linturomusic.com/#k-to-the-y (#alley still resolves by id) */
     slug: 'k-to-the-y',
     title: 'K to the Y',
-    subtitle: 'Visual mix · 80 minutes',
+    subtitle: 'Visual mix · 81 min',
     src: config.VIDEO_FILES.K_TO_THE_Y,
     poster: config.VIDEO_FILES.K_TO_THE_Y_POSTER,
   },
