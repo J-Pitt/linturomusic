@@ -52,6 +52,16 @@ const RECENT_MIXES = [
 
 const FEATURED_VIDEOS = [
   {
+    id: 'alley',
+    /** Shareable hash: linturomusic.com/#alley */
+    slug: 'alley',
+    title: 'Alley',
+    subtitle: 'Visual loop',
+    loop: true,
+    src: config.VIDEO_FILES.CAT_ALLEY,
+    poster: config.VIDEO_FILES.CAT_ALLEY_POSTER,
+  },
+  {
     id: 'whispers',
     /** Shareable hash: linturomusic.com/#whispers */
     slug: 'whispers',
@@ -901,6 +911,7 @@ const Hero = () => {
                       ref={videoRef}
                       controls
                       playsInline
+                      loop={Boolean(featuredVideo.loop)}
                       preload="metadata"
                       poster={featuredVideo.poster}
                       className="w-full h-full object-contain bg-black"

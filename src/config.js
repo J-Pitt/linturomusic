@@ -97,6 +97,8 @@ export const config = {
     DEEP_DARK_DUB_POSTER: import.meta.env.VITE_VIDEO_DEEP_DARK_DUB_POSTER || 'https://linturomusic.s3.us-west-2.amazonaws.com/deep-dark-dub.jpg',
     DEEP_DARK_WUBS: import.meta.env.VITE_VIDEO_DEEP_DARK_WUBS || 'https://linturomusic.s3.us-west-2.amazonaws.com/deep-dark-wubs.mp4',
     DEEP_DARK_WUBS_POSTER: import.meta.env.VITE_VIDEO_DEEP_DARK_WUBS_POSTER || 'https://linturomusic.s3.us-west-2.amazonaws.com/deep-dark-wubs.jpg',
+    CAT_ALLEY: import.meta.env.VITE_VIDEO_CAT_ALLEY || 'https://linturomusic.s3.us-west-2.amazonaws.com/cat-alley-set.mp4',
+    CAT_ALLEY_POSTER: import.meta.env.VITE_VIDEO_CAT_ALLEY_POSTER || 'https://linturomusic.s3.us-west-2.amazonaws.com/cat-alley-set.jpg',
   },
   
   // App metadata
