@@ -16,6 +16,7 @@ dist-ssr
 video/output/
 video/download/
 .venv-video/
+__pycache__/
 
 # Editor directories and files
 .vscode/*

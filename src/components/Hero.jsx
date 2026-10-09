@@ -53,13 +53,12 @@ const RECENT_MIXES = [
 const FEATURED_VIDEOS = [
   {
     id: 'alley',
-    /** Shareable hash: linturomusic.com/#alley */
-    slug: 'alley',
-    title: 'Alley',
-    subtitle: 'Visual loop',
-    loop: true,
-    src: config.VIDEO_FILES.CAT_ALLEY,
-    poster: config.VIDEO_FILES.CAT_ALLEY_POSTER,
+    /** Shareable hash: linturomusic.com/#k-to-the-y (#alley still resolves by id) */
+    slug: 'k-to-the-y',
+    title: 'K to the Y',
+    subtitle: 'Visual mix · 80 minutes',
+    src: config.VIDEO_FILES.K_TO_THE_Y,
+    poster: config.VIDEO_FILES.K_TO_THE_Y_POSTER,
   },
   {
     id: 'whispers',
