@@ -52,6 +52,24 @@ const RECENT_MIXES = [
 
 const FEATURED_VIDEOS = [
   {
+    id: 'goDeeper',
+    /** Shareable hash: linturomusic.com/#go-deeper */
+    slug: 'go-deeper',
+    title: 'Go Deeper',
+    subtitle: 'Visual mix · one hour',
+    src: config.VIDEO_FILES.GO_DEEPER,
+    poster: config.VIDEO_FILES.GO_DEEPER_POSTER,
+  },
+  {
+    id: 'fractals',
+    /** Shareable hash: linturomusic.com/#fractals */
+    slug: 'fractals',
+    title: 'Fractals',
+    subtitle: 'Visual mix · 10 min',
+    src: config.VIDEO_FILES.FRACTALS,
+    poster: config.VIDEO_FILES.FRACTALS_POSTER,
+  },
+  {
     id: 'alley',
     /** Shareable hash: linturomusic.com/#k-to-the-y (#alley still resolves by id) */
     slug: 'k-to-the-y',

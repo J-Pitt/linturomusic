@@ -99,6 +99,10 @@ export const config = {
     DEEP_DARK_WUBS_POSTER: import.meta.env.VITE_VIDEO_DEEP_DARK_WUBS_POSTER || 'https://linturomusic.s3.us-west-2.amazonaws.com/deep-dark-wubs.jpg',
     K_TO_THE_Y: import.meta.env.VITE_VIDEO_K_TO_THE_Y || 'https://linturomusic.s3.us-west-2.amazonaws.com/k-to-the-y-redu.mp4',
     K_TO_THE_Y_POSTER: import.meta.env.VITE_VIDEO_K_TO_THE_Y_POSTER || 'https://linturomusic.s3.us-west-2.amazonaws.com/k-to-the-y.jpg',
+    GO_DEEPER: import.meta.env.VITE_VIDEO_GO_DEEPER || 'https://linturomusic.s3.us-west-2.amazonaws.com/go-deeper.mp4',
+    GO_DEEPER_POSTER: import.meta.env.VITE_VIDEO_GO_DEEPER_POSTER || 'https://linturomusic.s3.us-west-2.amazonaws.com/go-deeper.jpg',
+    FRACTALS: import.meta.env.VITE_VIDEO_FRACTALS || 'https://linturomusic.s3.us-west-2.amazonaws.com/fractals.mp4',
+    FRACTALS_POSTER: import.meta.env.VITE_VIDEO_FRACTALS_POSTER || 'https://linturomusic.s3.us-west-2.amazonaws.com/fractals.jpg',
   },
   
   // App metadata
