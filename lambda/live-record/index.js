@@ -153,6 +153,7 @@ exports.handler = async (event) => {
       }
 
       const manifest = await readManifest()
+      const page = body.page === 'trap' ? 'trap' : 'home'
       const entry = {
         id: `live-${id}`,
         slug: slugify(title),
@@ -160,6 +161,7 @@ exports.handler = async (event) => {
         subtitle: String(subtitle || 'Live recording').slice(0, 120),
         src: `${PUBLIC_BASE}/${key}`,
         publishedAt: new Date().toISOString(),
+        ...(page === 'trap' ? { page: 'trap' } : {}),
       }
 
       manifest.videos = [

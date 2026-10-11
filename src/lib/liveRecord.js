@@ -78,7 +78,7 @@ export async function presignLiveUpload({ accessToken, hostKey, id, ext }) {
   return api({ action: 'presign', ...withAuth({ accessToken, hostKey }), id, ext })
 }
 
-export async function publishLiveVideo({ accessToken, hostKey, id, key, title, subtitle }) {
+export async function publishLiveVideo({ accessToken, hostKey, id, key, title, subtitle, page }) {
   return api({
     action: 'publish',
     ...withAuth({ accessToken, hostKey }),
@@ -86,6 +86,7 @@ export async function publishLiveVideo({ accessToken, hostKey, id, key, title, s
     key,
     title,
     subtitle,
+    page: page === 'trap' ? 'trap' : 'home',
   })
 }
 

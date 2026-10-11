@@ -1062,7 +1062,7 @@ export default function Live() {
       setReviewTitle(`Live ${stamp}`)
       setReview({ url, blob, id, duration: recordSeconds, mins })
       setPublishState('idle')
-      setPublishDetail('Watch the take, then add it to Videos or discard.')
+      setPublishDetail('Watch the take, then add it to the home page, Trap, or discard.')
       setStatusDetail('Recording stopped — review below.')
     } catch (err) {
       console.error(err)
@@ -1070,7 +1070,7 @@ export default function Live() {
     }
   }
 
-  const publishRecording = async (blobOverride) => {
+  const publishRecording = async (blobOverride, page = 'home') => {
     const blob = blobOverride || review?.blob
     if (!blob) return
     const token = accessTokenRef.current
@@ -1079,6 +1079,7 @@ export default function Live() {
       setPublishDetail('Sign in again to publish.')
       return
     }
+    const toTrap = page === 'trap'
     setPublishState('uploading')
     setPublishDetail('Uploading to S3…')
     setUploadProgress(0)
@@ -1089,16 +1090,17 @@ export default function Live() {
         onProgress: setUploadProgress,
       })
       setPublishState('publishing')
-      setPublishDetail('Saving to Videos…')
+      setPublishDetail(toTrap ? 'Saving to Trap…' : 'Saving to Videos…')
       await publishLiveVideo({
         accessToken: token,
         id: review.id,
         key,
         title: reviewTitle.trim() || 'Live set',
         subtitle: 'Live recording',
+        page: toTrap ? 'trap' : 'home',
       })
       setPublishState('done')
-      setPublishDetail('Added to Videos on the home page.')
+      setPublishDetail(toTrap ? 'Added to /trap.' : 'Added to Videos on the home page.')
     } catch (err) {
       console.error(err)
       setPublishState('error')
@@ -2496,7 +2498,7 @@ export default function Live() {
                   </div>
                   <p className="text-[11px] text-mute leading-relaxed">
                     Captures the live feed with FX + XDJ audio. After you stop, review and choose
-                    whether to add it to Videos.
+                    whether to add it to the home page or Trap.
                   </p>
                 </div>
               )}

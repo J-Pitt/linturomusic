@@ -12,6 +12,7 @@ import { useState, useRef, useEffect, useMemo } from 'react'
 import { config } from '../config'
 import { formatCount, loadLikedIds, loadStats, recordPlay, toggleLike } from '../lib/stats'
 import { fetchPublishedLiveVideos } from '../lib/liveRecord'
+import { isTrapPageVideo } from '../lib/trapVideos'
 import VolumeControl from './VolumeControl'
 import SiteNav from './SiteNav'
 
@@ -205,7 +206,7 @@ const Hero = () => {
   const [isPlaying, setIsPlaying] = useState(false)
   const [liveVideos, setLiveVideos] = useState([])
   const featuredVideos = useMemo(
-    () => [...FEATURED_VIDEOS, ...liveVideos],
+    () => [...FEATURED_VIDEOS, ...liveVideos.filter((video) => !isTrapPageVideo(video))],
     [liveVideos]
   )
   const [audioError, setAudioError] = useState(false)
@@ -247,10 +248,11 @@ const Hero = () => {
     let cancelled = false
     fetchPublishedLiveVideos().then((videos) => {
       if (cancelled) return
-      setLiveVideos(videos)
+      const homeVideos = videos.filter((video) => !isTrapPageVideo(video))
+      setLiveVideos(homeVideos)
       const fromHash = featuredFromHash(window.location.hash, [
         ...FEATURED_VIDEOS,
-        ...videos,
+        ...homeVideos,
       ])
       if (fromHash) setFeaturedVideoId(fromHash.id)
     })

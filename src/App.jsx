@@ -11,9 +11,12 @@ import Zoe from './components/Zoe'
 import Beatport from './components/Beatport'
 import FriendsGate from './components/FriendsGate'
 import Live from './components/Live'
+import Trap from './components/Trap'
 import Login from './components/Login'
 import Footer from './components/Footer'
 import SiteNav from './components/SiteNav'
+import { fetchPublishedLiveVideos } from './lib/liveRecord'
+import { mergeTrapVideos, trapVideoFromHash } from './lib/trapVideos'
 import './App.css'
 
 const BeatsPage = lazy(() => import('./beats/BeatsPage'))
@@ -40,6 +43,33 @@ function LegacyDubHash() {
   return null
 }
 
+function TrapHashRedirect() {
+  const { hash, pathname } = useLocation()
+  const navigate = useNavigate()
+
+  useEffect(() => {
+    if (pathname !== '/') return
+    const known = trapVideoFromHash(hash, mergeTrapVideos([]))
+    if (known) {
+      navigate(`/trap#${known.slug}`, { replace: true })
+      return
+    }
+    const raw = hash.replace(/^#/, '').trim()
+    if (!raw) return
+    let cancelled = false
+    fetchPublishedLiveVideos().then((videos) => {
+      if (cancelled) return
+      const match = trapVideoFromHash(hash, mergeTrapVideos(videos))
+      if (match) navigate(`/trap#${match.slug}`, { replace: true })
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [hash, pathname, navigate])
+
+  return null
+}
+
 function AppShell() {
   const pathname = useLocation().pathname.replace(/(.)\/+$/, '$1')
   const hideFooter =
@@ -51,6 +81,7 @@ function AppShell() {
   return (
     <div className="App">
       <LegacyDubHash />
+      <TrapHashRedirect />
       <main>
         <Routes>
           <Route
@@ -103,6 +134,7 @@ function AppShell() {
             }
           />
           <Route path="/live" element={<Live />} />
+          <Route path="/trap" element={<Trap />} />
           <Route path="/login" element={<Login />} />
         </Routes>
       </main>

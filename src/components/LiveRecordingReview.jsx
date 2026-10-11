@@ -208,16 +208,26 @@ export default function LiveRecordingReview({
       <p className="text-xs text-mute">{publishDetail}</p>
       <div className="flex flex-wrap gap-2">
         {publishState !== 'done' && (
-          <button
-            type="button"
-            onClick={() => onPublish(workingBlob)}
-            disabled={publishDisabled}
-            className="flex-1 min-w-[8rem] px-4 py-2.5 bg-paper text-ink text-sm font-medium disabled:opacity-50"
-          >
-            {publishState === 'uploading' || publishState === 'publishing'
-              ? 'Publishing…'
-              : 'Add to Videos'}
-          </button>
+          <>
+            <button
+              type="button"
+              onClick={() => onPublish(workingBlob, 'home')}
+              disabled={publishDisabled}
+              className="flex-1 min-w-[8rem] px-4 py-2.5 bg-paper text-ink text-sm font-medium disabled:opacity-50"
+            >
+              {publishState === 'uploading' || publishState === 'publishing'
+                ? 'Publishing…'
+                : 'Add to home'}
+            </button>
+            <button
+              type="button"
+              onClick={() => onPublish(workingBlob, 'trap')}
+              disabled={publishDisabled}
+              className="flex-1 min-w-[8rem] px-4 py-2.5 border border-paper text-paper text-sm font-medium disabled:opacity-50"
+            >
+              Add to Trap
+            </button>
+          </>
         )}
         <button
           type="button"
