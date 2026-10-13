@@ -101,8 +101,8 @@ export const config = {
     K_TO_THE_Y_POSTER: import.meta.env.VITE_VIDEO_K_TO_THE_Y_POSTER || 'https://linturomusic.s3.us-west-2.amazonaws.com/k-to-the-y.jpg',
     FRACTALS: import.meta.env.VITE_VIDEO_FRACTALS || 'https://linturomusic.s3.us-west-2.amazonaws.com/fractals.mp4',
     FRACTALS_POSTER: import.meta.env.VITE_VIDEO_FRACTALS_POSTER || 'https://linturomusic.s3.us-west-2.amazonaws.com/fractals.jpg',
-    BROOKLYN_DUBS: import.meta.env.VITE_VIDEO_BROOKLYN_DUBS || 'https://linturomusic.s3.us-west-2.amazonaws.com/brooklyn-dubs.mp4',
-    BROOKLYN_DUBS_POSTER: import.meta.env.VITE_VIDEO_BROOKLYN_DUBS_POSTER || 'https://linturomusic.s3.us-west-2.amazonaws.com/brooklyn-dubs.jpg',
+    BROOKLYN_DUBS: import.meta.env.VITE_VIDEO_BROOKLYN_DUBS || 'https://linturomusic.s3.us-west-2.amazonaws.com/brooklyn-dubs-2.mp4',
+    BROOKLYN_DUBS_POSTER: import.meta.env.VITE_VIDEO_BROOKLYN_DUBS_POSTER || 'https://linturomusic.s3.us-west-2.amazonaws.com/brooklyn-dubs-2.jpg',
   },
   
   // App metadata
