@@ -53,6 +53,15 @@ const RECENT_MIXES = [
 
 const FEATURED_VIDEOS = [
   {
+    id: 'brooklynDubs',
+    /** Shareable hash: linturomusic.com/#brooklyn-dubs */
+    slug: 'brooklyn-dubs',
+    title: 'Brooklyn Dubs',
+    subtitle: 'Visual mix · 33 min',
+    src: config.VIDEO_FILES.BROOKLYN_DUBS,
+    poster: config.VIDEO_FILES.BROOKLYN_DUBS_POSTER,
+  },
+  {
     id: 'fractals',
     /** Shareable hash: linturomusic.com/#fractals */
     slug: 'fractals',
