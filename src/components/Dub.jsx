@@ -277,7 +277,7 @@ const Dub = () => {
                 onPlay={() => {
                   if (playCounted.current[video.id]) return
                   playCounted.current[video.id] = true
-                  recordPlay(video.id).then((plays) => {
+                  recordPlay(video.id, { kind: 'video', title: video.title }).then((plays) => {
                     if (plays == null) return
                     setStats((prev) => ({
                       ...prev,

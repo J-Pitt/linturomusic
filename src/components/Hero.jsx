@@ -419,7 +419,8 @@ const Hero = () => {
         setIsPlaying(true)
         setShowControls(true)
         setIsLoading(false)
-        recordPlay(setType).then((plays) => {
+        const mix = RECENT_MIXES.find((item) => item.id === setType)
+        recordPlay(setType, { kind: 'mix', title: mix?.title || '' }).then((plays) => {
           if (plays == null) return
           setStats((prev) => ({
             ...prev,
@@ -689,7 +690,7 @@ const Hero = () => {
               setYtPlaying(true)
               if (!videoPlayCounted.current[featuredVideo.id]) {
                 videoPlayCounted.current[featuredVideo.id] = true
-                recordPlay(featuredVideo.id).then((plays) => {
+                recordPlay(featuredVideo.id, { kind: 'video', title: featuredVideo.title }).then((plays) => {
                   if (plays == null) return
                   setStats((prev) => ({
                     ...prev,
@@ -944,7 +945,7 @@ const Hero = () => {
                         pauseYoutubeVisual()
                         if (videoPlayCounted.current[featuredVideo.id]) return
                         videoPlayCounted.current[featuredVideo.id] = true
-                        recordPlay(featuredVideo.id).then((plays) => {
+                        recordPlay(featuredVideo.id, { kind: 'video', title: featuredVideo.title }).then((plays) => {
                           if (plays == null) return
                           setStats((prev) => ({
                             ...prev,

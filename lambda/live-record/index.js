@@ -29,6 +29,7 @@ function json(statusCode, body) {
 }
 
 const { loginAdmin, assertAuthorized } = require('./auth')
+const { hitStat, getStats } = require('./stats')
 const {
   subscribe,
   unsubscribe,
@@ -119,6 +120,15 @@ exports.handler = async (event) => {
         password: body.password,
       })
       return json(200, session)
+    }
+
+    if (action === 'stats-hit') {
+      return json(200, await hitStat(body))
+    }
+
+    if (action === 'stats') {
+      assertAuthorized(body)
+      return json(200, await getStats())
     }
 
     if (action === 'presign') {

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext'
 import { SignalIcon, XMarkIcon } from '@heroicons/react/24/outline'
 
 const HOME_LINKS = [
@@ -16,6 +17,7 @@ const HOME_LINKS = [
  */
 export default function SiteNav({ className = '' }) {
   const { pathname } = useLocation()
+  const { isAuthenticated } = useAuth()
   const onHome = pathname === '/'
   const [specialOpen, setSpecialOpen] = useState(false)
 
@@ -48,14 +50,24 @@ export default function SiteNav({ className = '' }) {
               className="h-28 w-auto object-contain md:h-32"
             />
           </Link>
-          <Link
-            to="/live"
-            className="shrink-0 justify-self-end md:order-last inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 border border-hairline text-xs sm:text-sm uppercase tracking-[0.18em] text-paper hover:border-paper transition-colors"
-            aria-label="Live stream"
-          >
-            <SignalIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-            Live
-          </Link>
+          <div className="shrink-0 justify-self-end md:order-last inline-flex items-center gap-3">
+            {isAuthenticated ? (
+              <Link
+                to="/stats"
+                className="text-xs uppercase tracking-[0.18em] text-mute hover:text-paper transition-colors"
+              >
+                Stats
+              </Link>
+            ) : null}
+            <Link
+              to="/live"
+              className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 border border-hairline text-xs sm:text-sm uppercase tracking-[0.18em] text-paper hover:border-paper transition-colors"
+              aria-label="Live stream"
+            >
+              <SignalIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              Live
+            </Link>
+          </div>
           <button
             type="button"
             onClick={() => setSpecialOpen(true)}

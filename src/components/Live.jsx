@@ -2244,6 +2244,14 @@ export default function Live() {
                 Back to viewer
               </button>
               {isAuthenticated ? (
+                <Link
+                  to="/stats"
+                  className="w-full px-4 py-2.5 border border-hairline text-sm text-mute hover:text-paper text-center"
+                >
+                  Site stats
+                </Link>
+              ) : null}
+              {isAuthenticated ? (
                 <button
                   type="button"
                   onClick={() => {

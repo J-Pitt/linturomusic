@@ -11,11 +11,13 @@ import Zoe from './components/Zoe'
 import Beatport from './components/Beatport'
 import FriendsGate from './components/FriendsGate'
 import Live from './components/Live'
+import Stats from './components/Stats'
 import Trap from './components/Trap'
 import Login from './components/Login'
 import Footer from './components/Footer'
 import SiteNav from './components/SiteNav'
 import { fetchPublishedLiveVideos } from './lib/liveRecord'
+import { recordVisit } from './lib/siteStats'
 import { mergeTrapVideos, trapVideoFromHash } from './lib/trapVideos'
 import './App.css'
 
@@ -75,8 +77,13 @@ function AppShell() {
   const hideFooter =
     pathname === '/live' ||
     pathname === '/login' ||
+    pathname === '/stats' ||
     pathname === '/beatport' ||
     pathname === '/beats'
+
+  useEffect(() => {
+    recordVisit()
+  }, [])
 
   return (
     <div className="App">
@@ -136,6 +143,7 @@ function AppShell() {
           <Route path="/live" element={<Live />} />
           <Route path="/trap" element={<Trap />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/stats" element={<Stats />} />
         </Routes>
       </main>
       {!hideFooter && <Footer />}

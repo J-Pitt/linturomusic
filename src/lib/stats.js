@@ -1,3 +1,5 @@
+import { recordSiteEvent } from './siteStats'
+
 const BASE = 'https://abacus.jasoncameron.dev'
 const NAMESPACE = 'linturomusic.com'
 const LIKED_KEY = 'linturo-liked'
@@ -72,7 +74,11 @@ export async function loadStats() {
   return stats
 }
 
-export async function recordPlay(id) {
+export async function recordPlay(id, meta = {}) {
+  if (id) {
+    const kind = meta.kind === 'mix' ? 'mix' : 'video'
+    recordSiteEvent({ kind, id, title: meta.title || '' })
+  }
   if (!STAT_IDS.includes(id) || playedThisVisit.has(id)) return null
   playedThisVisit.add(id)
   try {

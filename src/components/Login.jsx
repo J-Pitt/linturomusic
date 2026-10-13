@@ -10,7 +10,7 @@ export default function Login() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
 
-  const from = location.state?.from?.pathname || '/live'
+  const from = location.state?.from?.pathname || '/stats'
   const openHost = Boolean(location.state?.openHost || from === '/live')
 
   if (isAuthenticated) {
@@ -47,7 +47,7 @@ export default function Login() {
           <div className="space-y-2">
             <h1 className="text-xl font-medium tracking-tight">Sign in</h1>
             <p className="text-sm text-mute leading-relaxed">
-              Admin access for live hosting, recordings, and future site tools.
+              Sign in to see who visits and what gets played, and to host the live stream.
             </p>
           </div>
 

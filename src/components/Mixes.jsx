@@ -3,6 +3,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeftIcon, PauseIcon, PlayIcon } from '@heroicons/react/24/outline'
 import { config } from '../config'
+import { recordPlay } from '../lib/stats'
 import SiteNav from './SiteNav'
 import VolumeControl from './VolumeControl'
 
@@ -154,6 +155,8 @@ const Mixes = () => {
         setIsPlaying(true)
         setShowControls(true)
         setIsLoading(false)
+        const mix = MIXES.find((item) => item.id === setType)
+        recordPlay(setType, { kind: 'mix', title: mix?.title || '' })
       } catch {
         setIsPlaying(false)
         setIsLoading(false)
