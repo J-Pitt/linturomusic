@@ -17,7 +17,7 @@ import Login from './components/Login'
 import Footer from './components/Footer'
 import SiteNav from './components/SiteNav'
 import { fetchPublishedLiveVideos } from './lib/liveRecord'
-import { recordVisit } from './lib/siteStats'
+import { recordVisit, watchTimeOnSite } from './lib/siteStats'
 import { mergeTrapVideos, trapVideoFromHash } from './lib/trapVideos'
 import './App.css'
 
@@ -83,6 +83,7 @@ function AppShell() {
 
   useEffect(() => {
     recordVisit()
+    return watchTimeOnSite()
   }, [])
 
   return (

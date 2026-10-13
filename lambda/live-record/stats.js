@@ -46,19 +46,39 @@ async function ensureItem() {
   }
 }
 
-async function hitStat({ kind, id, title }) {
+async function hitStat({ kind, id, title, newBrowser, seconds: secondsIn }) {
   await ensureItem()
   const now = new Date().toISOString()
 
   if (kind === 'visit') {
     const day = now.slice(0, 10)
+    const names = { '#day': day }
+    const values = { ':one': 1, ':now': now }
+    let expr = 'ADD visits :one, days.#day :one'
+    if (newBrowser === true) expr += ', uniques :one'
+    expr += ' SET updatedAt = :now'
     await ddb.send(
       new UpdateCommand({
         TableName: TABLE,
         Key: { pk: 'site' },
-        UpdateExpression: 'ADD visits :one, days.#day :one SET updatedAt = :now',
-        ExpressionAttributeNames: { '#day': day },
-        ExpressionAttributeValues: { ':one': 1, ':now': now },
+        UpdateExpression: expr,
+        ExpressionAttributeNames: names,
+        ExpressionAttributeValues: values,
+      })
+    )
+    return { ok: true }
+  }
+
+  if (kind === 'time') {
+    let seconds = Math.round(Number(secondsIn) || 0)
+    if (!Number.isFinite(seconds) || seconds <= 0) return { ok: true }
+    seconds = Math.min(90, seconds)
+    await ddb.send(
+      new UpdateCommand({
+        TableName: TABLE,
+        Key: { pk: 'site' },
+        UpdateExpression: 'ADD timeSec :sec SET updatedAt = :now',
+        ExpressionAttributeValues: { ':sec': seconds, ':now': now },
       })
     )
     return { ok: true }
@@ -94,6 +114,10 @@ async function hitStat({ kind, id, title }) {
   return { ok: true }
 }
 
+function sumPlays(map) {
+  return Object.values(map || {}).reduce((total, n) => total + (Number(n) || 0), 0)
+}
+
 function rows(map, titles, kind) {
   return Object.entries(map || {})
     .map(([id, plays]) => ({
@@ -113,8 +137,15 @@ async function getStats() {
     .sort((a, b) => b.date.localeCompare(a.date))
     .slice(0, 14)
 
+  const visits = Number(item.visits) || 0
+  const timeSec = Number(item.timeSec) || 0
   return {
-    visits: Number(item.visits) || 0,
+    visits,
+    uniques: Number(item.uniques) || 0,
+    timeSec,
+    avgTimeSec: visits ? Math.round(timeSec / visits) : 0,
+    videoPlays: sumPlays(item.videos),
+    mixPlays: sumPlays(item.mixes),
     days,
     mixes: rows(item.mixes, item.titles, 'mix'),
     videos: rows(item.videos, item.titles, 'video'),

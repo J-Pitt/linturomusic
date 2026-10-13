@@ -3,10 +3,23 @@ import { Link, Navigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { loadSiteStats } from '../lib/siteStats'
 
-function CountTable({ title, empty, rows }) {
+function formatDuration(sec) {
+  const total = Math.max(0, Math.round(Number(sec) || 0))
+  const hours = Math.floor(total / 3600)
+  const minutes = Math.floor((total % 3600) / 60)
+  const seconds = total % 60
+  if (hours) return `${hours}h ${minutes}m`
+  if (minutes) return `${minutes}m ${seconds}s`
+  return `${seconds}s`
+}
+
+function CountTable({ title, total, empty, rows }) {
   return (
     <section className="space-y-3">
-      <h2 className="text-xs uppercase tracking-[0.22em] text-mute">{title}</h2>
+      <div className="flex items-baseline justify-between gap-4">
+        <h2 className="text-xs uppercase tracking-[0.22em] text-mute">{title}</h2>
+        <span className="text-sm tabular-nums text-paper">{total}</span>
+      </div>
       {rows.length === 0 ? (
         <p className="text-sm text-mute">{empty}</p>
       ) : (
@@ -71,8 +84,10 @@ export default function Stats() {
         <div className="space-y-2">
           <h1 className="text-xl font-medium tracking-tight">Site stats</h1>
           <p className="text-sm text-mute leading-relaxed">
-            Signed in as {user?.email}. A visit is one browser each day. A play is the first time
-            that browser starts a mix or video. Your signed-in sessions are not counted.
+            Signed in as {user?.email}. A unique browser is counted once. A visit is that browser
+            coming back on a new day. Time is counted while the tab is open and visible. A play is
+            the first time that browser starts a mix or video. Your signed-in sessions are not
+            counted.
           </p>
         </div>
 
@@ -81,27 +96,43 @@ export default function Stats() {
 
         {stats ? (
           <>
-            <section className="border border-hairline px-4 py-5">
-              <p className="text-xs uppercase tracking-[0.22em] text-mute">Visits</p>
-              <p className="mt-2 text-4xl font-medium tabular-nums">{stats.visits}</p>
-              {stats.days?.length ? (
-                <ul className="mt-4 space-y-1">
-                  {stats.days.map((day) => (
-                    <li key={day.date} className="flex justify-between text-sm text-mute">
-                      <span>{day.date}</span>
-                      <span className="tabular-nums">{day.count}</span>
-                    </li>
-                  ))}
-                </ul>
-              ) : null}
+            <section className="grid grid-cols-2 gap-px border border-hairline bg-hairline">
+              {[
+                ['Unique browsers', stats.uniques || 0],
+                ['Visits', stats.visits || 0],
+                ['Avg time on site', formatDuration(stats.avgTimeSec)],
+                ['Time on site', formatDuration(stats.timeSec)],
+              ].map(([label, value]) => (
+                <div key={label} className="bg-ink px-4 py-4">
+                  <p className="text-xs uppercase tracking-[0.18em] text-mute">{label}</p>
+                  <p className="mt-2 text-2xl font-medium tabular-nums">{value}</p>
+                </div>
+              ))}
             </section>
 
+            {stats.days?.length ? (
+              <ul className="space-y-1">
+                {stats.days.map((day) => (
+                  <li key={day.date} className="flex justify-between text-sm text-mute">
+                    <span>{day.date}</span>
+                    <span className="tabular-nums">{day.count}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+
             <CountTable
-              title="Videos"
+              title="Videos played"
+              total={stats.videoPlays || 0}
               empty="No video plays yet."
               rows={stats.videos || []}
             />
-            <CountTable title="Mixes" empty="No mix plays yet." rows={stats.mixes || []} />
+            <CountTable
+              title="Mixes played"
+              total={stats.mixPlays || 0}
+              empty="No mix plays yet."
+              rows={stats.mixes || []}
+            />
           </>
         ) : null}
       </div>
