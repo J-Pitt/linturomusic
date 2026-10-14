@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 
-function LiveVideoTile({ stream, label, isLocal, cameraOn, audioKick }) {
+function LiveVideoTile({ stream, label, isLocal, cameraOn, audioKick, fill = false }) {
   const videoRef = useRef(null)
   const audioRef = useRef(null)
   const initial = (label || '?').replace(/\s*\(You\)\s*$/, '').charAt(0).toUpperCase() || '?'
@@ -27,7 +27,10 @@ function LiveVideoTile({ stream, label, isLocal, cameraOn, audioKick }) {
     if (!audio || isLocal) return undefined
     const apply = () => {
       audio.srcObject = stream || null
-      if (stream) audio.play().catch(() => {})
+      if (stream) {
+        audio.volume = 1
+        audio.play().catch(() => {})
+      }
     }
     apply()
     if (!stream) return undefined
@@ -40,7 +43,11 @@ function LiveVideoTile({ stream, label, isLocal, cameraOn, audioKick }) {
   }, [stream, isLocal, audioKick])
 
   return (
-    <div className="relative aspect-video bg-black border border-hairline overflow-hidden">
+    <div
+      className={`relative bg-black border border-hairline overflow-hidden ${
+        fill ? 'h-full min-h-[12rem]' : 'aspect-video'
+      }`}
+    >
       {cameraOn && stream ? (
         <video
           ref={videoRef}
@@ -82,12 +89,12 @@ export default function LiveAudienceGrid({ tiles, audioKick = 0, stage = false }
         <div
           className={
             stage
-              ? 'grid grid-cols-1 sm:grid-cols-2 gap-2 flex-1 content-start overflow-y-auto'
+              ? 'grid grid-cols-1 sm:grid-cols-2 gap-2 flex-1 min-h-0 overflow-y-auto auto-rows-[minmax(12rem,1fr)]'
               : 'grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-2 max-h-[32dvh] overflow-y-auto'
           }
         >
           {tiles.map((tile) => (
-            <LiveVideoTile key={tile.key} audioKick={audioKick} {...tile} />
+            <LiveVideoTile key={tile.key} audioKick={audioKick} fill={stage} {...tile} />
           ))}
         </div>
       )}

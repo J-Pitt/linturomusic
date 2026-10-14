@@ -68,7 +68,7 @@ function parseViewerEntry(entry) {
   const peerId = String(entry.peerId || '').slice(0, 80)
   const name = normalizeDisplayName(entry.name)
   if (!peerId || !isValidDisplayName(name)) return null
-  return { peerId, name, camera: entry.camera === true }
+  return { peerId, name, camera: entry.camera === true, mic: entry.mic === true }
 }
 
 export function parseLivePayload(raw) {
@@ -92,12 +92,17 @@ export function parseLivePayload(raw) {
         type: 'hello',
         name,
         camera: typeof data.camera === 'boolean' ? data.camera : undefined,
+        mic: typeof data.mic === 'boolean' ? data.mic : undefined,
         clientId: parseLiveClientId(data.clientId),
       }
     }
 
     if (data.type === 'camera') {
       return { type: 'camera', on: data.on === true }
+    }
+
+    if (data.type === 'mic') {
+      return { type: 'mic', on: data.on === true }
     }
 
     if (data.type === 'ping') {

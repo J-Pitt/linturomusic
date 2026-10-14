@@ -235,6 +235,8 @@ export default function Live() {
   const capturingRef = useRef(false)
   const startingRef = useRef(false)
   const hangoutActiveRef = useRef(false)
+  /** True while some other person in the set has their mic open. */
+  const voiceOverRef = useRef(false)
 
   useEffect(() => {
     effectsRef.current = effects
@@ -857,7 +859,12 @@ export default function Live() {
 
   const publishViewerRoster = useCallback(() => {
     const viewers = Array.from(viewersMapRef.current.values())
-      .map(({ peerId, name, camera }) => ({ peerId, name, camera: !!camera }))
+      .map(({ peerId, name, camera, mic }) => ({
+        peerId,
+        name,
+        camera: !!camera,
+        mic: !!mic,
+      }))
       .sort((a, b) => a.name.localeCompare(b.name))
     setViewerList(viewers)
     setViewerCount(viewers.length)
@@ -890,20 +897,29 @@ export default function Live() {
   )
 
   const upsertViewer = useCallback(
-    (peerId, name, camera, clientId) => {
+    (peerId, name, camera, clientId, mic) => {
       const clean = normalizeDisplayName(name)
       if (!peerId || !isValidDisplayName(clean)) return
       const prev = viewersMapRef.current.get(peerId)
       const nextCamera = typeof camera === 'boolean' ? camera : !!prev?.camera
+      const nextMic = typeof mic === 'boolean' ? mic : !!prev?.mic
       const nextClientId = clientId || prev?.clientId || ''
       viewersMapRef.current.set(peerId, {
         peerId,
         name: clean,
         camera: nextCamera,
+        mic: nextMic,
         clientId: nextClientId,
         lastSeen: Date.now(),
       })
-      if (!prev || prev.name !== clean || !!prev.camera !== nextCamera) publishViewerRoster()
+      if (
+        !prev ||
+        prev.name !== clean ||
+        !!prev.camera !== nextCamera ||
+        !!prev.mic !== nextMic
+      ) {
+        publishViewerRoster()
+      }
     },
     [publishViewerRoster]
   )
@@ -1362,7 +1378,12 @@ export default function Live() {
               })
             )
             const viewers = Array.from(viewersMapRef.current.values()).map(
-              ({ peerId, name, camera }) => ({ peerId, name, camera: !!camera })
+              ({ peerId, name, camera, mic }) => ({
+                peerId,
+                name,
+                camera: !!camera,
+                mic: !!mic,
+              })
             )
             conn.send(JSON.stringify({ type: 'viewer-list', viewers }))
             conn.send(JSON.stringify({ type: 'viewers', count: viewers.length }))
@@ -1386,13 +1407,21 @@ export default function Live() {
               dropViewerConnection(conn.peer)
               return
             }
-            upsertViewer(conn.peer, msg.name, msg.camera, msg.clientId)
+            upsertViewer(conn.peer, msg.name, msg.camera, msg.clientId, msg.mic)
             return
           }
           if (msg.type === 'camera') {
             const entry = viewersMapRef.current.get(conn.peer)
             if (entry && !!entry.camera !== !!msg.on) {
               entry.camera = !!msg.on
+              publishViewerRoster()
+            }
+            return
+          }
+          if (msg.type === 'mic') {
+            const entry = viewersMapRef.current.get(conn.peer)
+            if (entry && !!entry.mic !== !!msg.on) {
+              entry.mic = !!msg.on
               publishViewerRoster()
             }
             return
@@ -1567,6 +1596,7 @@ export default function Live() {
             type: 'hello',
             name: chatNameRef.current,
             camera: camOnRef.current,
+            mic: micOnRef.current,
             clientId: liveClientId(),
           })
         )
@@ -1874,6 +1904,28 @@ export default function Live() {
     return () => clearInterval(timer)
   }, [mode, status, viewerList, currentOutboundStream, attachMeshCall, removeAudienceStream])
 
+  useEffect(() => {
+    const el = viewerVideoRef.current
+    if (!el || mode !== 'viewer' || status !== 'live' || inHangout) {
+      if (el) el.volume = 1
+      return undefined
+    }
+    let raf = 0
+    const tick = () => {
+      if (!el.muted) {
+        const target = voiceOverRef.current ? 0.18 : 1
+        const next = el.volume + (target - el.volume) * 0.22
+        el.volume = Math.abs(target - next) < 0.02 ? target : next
+      }
+      raf = requestAnimationFrame(tick)
+    }
+    raf = requestAnimationFrame(tick)
+    return () => {
+      cancelAnimationFrame(raf)
+      el.volume = 1
+    }
+  }, [mode, status, inHangout])
+
   const unmuteViewer = async () => {
     const el = viewerVideoRef.current
     if (!el) return
@@ -1910,6 +1962,11 @@ export default function Live() {
     }
     stream.getAudioTracks().forEach((track) => {
       track.enabled = micOnRef.current
+      try {
+        track.contentHint = 'speech'
+      } catch {
+        /* ignore */
+      }
     })
     stream.getVideoTracks().forEach((track) => {
       track.enabled = camOnRef.current
@@ -1922,6 +1979,14 @@ export default function Live() {
   const sendCameraFlag = (on) => {
     try {
       viewerDataConnRef.current?.send(JSON.stringify({ type: 'camera', on }))
+    } catch {
+      /* ignore */
+    }
+  }
+
+  const sendMicFlag = (on) => {
+    try {
+      viewerDataConnRef.current?.send(JSON.stringify({ type: 'mic', on }))
     } catch {
       /* ignore */
     }
@@ -1973,6 +2038,11 @@ export default function Live() {
         if (!stream) return
         stream.getAudioTracks().forEach((track) => {
           track.enabled = true
+          try {
+            track.contentHint = 'speech'
+          } catch {
+            /* ignore */
+          }
         })
       } else {
         localMediaRef.current?.getAudioTracks?.().forEach((track) => {
@@ -1982,6 +2052,7 @@ export default function Live() {
       micOnRef.current = next
       setMicOn(next)
       await pushOutboundTracks()
+      sendMicFlag(next)
     } catch (err) {
       console.error(err)
       micOnRef.current = false
@@ -2108,9 +2179,13 @@ export default function Live() {
         stream: audienceStreams[viewer.peerId] || null,
         isLocal: false,
         cameraOn: !!viewer.camera,
+        micOn: !!viewer.mic,
       })
     }
   }
+
+  voiceOverRef.current = audienceTiles.some((tile) => !tile.isLocal && tile.micOn)
+  const voiceOver = voiceOverRef.current
 
   return (
     <div className="min-h-[100dvh] bg-ink text-paper flex flex-col">
@@ -2246,8 +2321,9 @@ export default function Live() {
                       <p className="w-full text-xs text-paper/80">{mediaError}</p>
                     ) : (
                       <p className="w-full text-[11px] text-mute">
-                        Camera and mic stay off until you turn them on. Your mic is heard in the room,
-                        not in the recording.
+                        {voiceOver
+                          ? 'A mic is open, so the set is dipped under them.'
+                          : 'Turn your mic on to talk over the set. The music dips for everyone else while it’s on, and it stays out of the recording.'}
                       </p>
                     )}
                   </div>
