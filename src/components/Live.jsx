@@ -2457,10 +2457,13 @@ export default function Live() {
           />
         ) : (
           <div className="relative flex flex-col lg:flex-row">
-            <div className="relative flex flex-col min-w-0 flex-1">
+            <div className="relative flex flex-col min-w-0 flex-1 overflow-x-auto">
               <div
                 className="relative bg-black flex items-center justify-center shrink-0"
-                style={{ height: stageSize.height }}
+                style={{
+                  height: stageSize.height,
+                  width: `max(100%, ${Math.round(stageSize.height * (16 / 9))}px)`,
+                }}
               >
                 <video
                   ref={viewerVideoRef}
@@ -2676,10 +2679,13 @@ export default function Live() {
 
       {mode === 'host' ? (
         <div className="flex flex-col lg:flex-row">
-          <div className="flex flex-col min-w-0 flex-1">
+          <div className="flex flex-col min-w-0 flex-1 overflow-x-auto">
             <div
               className="relative bg-black shrink-0 flex items-center justify-center"
-              style={{ height: stageSize.height }}
+              style={{
+                height: stageSize.height,
+                width: `max(100%, ${Math.round(stageSize.height * (16 / 9))}px)`,
+              }}
             >
               <video
                 ref={previewVideoRef}

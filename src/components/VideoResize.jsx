@@ -10,23 +10,23 @@ export function ResizeBar({ heightRef, commit, min, label }) {
       onPointerDown={(event) => {
         if (event.button !== 0) return
         event.preventDefault()
-        const handle = event.currentTarget
-        handle.setPointerCapture(event.pointerId)
         const startY = event.clientY
         const startHeight = heightRef.current
         const onMove = (ev) => {
           commit(startHeight + (ev.clientY - startY))
         }
         const onUp = () => {
-          handle.removeEventListener('pointermove', onMove)
-          handle.removeEventListener('pointerup', onUp)
+          window.removeEventListener('pointermove', onMove)
+          window.removeEventListener('pointerup', onUp)
         }
-        handle.addEventListener('pointermove', onMove)
-        handle.addEventListener('pointerup', onUp)
+        window.addEventListener('pointermove', onMove)
+        window.addEventListener('pointerup', onUp)
       }}
-      className="relative z-10 h-3 shrink-0 cursor-ns-resize touch-none flex items-center justify-center bg-ink"
+      className="relative z-20 h-9 shrink-0 cursor-ns-resize touch-none select-none flex items-center justify-center gap-3 border-y border-hairline bg-ink"
     >
-      <span className="h-px w-12 bg-mute/80" />
+      <span className="h-px w-8 bg-mute" />
+      <span className="text-[10px] uppercase tracking-[0.22em] text-mute">Drag</span>
+      <span className="h-px w-8 bg-mute" />
     </div>
   )
 }
