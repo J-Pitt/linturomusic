@@ -1,6 +1,8 @@
 import { useEffect, useRef } from 'react'
+import { useVideoHeight } from '../lib/videoSize'
+import { ResizeBar } from './VideoResize'
 
-function LiveVideoTile({ stream, label, isLocal, cameraOn, audioKick, fill = false }) {
+function LiveVideoTile({ stream, label, isLocal, cameraOn, audioKick, height }) {
   const videoRef = useRef(null)
   const audioRef = useRef(null)
   const initial = (label || '?').replace(/\s*\(You\)\s*$/, '').charAt(0).toUpperCase() || '?'
@@ -44,9 +46,8 @@ function LiveVideoTile({ stream, label, isLocal, cameraOn, audioKick, fill = fal
 
   return (
     <div
-      className={`relative bg-black border border-hairline overflow-hidden ${
-        fill ? 'h-full min-h-[12rem]' : 'aspect-video'
-      }`}
+      className="relative bg-black border border-hairline overflow-hidden"
+      style={{ height }}
     >
       {cameraOn && stream ? (
         <video
@@ -69,14 +70,13 @@ function LiveVideoTile({ stream, label, isLocal, cameraOn, audioKick, fill = fal
   )
 }
 
-export default function LiveAudienceGrid({ tiles, audioKick = 0, stage = false }) {
+export default function LiveAudienceGrid({ tiles, audioKick = 0 }) {
+  const tileSize = useVideoHeight('linturo-live-tile-height', 240, 120)
+  const column = Math.round(tileSize.height * (16 / 9))
+
   return (
     <section
-      className={
-        stage
-          ? 'flex-1 min-h-[40dvh] bg-ink px-3 sm:px-4 py-3 flex flex-col'
-          : 'shrink-0 border-t border-hairline bg-ink px-3 sm:px-4 py-3'
-      }
+      className="shrink-0 border-t border-hairline bg-ink px-3 sm:px-4 pt-3"
       aria-label="Everyone in the room"
     >
       <div className="flex items-center justify-between gap-2 mb-2">
@@ -84,20 +84,30 @@ export default function LiveAudienceGrid({ tiles, audioKick = 0, stage = false }
         <p className="text-[11px] text-mute tabular-nums">{tiles.length}</p>
       </div>
       {tiles.length === 0 ? (
-        <p className="text-xs text-mute">No one else in the room yet.</p>
+        <p className="text-xs text-mute pb-3">No one else in the room yet.</p>
       ) : (
         <div
-          className={
-            stage
-              ? 'grid grid-cols-1 sm:grid-cols-2 gap-2 flex-1 min-h-0 overflow-y-auto auto-rows-[minmax(12rem,1fr)]'
-              : 'grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-2 max-h-[32dvh] overflow-y-auto'
-          }
+          className="grid gap-2"
+          style={{
+            gridTemplateColumns: `repeat(auto-fill, minmax(min(100%, ${column}px), 1fr))`,
+          }}
         >
           {tiles.map((tile) => (
-            <LiveVideoTile key={tile.key} audioKick={audioKick} fill={stage} {...tile} />
+            <LiveVideoTile
+              key={tile.key}
+              audioKick={audioKick}
+              height={tileSize.height}
+              {...tile}
+            />
           ))}
         </div>
       )}
+      <ResizeBar
+        heightRef={tileSize.heightRef}
+        commit={tileSize.commit}
+        min={tileSize.min}
+        label="Drag to resize the room videos"
+      />
     </section>
   )
 }

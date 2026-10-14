@@ -813,10 +813,10 @@ export default function HangoutRoom({ name, onLeave, onWatchSet, onHostControls,
   }
 
   return (
-    <div className="flex-1 flex flex-col lg:flex-row min-h-0">
-      <div className="flex-1 flex flex-col min-h-0 min-w-0">
+    <div className="flex flex-col lg:flex-row">
+      <div className="flex flex-col min-w-0 flex-1">
         {status === 'in' ? (
-          <LiveAudienceGrid tiles={tiles} audioKick={audioKick} stage />
+          <LiveAudienceGrid tiles={tiles} audioKick={audioKick} />
         ) : (
           <div className="flex-1 min-h-[40dvh] flex items-center justify-center px-6 text-center">
             <div className="max-w-sm space-y-3">
@@ -902,7 +902,7 @@ export default function HangoutRoom({ name, onLeave, onWatchSet, onHostControls,
         </div>
       </div>
 
-      <aside className="w-full lg:w-[22rem] xl:w-96 shrink-0 border-t lg:border-t-0 lg:border-l border-hairline flex flex-col min-h-[24rem] lg:min-h-0">
+      <aside className="w-full lg:w-[22rem] xl:w-96 shrink-0 border-t lg:border-t-0 lg:border-l border-hairline flex flex-col min-h-[24rem] lg:sticky lg:top-0 lg:h-[100dvh] lg:max-h-[100dvh]">
         <div className="p-4 sm:p-5 flex-1 flex flex-col min-h-0 gap-3">
           {setIsLive ? (
             <button

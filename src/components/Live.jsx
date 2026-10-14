@@ -38,6 +38,8 @@ import HangoutRoom from './HangoutRoom'
 import LiveAudienceGrid from './LiveAudienceGrid'
 import LiveChat from './LiveChat'
 import LiveRecordingReview from './LiveRecordingReview'
+import { ResizeBar } from './VideoResize'
+import { useVideoHeight } from '../lib/videoSize'
 import { ListAnnounce } from './Newsletter'
 import { useAuth } from '../context/AuthContext'
 import { notifyLiveList } from '../lib/newsletter'
@@ -94,6 +96,29 @@ function cameraLabel(device, index) {
   if (!device.label) return label
   if (isExternalCamera(device)) return `${label} · USB`
   return label
+}
+
+const COMPUTER_MIC_RE = /macbook|built-?in|internal|facetime|imac|mac mini|studio display|microphone array/i
+const MIC_ALIAS_RE = /^(default|communications)$/i
+
+function isComputerMic(device) {
+  return COMPUTER_MIC_RE.test(device?.label || '')
+}
+
+/** Real inputs that are not the music device and not Chrome's default alias. */
+function computerMicChoices(audioInputs, musicId) {
+  const music = audioInputs.find((device) => device.deviceId === musicId)
+  return audioInputs.filter((device) => {
+    if (!device.deviceId || MIC_ALIAS_RE.test(device.deviceId)) return false
+    if (musicId && device.deviceId === musicId) return false
+    if (music?.groupId && device.groupId === music.groupId && !isComputerMic(device)) return false
+    return true
+  })
+}
+
+function preferredComputerMic(audioInputs, musicId) {
+  const choices = computerMicChoices(audioInputs, musicId)
+  return choices.find(isComputerMic) || choices[0] || null
 }
 
 function pickPreferredCamera(videoDevices, prevId) {
@@ -167,6 +192,7 @@ export default function Live() {
   const [devices, setDevices] = useState({ video: [], audio: [] })
   const [videoDeviceId, setVideoDeviceId] = useState('')
   const [audioDeviceId, setAudioDeviceId] = useState('')
+  const [talkDeviceId, setTalkDeviceId] = useState('')
   const [effects, setEffects] = useState(DEFAULT_EFFECTS)
   const [presetId, setPresetId] = useState('')
   const [muted, setMuted] = useState(true)
@@ -202,6 +228,7 @@ export default function Live() {
   const [hostTalk, setHostTalk] = useState(false)
   const [hostTalkError, setHostTalkError] = useState('')
   const [hostTalking, setHostTalking] = useState(false)
+  const stageSize = useVideoHeight('linturo-live-stage-height', 520, 200)
   const accessTokenRef = useRef('')
 
   const viewerVideoRef = useRef(null)
@@ -420,6 +447,15 @@ export default function Live() {
       return { audioId: '', videoId: '' }
     }
   }, [])
+
+  useEffect(() => {
+    if (mode !== 'host') return
+    setTalkDeviceId((prev) => {
+      const choices = computerMicChoices(devices.audio, audioDeviceId)
+      if (prev && choices.some((device) => device.deviceId === prev)) return prev
+      return preferredComputerMic(devices.audio, audioDeviceId)?.deviceId || ''
+    })
+  }, [mode, devices.audio, audioDeviceId])
 
   /**
    * Serialize getUserMedia. A second caller waits, then reuses a live track
@@ -1182,40 +1218,48 @@ export default function Live() {
     rafRef.current = requestAnimationFrame(tick)
   }
 
-  const openHostTalkMic = async (excludeId) => {
+  const openHostTalkMic = async (musicId) => {
     const list = await navigator.mediaDevices.enumerateDevices()
-    const mics = list.filter(
-      (d) => d.kind === 'audioinput' && d.deviceId && d.deviceId !== excludeId
-    )
-    const builtIn =
-      mics.find((d) => /macbook|built-in|internal|facetime|microphone array/i.test(d.label)) ||
-      mics[0]
-    if (!builtIn?.deviceId) return null
-    const stream = await runGum(async () =>
-      navigator.mediaDevices.getUserMedia({
-        video: false,
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-          deviceId: { ideal: builtIn.deviceId },
-        },
-      })
-    )
-    const track = liveKindTrack(stream, 'audio')
-    if (!track) return null
-    const chosen = track.getSettings?.().deviceId || ''
-    if (excludeId && chosen === excludeId) {
-      track.stop()
-      return null
+    const audioInputs = list.filter((device) => device.kind === 'audioinput')
+    const choices = computerMicChoices(audioInputs, musicId)
+    const preferred = choices.find((device) => device.deviceId === talkDeviceId) || preferredComputerMic(audioInputs, musicId)
+    const ordered = preferred
+      ? [preferred, ...choices.filter((device) => device.deviceId !== preferred.deviceId)]
+      : choices
+
+    for (const device of ordered) {
+      try {
+        const stream = await runGum(async () =>
+          navigator.mediaDevices.getUserMedia({
+            video: false,
+            audio: {
+              echoCancellation: true,
+              noiseSuppression: true,
+              autoGainControl: true,
+              deviceId: { exact: device.deviceId },
+            },
+          })
+        )
+        const track = liveKindTrack(stream, 'audio')
+        if (!track) continue
+        const chosen = track.getSettings?.().deviceId || ''
+        if (musicId && chosen === musicId) {
+          track.stop()
+          continue
+        }
+        track.enabled = false
+        try {
+          track.contentHint = 'speech'
+        } catch {
+          /* ignore */
+        }
+        setTalkDeviceId(device.deviceId)
+        return track
+      } catch (err) {
+        console.error(err)
+      }
     }
-    track.enabled = false
-    try {
-      track.contentHint = 'speech'
-    } catch {
-      /* ignore */
-    }
-    return track
+    return null
   }
 
   const goLive = async () => {
@@ -1340,7 +1384,8 @@ export default function Live() {
       try {
         talkTrack = await openHostTalkMic(musicDeviceId)
         if (!talkTrack) {
-          talkError = 'No computer mic besides the music input. Talking stays off for this set.'
+          talkError =
+            'No computer mic turned up besides the XDJ. Pick MacBook Microphone under Talk mic, then go live again.'
         }
       } catch (err) {
         console.error(err)
@@ -2349,12 +2394,15 @@ export default function Live() {
             onPresence={handleHangoutPresence}
           />
         ) : (
-          <div className="relative flex-1 flex flex-col lg:flex-row min-h-0">
-            <div className="relative flex-1 flex flex-col min-h-0 min-w-0">
-              <div className="relative flex-1 bg-black flex items-center justify-center min-h-[40dvh]">
+          <div className="relative flex flex-col lg:flex-row">
+            <div className="relative flex flex-col min-w-0 flex-1">
+              <div
+                className="relative bg-black flex items-center justify-center shrink-0"
+                style={{ height: stageSize.height }}
+              >
                 <video
                   ref={viewerVideoRef}
-                  className="w-full h-full max-h-[52dvh] lg:max-h-none object-contain bg-black"
+                  className="w-full h-full object-contain bg-black"
                   playsInline
                   autoPlay
                   muted={muted}
@@ -2421,6 +2469,12 @@ export default function Live() {
                   </button>
                 )}
               </div>
+              <ResizeBar
+                heightRef={stageSize.heightRef}
+                commit={stageSize.commit}
+                min={stageSize.min}
+                label="Drag to resize the set"
+              />
               {status === 'live' && (
                 <>
                   <LiveAudienceGrid tiles={audienceTiles} audioKick={audioKick} />
@@ -2476,7 +2530,7 @@ export default function Live() {
                 </button>
               </div>
             </div>
-            <aside className="w-full lg:w-[22rem] xl:w-96 shrink-0 border-t lg:border-t-0 lg:border-l border-hairline flex flex-col min-h-[24rem] lg:min-h-0">
+            <aside className="w-full lg:w-[22rem] xl:w-96 shrink-0 border-t lg:border-t-0 lg:border-l border-hairline flex flex-col min-h-[24rem] lg:sticky lg:top-0 lg:h-[100dvh] lg:max-h-[100dvh]">
               <div className="p-4 sm:p-5 flex-1 flex flex-col min-h-0">
                 <LiveChat
                   fill
@@ -2559,9 +2613,12 @@ export default function Live() {
       ) : null}
 
       {mode === 'host' ? (
-        <div className="flex-1 flex flex-col lg:flex-row min-h-0">
-          <div className="flex-1 flex flex-col min-h-0 min-w-0">
-            <div className="relative flex-1 bg-black min-h-[36dvh] lg:min-h-0 flex items-center justify-center">
+        <div className="flex flex-col lg:flex-row">
+          <div className="flex flex-col min-w-0 flex-1">
+            <div
+              className="relative bg-black shrink-0 flex items-center justify-center"
+              style={{ height: stageSize.height }}
+            >
               <video
                 ref={previewVideoRef}
                 className="absolute opacity-0 pointer-events-none w-px h-px"
@@ -2569,16 +2626,19 @@ export default function Live() {
                 muted
                 autoPlay
               />
-              <canvas
-                ref={canvasRef}
-                className="w-full h-full max-h-[52dvh] lg:max-h-none object-contain"
-              />
+              <canvas ref={canvasRef} className="w-full h-full object-contain" />
               {status !== 'live' && status !== 'preview' && (
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                   <p className="text-sm text-mute px-6 text-center">{statusDetail}</p>
                 </div>
               )}
             </div>
+            <ResizeBar
+              heightRef={stageSize.heightRef}
+              commit={stageSize.commit}
+              min={stageSize.min}
+              label="Drag to resize the set"
+            />
             {status === 'live' && (
               <LiveAudienceGrid tiles={audienceTiles} audioKick={audioKick} />
             )}
@@ -2687,6 +2747,31 @@ export default function Live() {
                       />
                     </div>
                   </div>
+                </label>
+                <label className="block space-y-1.5">
+                  <span className="flex items-center gap-2 text-xs text-mute">
+                    <MicrophoneIcon className="h-4 w-4" />
+                    Talk mic (computer)
+                  </span>
+                  <select
+                    value={talkDeviceId}
+                    onChange={(e) => setTalkDeviceId(e.target.value)}
+                    className="w-full px-3 py-2 border border-hairline bg-black text-paper text-sm"
+                    disabled={status === 'live'}
+                  >
+                    {computerMicChoices(devices.audio, audioDeviceId).length === 0 ? (
+                      <option value="">No computer mic listed yet</option>
+                    ) : (
+                      computerMicChoices(devices.audio, audioDeviceId).map((device) => (
+                        <option key={device.deviceId} value={device.deviceId}>
+                          {device.label || 'Computer microphone'}
+                        </option>
+                      ))
+                    )}
+                  </select>
+                  <p className="text-[11px] text-mute leading-relaxed">
+                    Pick the Mac microphone, not the XDJ. Then go live, and use the button below to talk.
+                  </p>
                 </label>
                 {status === 'live' ? (
                   <div className="space-y-1.5">
