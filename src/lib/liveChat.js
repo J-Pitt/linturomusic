@@ -105,6 +105,10 @@ export function parseLivePayload(raw) {
       return { type: 'mic', on: data.on === true }
     }
 
+    if (data.type === 'host-mic') {
+      return { type: 'host-mic', on: data.on === true }
+    }
+
     if (data.type === 'ping') {
       return { type: 'ping' }
     }

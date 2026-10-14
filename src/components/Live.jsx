@@ -123,6 +123,18 @@ function permissionDeniedError() {
   return new Error('Microphone permission was blocked. Allow the mic, then try again.')
 }
 
+/** First audio track is the set. A second track, when present, is the host's computer mic. */
+function splitHostPlayback(remote) {
+  const videos = remote?.getVideoTracks?.() || []
+  const audios = remote?.getAudioTracks?.() || []
+  const music = audios[0] || null
+  const talk = audios[1] || null
+  return {
+    picture: new MediaStream([...videos, music].filter(Boolean)),
+    talk: talk ? new MediaStream([talk]) : null,
+  }
+}
+
 function EffectSlider({ label, value, onChange, min = 0, max = 1, step = 0.01 }) {
   return (
     <label className="block space-y-1.5">
@@ -187,9 +199,14 @@ export default function Live() {
   const [mediaBusy, setMediaBusy] = useState(false)
   const [mediaError, setMediaError] = useState('')
   const [audioKick, setAudioKick] = useState(0)
+  const [hostTalk, setHostTalk] = useState(false)
+  const [hostTalkError, setHostTalkError] = useState('')
+  const [hostTalking, setHostTalking] = useState(false)
   const accessTokenRef = useRef('')
 
   const viewerVideoRef = useRef(null)
+  const hostTalkAudioRef = useRef(null)
+  const hostTalkTrackRef = useRef(null)
   const previewVideoRef = useRef(null)
   const canvasRef = useRef(null)
   const localStreamRef = useRef(null)
@@ -757,6 +774,14 @@ export default function Live() {
     setChatConnected(false)
     peerRef.current?.destroy()
     peerRef.current = null
+    try {
+      hostTalkTrackRef.current?.stop()
+    } catch {
+      /* ignore */
+    }
+    hostTalkTrackRef.current = null
+    setHostTalk(false)
+    setHostTalkError('')
     stopTracks(localStreamRef.current)
     stopTracks(outboundStreamRef.current)
     stopTracks(audioStreamRef.current)
@@ -807,7 +832,9 @@ export default function Live() {
     handshakeRef.current?.dispose?.()
     handshakeRef.current = null
     hadRemoteStreamRef.current = false
+    setHostTalking(false)
     if (viewerVideoRef.current) viewerVideoRef.current.srcObject = null
+    if (hostTalkAudioRef.current) hostTalkAudioRef.current.srcObject = null
   }, [])
 
 
@@ -1041,7 +1068,10 @@ export default function Live() {
       return
     }
     try {
-      const rec = createLiveRecorder(stream)
+      const video = stream.getVideoTracks()[0]
+      const music = stream.getAudioTracks()[0]
+      const recordStream = new MediaStream([video, music].filter(Boolean))
+      const rec = createLiveRecorder(recordStream)
       recorderRef.current = rec
       rec.start()
       setRecording(true)
@@ -1152,6 +1182,42 @@ export default function Live() {
     rafRef.current = requestAnimationFrame(tick)
   }
 
+  const openHostTalkMic = async (excludeId) => {
+    const list = await navigator.mediaDevices.enumerateDevices()
+    const mics = list.filter(
+      (d) => d.kind === 'audioinput' && d.deviceId && d.deviceId !== excludeId
+    )
+    const builtIn =
+      mics.find((d) => /macbook|built-in|internal|facetime|microphone array/i.test(d.label)) ||
+      mics[0]
+    if (!builtIn?.deviceId) return null
+    const stream = await runGum(async () =>
+      navigator.mediaDevices.getUserMedia({
+        video: false,
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+          deviceId: { ideal: builtIn.deviceId },
+        },
+      })
+    )
+    const track = liveKindTrack(stream, 'audio')
+    if (!track) return null
+    const chosen = track.getSettings?.().deviceId || ''
+    if (excludeId && chosen === excludeId) {
+      track.stop()
+      return null
+    }
+    track.enabled = false
+    try {
+      track.contentHint = 'speech'
+    } catch {
+      /* ignore */
+    }
+    return track
+  }
+
   const goLive = async () => {
     if (startingRef.current) return
     startingRef.current = true
@@ -1173,6 +1239,14 @@ export default function Live() {
     setViewerList([])
     setViewerCount(0)
     setAudienceStreams({})
+    try {
+      hostTalkTrackRef.current?.stop()
+    } catch {
+      /* ignore */
+    }
+    hostTalkTrackRef.current = null
+    setHostTalk(false)
+    setHostTalkError('')
     clearInterval(viewerPruneTimerRef.current)
     peerRef.current?.destroy()
     peerRef.current = null
@@ -1260,7 +1334,21 @@ export default function Live() {
           /* ignore */
         }
       }
-      const outbound = new MediaStream([videoTrack, broadcastAudio].filter(Boolean))
+      const musicDeviceId = broadcastAudio.getSettings?.().deviceId || audioId
+      let talkTrack = null
+      let talkError = ''
+      try {
+        talkTrack = await openHostTalkMic(musicDeviceId)
+        if (!talkTrack) {
+          talkError = 'No computer mic besides the music input. Talking stays off for this set.'
+        }
+      } catch (err) {
+        console.error(err)
+        talkError = 'Computer mic was blocked. Allow it, then go live again to talk over the set.'
+      }
+      setHostTalkError(talkError)
+      hostTalkTrackRef.current = talkTrack
+      const outbound = new MediaStream([videoTrack, broadcastAudio, talkTrack].filter(Boolean))
       outboundStreamRef.current = outbound
 
       setStatusDetail('Opening live room…')
@@ -1408,6 +1496,16 @@ export default function Live() {
               return
             }
             upsertViewer(conn.peer, msg.name, msg.camera, msg.clientId, msg.mic)
+            try {
+              conn.send(
+                JSON.stringify({
+                  type: 'host-mic',
+                  on: !!hostTalkTrackRef.current?.enabled,
+                })
+              )
+            } catch {
+              /* ignore */
+            }
             return
           }
           if (msg.type === 'camera') {
@@ -1717,6 +1815,7 @@ export default function Live() {
         if (msg.type === 'viewers') setViewerCount(msg.count)
         if (msg.type === 'chat') appendChat(msg)
         if (msg.type === 'history') msg.messages.forEach((m) => appendChat(m))
+        if (msg.type === 'host-mic') setHostTalking(!!msg.on)
         if (msg.type === 'locked') {
           viewerLockedRef.current = true
           clearTimeout(reconnectTimerRef.current)
@@ -1765,7 +1864,28 @@ export default function Live() {
 
         const el = viewerVideoRef.current
         if (!el) return
-        el.srcObject = remote
+        const playback = splitHostPlayback(remote)
+        el.srcObject = playback.picture
+        const talkEl = hostTalkAudioRef.current
+        if (talkEl) {
+          talkEl.srcObject = playback.talk
+          talkEl.volume = 1
+        }
+        const playTalk = () => {
+          if (!talkEl?.srcObject) return Promise.resolve()
+          return talkEl.play().catch(() => {})
+        }
+        remote.addEventListener('addtrack', () => {
+          if (!stillCurrent()) return
+          const next = splitHostPlayback(remote)
+          const currentTalk = talkEl?.srcObject?.getAudioTracks?.()[0]
+          const nextTalk = next.talk?.getAudioTracks?.()[0]
+          if (talkEl && nextTalk && currentTalk !== nextTalk) {
+            talkEl.srcObject = next.talk
+            talkEl.volume = 1
+            playTalk()
+          }
+        })
         el.setAttribute('playsinline', '')
         el.setAttribute('webkit-playsinline', '')
         el.playsInline = true
@@ -1774,9 +1894,11 @@ export default function Live() {
         el.volume = 1
         el.removeAttribute('muted')
         el.muted = false
+        if (talkEl) talkEl.muted = false
         setMuted(false)
         try {
           await el.play()
+          await playTalk()
           setStatus('live')
           setAudioKick((n) => n + 1)
           setStatusDetail(
@@ -1787,8 +1909,10 @@ export default function Live() {
           el.muted = true
           el.setAttribute('muted', '')
           setMuted(true)
+          if (talkEl) talkEl.muted = true
           try {
             await el.play()
+            await playTalk()
           } catch {
             /* ignore */
           }
@@ -1936,6 +2060,12 @@ export default function Live() {
     el.volume = 1
     el.removeAttribute('muted')
     el.muted = false
+    const talkEl = hostTalkAudioRef.current
+    if (talkEl) {
+      talkEl.muted = false
+      talkEl.volume = 1
+      talkEl.play().catch(() => {})
+    }
     setMuted(false)
     setNeedsGesture(false)
     setAudioKick((n) => n + 1)
@@ -2184,7 +2314,8 @@ export default function Live() {
     }
   }
 
-  voiceOverRef.current = audienceTiles.some((tile) => !tile.isLocal && tile.micOn)
+  voiceOverRef.current =
+    hostTalking || audienceTiles.some((tile) => !tile.isLocal && tile.micOn)
   const voiceOver = voiceOverRef.current
 
   return (
@@ -2228,6 +2359,7 @@ export default function Live() {
                   autoPlay
                   muted={muted}
                 />
+                <audio ref={hostTalkAudioRef} autoPlay playsInline muted={muted} />
                 {status !== 'live' && (
                   <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-6 text-center">
                     <p className="text-sm sm:text-base text-mute pointer-events-none">
@@ -2556,6 +2688,38 @@ export default function Live() {
                     </div>
                   </div>
                 </label>
+                {status === 'live' ? (
+                  <div className="space-y-1.5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const track = hostTalkTrackRef.current
+                        if (!track || track.readyState !== 'live') {
+                          setHostTalkError(
+                            'Computer mic is not in this set. Allow it, end live, and go live again.'
+                          )
+                          return
+                        }
+                        const next = !track.enabled
+                        track.enabled = next
+                        setHostTalk(next)
+                        setHostTalkError('')
+                        broadcastData({ type: 'host-mic', on: next })
+                      }}
+                      className={`w-full px-4 py-2.5 border text-sm font-medium ${
+                        hostTalk
+                          ? 'border-paper bg-paper text-ink'
+                          : 'border-hairline text-paper hover:border-paper'
+                      }`}
+                    >
+                      {hostTalk ? 'Computer mic on' : 'Talk on the computer mic'}
+                    </button>
+                    <p className="text-[11px] text-mute leading-relaxed">
+                      {hostTalkError ||
+                        'Speaks over the set while you play. The music dips for viewers until you turn it off. Not in the recording.'}
+                    </p>
+                  </div>
+                ) : null}
               </div>
 
               <div className="flex flex-wrap gap-2">
