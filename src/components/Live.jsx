@@ -254,12 +254,17 @@ export default function Live() {
   const [hostTalk, setHostTalk] = useState(false)
   const [hostTalkError, setHostTalkError] = useState('')
   const [hostTalking, setHostTalking] = useState(false)
+  const hostTalkRef = useRef(false)
+  const hostTalkingRef = useRef(false)
+  hostTalkRef.current = hostTalk
+  hostTalkingRef.current = hostTalking
   const stageSize = useVideoHeight('linturo-live-stage-height', 520, 200)
   const accessTokenRef = useRef('')
 
   const viewerVideoRef = useRef(null)
   const hostTalkAudioRef = useRef(null)
   const hostTalkTrackRef = useRef(null)
+  const viewerRemoteRef = useRef(null)
   const previewVideoRef = useRef(null)
   const canvasRef = useRef(null)
   const localStreamRef = useRef(null)
@@ -898,6 +903,7 @@ export default function Live() {
     setHostTalking(false)
     if (viewerVideoRef.current) viewerVideoRef.current.srcObject = null
     if (hostTalkAudioRef.current) hostTalkAudioRef.current.srcObject = null
+    viewerRemoteRef.current = null
   }, [])
 
 
@@ -1287,7 +1293,7 @@ export default function Live() {
             continue
           }
         }
-        track.enabled = false
+        track.enabled = true
         try {
           track.contentHint = 'speech'
         } catch {
@@ -1522,7 +1528,27 @@ export default function Live() {
         // Do NOT clone WebRTC tracks — cloned canvas/audio tracks often go silent on mobile.
         const musicTrack = stream.getAudioTracks()[0]
         if (musicTrack) musicTrack.enabled = true
+        const talkTrack = hostTalkTrackRef.current
+        if (talkTrack) talkTrack.enabled = true
         call.answer(stream)
+        const pc = call.peerConnection
+        const restoreTalk = () => {
+          if (!talkTrack || hostTalkTrackRef.current !== talkTrack) return
+          talkTrack.enabled = hostTalkRef.current
+        }
+        if (pc) {
+          let sawNegotiation = pc.signalingState !== 'stable'
+          const onStable = () => {
+            if (!sawNegotiation) {
+              if (pc.signalingState !== 'stable') sawNegotiation = true
+              return
+            }
+            if (pc.signalingState !== 'stable') return
+            pc.removeEventListener('signalingstatechange', onStable)
+            restoreTalk()
+          }
+          pc.addEventListener('signalingstatechange', onStable)
+        }
         callsRef.current.set(call.peer, call)
         call.on('stream', (remote) => {
           if (remote) {
@@ -1607,7 +1633,7 @@ export default function Live() {
               conn.send(
                 JSON.stringify({
                   type: 'host-mic',
-                  on: !!hostTalkTrackRef.current?.enabled,
+                  on: hostTalkRef.current,
                 })
               )
             } catch {
@@ -1971,16 +1997,21 @@ export default function Live() {
 
         const el = viewerVideoRef.current
         if (!el) return
+        viewerRemoteRef.current = remote
         const playback = splitHostPlayback(remote)
         el.srcObject = playback.picture
         const talkEl = hostTalkAudioRef.current
         if (talkEl) {
           talkEl.srcObject = playback.talk
-          talkEl.volume = 1
+          talkEl.volume = hostTalkingRef.current ? 1 : 0
         }
         const playTalk = () => {
-          if (!talkEl?.srcObject) return Promise.resolve()
-          return talkEl.play().catch(() => {})
+          if (!talkEl?.srcObject || !hostTalkingRef.current) return Promise.resolve()
+          talkEl.muted = false
+          talkEl.volume = 1
+          return talkEl.play().catch(() => {
+            setNeedsGesture(true)
+          })
         }
         remote.addEventListener('addtrack', () => {
           if (!stillCurrent()) return
@@ -1989,7 +2020,7 @@ export default function Live() {
           const nextTalk = next.talk?.getAudioTracks?.()[0]
           if (talkEl && nextTalk && currentTalk !== nextTalk) {
             talkEl.srcObject = next.talk
-            talkEl.volume = 1
+            talkEl.volume = hostTalkingRef.current ? 1 : 0
             playTalk()
           }
         })
@@ -2136,6 +2167,33 @@ export default function Live() {
   }, [mode, status, viewerList, currentOutboundStream, attachMeshCall, removeAudienceStream])
 
   useEffect(() => {
+    const talkEl = hostTalkAudioRef.current
+    if (mode !== 'viewer' || inHangout || !talkEl) return undefined
+    const remote = viewerRemoteRef.current
+    if (remote) {
+      const nextTalk = splitHostPlayback(remote).talk
+      const nextTrack = nextTalk?.getAudioTracks?.()[0]
+      const currentTrack = talkEl.srcObject?.getAudioTracks?.()[0]
+      if (nextTrack && nextTrack !== currentTrack) talkEl.srcObject = nextTalk
+    }
+    if (!hostTalking) {
+      talkEl.volume = 0
+      return undefined
+    }
+    talkEl.muted = false
+    talkEl.volume = 1
+    const play = () => {
+      talkEl.play().catch(() => setNeedsGesture(true))
+    }
+    play()
+    const track = talkEl.srcObject?.getAudioTracks?.()[0]
+    if (track) track.onunmute = play
+    return () => {
+      if (track) track.onunmute = null
+    }
+  }, [hostTalking, mode, status, inHangout])
+
+  useEffect(() => {
     const el = viewerVideoRef.current
     if (!el || mode !== 'viewer' || status !== 'live' || inHangout) {
       if (el) el.volume = 1
@@ -2170,8 +2228,8 @@ export default function Live() {
     const talkEl = hostTalkAudioRef.current
     if (talkEl) {
       talkEl.muted = false
-      talkEl.volume = 1
-      talkEl.play().catch(() => {})
+      talkEl.volume = hostTalkingRef.current ? 1 : 0
+      if (hostTalkingRef.current) talkEl.play().catch(() => {})
     }
     setMuted(false)
     setNeedsGesture(false)
@@ -2862,7 +2920,8 @@ export default function Live() {
                           }
                           hostTalkTrackRef.current = track
                         }
-                        const next = !track.enabled
+                        const next = !hostTalkRef.current
+                        hostTalkRef.current = next
                         track.enabled = next
                         setHostTalk(next)
                         setHostTalkError('')

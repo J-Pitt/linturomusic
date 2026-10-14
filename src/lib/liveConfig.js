@@ -41,7 +41,11 @@ export const LIVE_PEER_OPTIONS = {
   },
 }
 
-/** Tiny canvas + silent audio — audio m-line required so host audio negotiates on mobile. */
+/**
+ * Tiny canvas plus two silent audio tracks.
+ * The first audio line carries the set. The second is the host's computer mic.
+ * PeerJS does not renegotiate, so both lines have to be in the viewer's offer.
+ */
 export function createHandshakeStream() {
   const canvas = document.createElement('canvas')
   canvas.width = 16
@@ -72,22 +76,26 @@ export function createHandshakeStream() {
   try {
     const AudioCtx = window.AudioContext || window.webkitAudioContext
     audioCtx = new AudioCtx()
-    const dest = audioCtx.createMediaStreamDestination()
-    const osc = audioCtx.createOscillator()
-    const gain = audioCtx.createGain()
-    gain.gain.value = 0
-    osc.connect(gain)
-    gain.connect(dest)
-    osc.start()
-    dest.stream.getAudioTracks().forEach((t) => {
-      t.enabled = true
+    const addSilent = (hint) => {
+      const dest = audioCtx.createMediaStreamDestination()
+      const osc = audioCtx.createOscillator()
+      const gain = audioCtx.createGain()
+      gain.gain.value = 0
+      osc.connect(gain)
+      gain.connect(dest)
+      osc.start()
+      const track = dest.stream.getAudioTracks()[0]
+      if (!track) return
+      track.enabled = true
       try {
-        t.contentHint = 'music'
+        track.contentHint = hint
       } catch {
         /* ignore */
       }
-      stream.addTrack(t)
-    })
+      stream.addTrack(track)
+    }
+    addSilent('music')
+    addSilent('speech')
     audioCtx.resume?.().catch(() => {})
   } catch {
     /* Viewer may still get video; audio negotiation can fail without this track. */
