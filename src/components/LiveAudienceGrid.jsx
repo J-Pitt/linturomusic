@@ -62,11 +62,15 @@ function LiveVideoTile({ stream, label, isLocal, cameraOn, audioKick }) {
   )
 }
 
-export default function LiveAudienceGrid({ tiles, audioKick = 0 }) {
+export default function LiveAudienceGrid({ tiles, audioKick = 0, stage = false }) {
   return (
     <section
-      className="shrink-0 border-t border-hairline bg-ink px-3 sm:px-4 py-3"
-      aria-label="Everyone else"
+      className={
+        stage
+          ? 'flex-1 min-h-[40dvh] bg-ink px-3 sm:px-4 py-3 flex flex-col'
+          : 'shrink-0 border-t border-hairline bg-ink px-3 sm:px-4 py-3'
+      }
+      aria-label="Everyone in the room"
     >
       <div className="flex items-center justify-between gap-2 mb-2">
         <p className="text-xs uppercase tracking-[0.24em] text-mute">Room</p>
@@ -75,7 +79,13 @@ export default function LiveAudienceGrid({ tiles, audioKick = 0 }) {
       {tiles.length === 0 ? (
         <p className="text-xs text-mute">No one else in the room yet.</p>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-2 max-h-[32dvh] overflow-y-auto">
+        <div
+          className={
+            stage
+              ? 'grid grid-cols-1 sm:grid-cols-2 gap-2 flex-1 content-start overflow-y-auto'
+              : 'grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-2 max-h-[32dvh] overflow-y-auto'
+          }
+        >
           {tiles.map((tile) => (
             <LiveVideoTile key={tile.key} audioKick={audioKick} {...tile} />
           ))}

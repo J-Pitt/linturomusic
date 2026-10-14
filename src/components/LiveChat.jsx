@@ -8,6 +8,7 @@ export default function LiveChat({
   onNameChange,
   disabled = false,
   compact = false,
+  fill = false,
   placeholder = 'Say something…',
   nameReadOnly = false,
 }) {
@@ -29,7 +30,11 @@ export default function LiveChat({
   }
 
   return (
-    <div className={`flex flex-col min-h-0 ${compact ? 'h-56' : 'h-64 sm:h-72'}`}>
+    <div
+      className={`flex flex-col min-h-0 ${
+        fill ? 'flex-1 h-full min-h-[20rem] lg:min-h-0' : compact ? 'h-56' : 'h-64 sm:h-72'
+      }`}
+    >
       <div className="flex items-center justify-between gap-2 mb-2">
         <p className="text-xs uppercase tracking-[0.24em] text-mute">Chat</p>
         <input

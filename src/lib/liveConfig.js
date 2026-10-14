@@ -112,6 +112,9 @@ export function makeHostPeerId() {
   return `linturo-${Math.random().toString(36).slice(2, 10)}`
 }
 
+/** Stable room id so viewers can meet when a set is not on. */
+export const HANGOUT_PEER_ID = 'linturo-hangout'
+
 export const DEFAULT_EFFECTS = {
   intensity: 0.28,
   hueSpeed: 0.18,

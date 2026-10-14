@@ -104,6 +104,12 @@ export function parseLivePayload(raw) {
       return { type: 'ping' }
     }
 
+    if (data.type === 'host') {
+      const name = normalizeDisplayName(data.name)
+      if (!isValidDisplayName(name)) return null
+      return { type: 'host', name, camera: data.camera === true }
+    }
+
     if (data.type === 'locked') {
       return { type: 'locked' }
     }

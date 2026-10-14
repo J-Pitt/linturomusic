@@ -34,6 +34,7 @@ import {
   parseLivePayload,
   saveGuestName,
 } from '../lib/liveChat'
+import HangoutRoom from './HangoutRoom'
 import LiveAudienceGrid from './LiveAudienceGrid'
 import LiveChat from './LiveChat'
 import LiveRecordingReview from './LiveRecordingReview'
@@ -172,6 +173,7 @@ export default function Live() {
   const [joinNameError, setJoinNameError] = useState('')
   const [chatConnected, setChatConnected] = useState(false)
   const [viewerWantsJoin, setViewerWantsJoin] = useState(false)
+  const [inHangout, setInHangout] = useState(false)
   const [roomLocked, setRoomLocked] = useState(false)
   const [removedViewers, setRemovedViewers] = useState([])
   const [audioLevel, setAudioLevel] = useState(0)
@@ -232,6 +234,7 @@ export default function Live() {
   const gumDepthRef = useRef(0)
   const capturingRef = useRef(false)
   const startingRef = useRef(false)
+  const hangoutActiveRef = useRef(false)
 
   useEffect(() => {
     effectsRef.current = effects
@@ -1819,7 +1822,7 @@ export default function Live() {
     }
     // Wait for explicit tap on phones — autoplay + WebRTC need a gesture
     setStatus('idle')
-    setStatusDetail('Tap Join live when the set is going.')
+    setStatusDetail('Join to get on video and chat. If a set is live, it plays here.')
     return () => {
       clearTimeout(reconnectTimerRef.current)
       teardownViewer()
@@ -1993,6 +1996,87 @@ export default function Live() {
     }
   }
 
+  const handleHangoutPresence = useCallback((info) => {
+    if (!hangoutActiveRef.current) return
+    if (info.connected) {
+      setStatus('live')
+      setViewerCount(info.count || 1)
+      setStatusDetail('In the room')
+      return
+    }
+    if (info.error) {
+      setStatus('error')
+      setStatusDetail(info.error)
+      return
+    }
+    setStatus('connecting')
+    setStatusDetail('Joining the room…')
+  }, [])
+
+  const openHostControls = () => {
+    hangoutActiveRef.current = false
+    setInHangout(false)
+    setViewerWantsJoin(false)
+    teardownViewer()
+    setStatus('idle')
+    setStatusDetail('')
+    setChatMessages([])
+    setViewerList([])
+    setViewerCount(0)
+    if (!isAuthenticated) {
+      navigate('/login', {
+        state: { from: { pathname: '/live' }, openHost: true },
+      })
+      return
+    }
+    setMode('gate')
+  }
+
+  const leaveHangout = () => {
+    hangoutActiveRef.current = false
+    setInHangout(false)
+    setViewerWantsJoin(false)
+    setStatus('idle')
+    setViewerCount(0)
+    setStatusDetail('Join to get on video and chat. If a set is live, it plays here.')
+  }
+
+  const watchSetFromHangout = () => {
+    hangoutActiveRef.current = false
+    setInHangout(false)
+    setViewerWantsJoin(true)
+    connectAsViewer()
+  }
+
+  const joinRoom = async () => {
+    if (!isValidDisplayName(chatName)) {
+      setJoinNameError('Enter a username (at least 2 characters) to join.')
+      return
+    }
+    setJoinNameError('')
+    const clean = normalizeDisplayName(chatName)
+    saveGuestName(clean)
+    setChatName(clean)
+    setStatus('connecting')
+    setStatusDetail('Looking for the room…')
+    let presence = { live: false, peerId: '' }
+    try {
+      presence = await fetchLivePresence()
+    } catch {
+      presence = { live: false, peerId: '' }
+    }
+    if (presence.live && presence.peerId) {
+      hangoutActiveRef.current = false
+      setInHangout(false)
+      setViewerWantsJoin(true)
+      connectAsViewer()
+      return
+    }
+    hangoutActiveRef.current = true
+    setViewerWantsJoin(false)
+    setInHangout(true)
+  }
+
   const setEffect = (key, value) => {
     setPresetId('')
     setEffects((prev) => ({ ...prev, [key]: value }))
@@ -2050,158 +2134,156 @@ export default function Live() {
       </header>
 
       {mode === 'viewer' ? (
-        <div className="relative flex-1 flex flex-col min-h-0">
-          <div className="relative flex-1 bg-black flex items-center justify-center min-h-[40dvh]">
-            <video
-              ref={viewerVideoRef}
-              className="w-full h-full max-h-[52dvh] object-contain bg-black"
-              playsInline
-              autoPlay
-              muted={muted}
-            />
-            {status !== 'live' && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-6 text-center">
-                <p className="text-sm sm:text-base text-mute pointer-events-none">
-                  {statusDetail || 'Ready when you are.'}
-                </p>
-                {status === 'connecting' ? (
-                  <p className="text-xs text-mute pointer-events-none">Connecting…</p>
-                ) : (
-                  <div className="w-full max-w-xs space-y-3">
-                    <label className="block text-left space-y-1.5">
-                      <span className="text-[11px] uppercase tracking-[0.2em] text-mute">
-                        Username
-                      </span>
-                      <input
-                        type="text"
-                        value={chatName}
-                        onChange={(e) => {
-                          setChatName(normalizeDisplayName(e.target.value))
-                          setJoinNameError('')
-                        }}
-                        maxLength={24}
-                        placeholder="Pick a name"
-                        className="w-full px-3 py-2.5 border border-hairline bg-black text-paper text-sm focus:outline-none focus:border-paper"
-                        autoComplete="nickname"
-                      />
-                    </label>
-                    {joinNameError ? (
-                      <p className="text-xs text-paper/80">{joinNameError}</p>
+        inHangout ? (
+          <HangoutRoom
+            name={chatName}
+            onLeave={leaveHangout}
+            onWatchSet={watchSetFromHangout}
+            onHostControls={openHostControls}
+            onPresence={handleHangoutPresence}
+          />
+        ) : (
+          <div className="relative flex-1 flex flex-col lg:flex-row min-h-0">
+            <div className="relative flex-1 flex flex-col min-h-0 min-w-0">
+              <div className="relative flex-1 bg-black flex items-center justify-center min-h-[40dvh]">
+                <video
+                  ref={viewerVideoRef}
+                  className="w-full h-full max-h-[52dvh] lg:max-h-none object-contain bg-black"
+                  playsInline
+                  autoPlay
+                  muted={muted}
+                />
+                {status !== 'live' && (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-6 text-center">
+                    <p className="text-sm sm:text-base text-mute pointer-events-none">
+                      {statusDetail || 'Ready when you are.'}
+                    </p>
+                    {status === 'connecting' ? (
+                      <p className="text-xs text-mute pointer-events-none">Connecting…</p>
                     ) : (
-                      <p className="text-[11px] text-mute">Required to join — others will see it.</p>
+                      <div className="w-full max-w-xs space-y-3">
+                        <label className="block text-left space-y-1.5">
+                          <span className="text-[11px] uppercase tracking-[0.2em] text-mute">
+                            Username
+                          </span>
+                          <input
+                            type="text"
+                            value={chatName}
+                            onChange={(e) => {
+                              setChatName(normalizeDisplayName(e.target.value))
+                              setJoinNameError('')
+                            }}
+                            maxLength={24}
+                            placeholder="Pick a name"
+                            className="w-full px-3 py-2.5 border border-hairline bg-black text-paper text-sm focus:outline-none focus:border-paper"
+                            autoComplete="nickname"
+                          />
+                        </label>
+                        {joinNameError ? (
+                          <p className="text-xs text-paper/80">{joinNameError}</p>
+                        ) : (
+                          <p className="text-[11px] text-mute">
+                            Required to join — others will see it. Camera and mic stay off until you
+                            turn them on.
+                          </p>
+                        )}
+                        <button
+                          type="button"
+                          onClick={joinRoom}
+                          className="w-full px-5 py-3 bg-paper text-ink text-sm font-medium disabled:opacity-40"
+                          disabled={!isValidDisplayName(chatName)}
+                        >
+                          {status === 'offline' ? 'Retry join' : 'Join'}
+                        </button>
+                      </div>
                     )}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (!isValidDisplayName(chatName)) {
-                          setJoinNameError('Enter a username (at least 2 characters) to join.')
-                          return
-                        }
-                        setViewerWantsJoin(true)
-                        connectAsViewer()
-                      }}
-                      className="w-full px-5 py-3 bg-paper text-ink text-sm font-medium disabled:opacity-40"
-                      disabled={!isValidDisplayName(chatName)}
-                    >
-                      {status === 'offline' ? 'Retry join' : 'Join live'}
-                    </button>
                   </div>
                 )}
-              </div>
-            )}
-            {(needsGesture || muted) && status === 'live' && (
-              <button
-                type="button"
-                onClick={unmuteViewer}
-                className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-2 px-4 py-3 bg-paper text-ink text-sm font-medium"
-              >
-                {muted ? (
-                  <SpeakerXMarkIcon className="h-5 w-5" />
-                ) : (
-                  <SpeakerWaveIcon className="h-5 w-5" />
-                )}
-                Tap for sound
-              </button>
-            )}
-          </div>
-          {status === 'live' && (
-            <>
-              <LiveAudienceGrid tiles={audienceTiles} audioKick={audioKick} />
-              <div className="px-4 sm:px-6 py-2.5 border-t border-hairline flex flex-wrap items-center gap-2">
-                <button
-                  type="button"
-                  onClick={toggleCamera}
-                  disabled={mediaBusy}
-                  className={`px-3 py-2 border text-xs uppercase tracking-[0.16em] disabled:opacity-40 ${
-                    camOn
-                      ? 'border-paper bg-paper text-ink'
-                      : 'border-hairline text-mute hover:text-paper'
-                  }`}
-                >
-                  {camOn ? 'Camera on' : 'Camera off'}
-                </button>
-                <button
-                  type="button"
-                  onClick={toggleMic}
-                  disabled={mediaBusy}
-                  className={`px-3 py-2 border text-xs uppercase tracking-[0.16em] disabled:opacity-40 ${
-                    micOn
-                      ? 'border-paper bg-paper text-ink'
-                      : 'border-hairline text-mute hover:text-paper'
-                  }`}
-                >
-                  {micOn ? 'Mic on' : 'Mic off'}
-                </button>
-                {mediaError ? (
-                  <p className="w-full text-xs text-paper/80">{mediaError}</p>
-                ) : (
-                  <p className="w-full text-[11px] text-mute">
-                    Camera and mic stay off until you turn them on. Your mic is heard in the room,
-                    not in the recording.
-                  </p>
+                {(needsGesture || muted) && status === 'live' && (
+                  <button
+                    type="button"
+                    onClick={unmuteViewer}
+                    className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-2 px-4 py-3 bg-paper text-ink text-sm font-medium"
+                  >
+                    {muted ? (
+                      <SpeakerXMarkIcon className="h-5 w-5" />
+                    ) : (
+                      <SpeakerWaveIcon className="h-5 w-5" />
+                    )}
+                    Tap for sound
+                  </button>
                 )}
               </div>
-            </>
-          )}
-          <div className="px-4 sm:px-6 py-3 border-t border-hairline space-y-3">
-            <LiveChat
-              messages={chatMessages}
-              onSend={sendViewerChat}
-              name={chatName}
-              onNameChange={(n) => setChatName(saveGuestName(n))}
-              nameReadOnly={status === 'live'}
-              disabled={status !== 'live' || !chatConnected}
-              placeholder="Chat with the room…"
-            />
+              {status === 'live' && (
+                <>
+                  <LiveAudienceGrid tiles={audienceTiles} audioKick={audioKick} />
+                  <div className="px-4 sm:px-6 py-2.5 border-t border-hairline flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={toggleCamera}
+                      disabled={mediaBusy}
+                      className={`px-3 py-2 border text-xs uppercase tracking-[0.16em] disabled:opacity-40 ${
+                        camOn
+                          ? 'border-paper bg-paper text-ink'
+                          : 'border-hairline text-mute hover:text-paper'
+                      }`}
+                    >
+                      {camOn ? 'Camera on' : 'Camera off'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={toggleMic}
+                      disabled={mediaBusy}
+                      className={`px-3 py-2 border text-xs uppercase tracking-[0.16em] disabled:opacity-40 ${
+                        micOn
+                          ? 'border-paper bg-paper text-ink'
+                          : 'border-hairline text-mute hover:text-paper'
+                      }`}
+                    >
+                      {micOn ? 'Mic on' : 'Mic off'}
+                    </button>
+                    {mediaError ? (
+                      <p className="w-full text-xs text-paper/80">{mediaError}</p>
+                    ) : (
+                      <p className="w-full text-[11px] text-mute">
+                        Camera and mic stay off until you turn them on. Your mic is heard in the room,
+                        not in the recording.
+                      </p>
+                    )}
+                  </div>
+                </>
+              )}
+              <div className="px-4 sm:px-6 py-3 border-t border-hairline flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <p className="text-xs sm:text-sm text-mute">
+                  {status === 'live'
+                    ? 'The set stays on top. Everyone else is in the grid below.'
+                    : 'Join to get on video, talk, and chat. A live set plays here when one is on.'}
+                </p>
+                <button
+                  type="button"
+                  onClick={openHostControls}
+                  className="text-xs uppercase tracking-[0.2em] text-mute hover:text-paper transition-colors self-start sm:self-auto"
+                >
+                  Host controls
+                </button>
+              </div>
+            </div>
+            <aside className="w-full lg:w-[22rem] xl:w-96 shrink-0 border-t lg:border-t-0 lg:border-l border-hairline flex flex-col min-h-[24rem] lg:min-h-0">
+              <div className="p-4 sm:p-5 flex-1 flex flex-col min-h-0">
+                <LiveChat
+                  fill
+                  messages={chatMessages}
+                  onSend={sendViewerChat}
+                  name={chatName}
+                  onNameChange={(n) => setChatName(saveGuestName(n))}
+                  nameReadOnly={status === 'live'}
+                  disabled={status !== 'live' || !chatConnected}
+                  placeholder="Chat with the room…"
+                />
+              </div>
+            </aside>
           </div>
-          <div className="px-4 sm:px-6 py-3 border-t border-hairline flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <p className="text-xs sm:text-sm text-mute">
-              The set stays on top. Everyone else is in the grid below.
-            </p>
-            <button
-              type="button"
-              onClick={() => {
-                setViewerWantsJoin(false)
-                teardownViewer()
-                setStatus('idle')
-                setStatusDetail('')
-                setChatMessages([])
-                setViewerList([])
-                setViewerCount(0)
-                if (!isAuthenticated) {
-                  navigate('/login', {
-                    state: { from: { pathname: '/live' }, openHost: true },
-                  })
-                  return
-                }
-                setMode('gate')
-              }}
-              className="text-xs uppercase tracking-[0.2em] text-mute hover:text-paper transition-colors self-start sm:self-auto"
-            >
-              Host controls
-            </button>
-          </div>
-        </div>
+        )
       ) : null}
 
       {mode === 'gate' ? (
