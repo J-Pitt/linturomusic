@@ -100,20 +100,46 @@ function cameraLabel(device, index) {
 
 const COMPUTER_MIC_RE = /macbook|built-?in|internal|facetime|imac|mac mini|studio display|microphone array/i
 const MIC_ALIAS_RE = /^(default|communications)$/i
+const MUSIC_DECK_RE = /xdj|pioneer|alphatheta/i
 
 function isComputerMic(device) {
   return COMPUTER_MIC_RE.test(device?.label || '')
 }
 
-/** Real inputs that are not the music device and not Chrome's default alias. */
+function isAliasMic(device) {
+  return MIC_ALIAS_RE.test(device?.deviceId || '')
+}
+
+function isMusicDeck(device) {
+  return MUSIC_DECK_RE.test(device?.label || '')
+}
+
+function talkMicLabel(device) {
+  const label = (device?.label || 'Computer microphone').replace(/^(Default|Communications)\s+-\s+/i, '')
+  return label
+}
+
+/**
+ * Laptop mic for talkover. Chrome often exposes the MacBook mic only as
+ * "default" (this machine's default input). Keep that. Hide the XDJ.
+ */
 function computerMicChoices(audioInputs, musicId) {
   const music = audioInputs.find((device) => device.deviceId === musicId)
-  return audioInputs.filter((device) => {
-    if (!device.deviceId || MIC_ALIAS_RE.test(device.deviceId)) return false
-    if (musicId && device.deviceId === musicId) return false
-    if (music?.groupId && device.groupId === music.groupId && !isComputerMic(device)) return false
+  const ranked = audioInputs.filter((device) => {
+    if (!device.deviceId) return false
+    if (isMusicDeck(device)) return false
+    if (musicId && device.deviceId === musicId && !isComputerMic(device)) return false
+    if (music && isMusicDeck(music) && device.groupId && device.groupId === music.groupId) return false
     return true
   })
+  const hardwareComputer = ranked.filter((device) => !isAliasMic(device) && isComputerMic(device))
+  const hardwareOther = ranked.filter((device) => !isAliasMic(device) && !isComputerMic(device))
+  if (hardwareComputer.length) return [...hardwareComputer, ...hardwareOther]
+  const fallback =
+    ranked.find((device) => device.deviceId === 'default') ||
+    ranked.find((device) => isComputerMic(device)) ||
+    null
+  return fallback ? [fallback, ...hardwareOther] : hardwareOther
 }
 
 function preferredComputerMic(audioInputs, musicId) {
@@ -452,8 +478,9 @@ export default function Live() {
     if (mode !== 'host') return
     setTalkDeviceId((prev) => {
       const choices = computerMicChoices(devices.audio, audioDeviceId)
+      if (!choices.length) return prev
       if (prev && choices.some((device) => device.deviceId === prev)) return prev
-      return preferredComputerMic(devices.audio, audioDeviceId)?.deviceId || ''
+      return preferredComputerMic(devices.audio, audioDeviceId)?.deviceId || prev
     })
   }, [mode, devices.audio, audioDeviceId])
 
@@ -1218,14 +1245,19 @@ export default function Live() {
     rafRef.current = requestAnimationFrame(tick)
   }
 
-  const openHostTalkMic = async (musicId) => {
+  const openHostTalkMic = async (musicId, musicTrack) => {
     const list = await navigator.mediaDevices.enumerateDevices()
     const audioInputs = list.filter((device) => device.kind === 'audioinput')
     const choices = computerMicChoices(audioInputs, musicId)
-    const preferred = choices.find((device) => device.deviceId === talkDeviceId) || preferredComputerMic(audioInputs, musicId)
+    const preferred =
+      choices.find((device) => device.deviceId === talkDeviceId) ||
+      preferredComputerMic(audioInputs, musicId)
     const ordered = preferred
       ? [preferred, ...choices.filter((device) => device.deviceId !== preferred.deviceId)]
       : choices
+    if (!ordered.some((device) => device.deviceId === 'default')) {
+      ordered.push({ deviceId: 'default', label: 'MacBook Pro Microphone' })
+    }
 
     for (const device of ordered) {
       try {
@@ -1242,10 +1274,18 @@ export default function Live() {
         )
         const track = liveKindTrack(stream, 'audio')
         if (!track) continue
+        if (musicTrack && track.id === musicTrack.id) continue
         const chosen = track.getSettings?.().deviceId || ''
-        if (musicId && chosen === musicId) {
+        if (musicId && chosen && chosen === musicId) {
           track.stop()
           continue
+        }
+        if (musicTrack) {
+          const musicChosen = musicTrack.getSettings?.().deviceId || ''
+          if (musicChosen && chosen === musicChosen) {
+            track.stop()
+            continue
+          }
         }
         track.enabled = false
         try {
@@ -1253,13 +1293,36 @@ export default function Live() {
         } catch {
           /* ignore */
         }
-        setTalkDeviceId(device.deviceId)
+        if (!isAliasMic(device)) setTalkDeviceId(device.deviceId)
         return track
       } catch (err) {
         console.error(err)
       }
     }
     return null
+  }
+
+  const replaceHostTalkTrack = (track, musicTrack) => {
+    const outbound = outboundStreamRef.current
+    if (outbound && !outbound.getTracks().includes(track)) outbound.addTrack(track)
+    let calls = 0
+    let replaced = 0
+    callsRef.current.forEach((call) => {
+      calls += 1
+      const senders = call?.peerConnection?.getSenders?.() || []
+      const talkSender = senders.find((sender) => {
+        const current = sender.track
+        if (!current || current.kind !== 'audio') return false
+        if (musicTrack && current.id === musicTrack.id) return false
+        return true
+      })
+      if (!talkSender || talkSender.track?.id === track.id) return
+      replaced += 1
+      talkSender.replaceTrack(track).catch(() => {})
+    })
+    const attached = calls === 0 || replaced > 0
+    if (!attached && outbound?.getTracks().includes(track)) outbound.removeTrack(track)
+    return attached
   }
 
   const goLive = async () => {
@@ -1382,7 +1445,7 @@ export default function Live() {
       let talkTrack = null
       let talkError = ''
       try {
-        talkTrack = await openHostTalkMic(musicDeviceId)
+        talkTrack = await openHostTalkMic(musicDeviceId, broadcastAudio)
         if (!talkTrack) {
           talkError =
             'No computer mic turned up besides the XDJ. Pick MacBook Microphone under Talk mic, then go live again.'
@@ -1457,9 +1520,8 @@ export default function Live() {
           return
         }
         // Do NOT clone WebRTC tracks — cloned canvas/audio tracks often go silent on mobile.
-        stream.getAudioTracks().forEach((t) => {
-          t.enabled = true
-        })
+        const musicTrack = stream.getAudioTracks()[0]
+        if (musicTrack) musicTrack.enabled = true
         call.answer(stream)
         callsRef.current.set(call.peer, call)
         call.on('stream', (remote) => {
@@ -2760,11 +2822,11 @@ export default function Live() {
                     disabled={status === 'live'}
                   >
                     {computerMicChoices(devices.audio, audioDeviceId).length === 0 ? (
-                      <option value="">No computer mic listed yet</option>
+                      <option value="">MacBook Pro Microphone</option>
                     ) : (
                       computerMicChoices(devices.audio, audioDeviceId).map((device) => (
                         <option key={device.deviceId} value={device.deviceId}>
-                          {device.label || 'Computer microphone'}
+                          {talkMicLabel(device)}
                         </option>
                       ))
                     )}
@@ -2777,13 +2839,22 @@ export default function Live() {
                   <div className="space-y-1.5">
                     <button
                       type="button"
-                      onClick={() => {
-                        const track = hostTalkTrackRef.current
+                      onClick={async () => {
+                        let track = hostTalkTrackRef.current
                         if (!track || track.readyState !== 'live') {
-                          setHostTalkError(
-                            'Computer mic is not in this set. Allow it, end live, and go live again.'
-                          )
-                          return
+                          const music = outboundStreamRef.current
+                            ?.getAudioTracks?.()
+                            .find((item) => item.readyState === 'live' && item.contentHint !== 'speech')
+                          const musicId = music?.getSettings?.().deviceId || audioDeviceId
+                          track = await openHostTalkMic(musicId, music)
+                          if (!track || !replaceHostTalkTrack(track, music)) {
+                            track?.stop?.()
+                            setHostTalkError(
+                              'Computer mic is not in this set. Allow it, end live, and go live again.'
+                            )
+                            return
+                          }
+                          hostTalkTrackRef.current = track
                         }
                         const next = !track.enabled
                         track.enabled = next
