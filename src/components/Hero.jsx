@@ -41,6 +41,7 @@ function loadYouTubeApi() {
 }
 
 const RECENT_MIXES = [
+  { id: 'festivalDemo', title: 'Festival Demo', url: config.AUDIO_FILES.FESTIVAL_DEMO },
   { id: 'shadows', title: 'Shadows', url: config.AUDIO_FILES.SHADOWS },
   { id: 'downAgain', title: 'Down Again', url: config.AUDIO_FILES.DOWN_AGAIN },
   { id: 'eternity', title: 'Eternity', url: config.AUDIO_FILES.ETERNITY },
