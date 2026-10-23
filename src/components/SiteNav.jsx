@@ -12,7 +12,7 @@ const HOME_LINKS = [
 
 /**
  * Quiet shared chrome: small tag + sentence-case section links.
- * Live sits top-right as a dedicated entry.
+ * Live and Shop sit top-right as dedicated entries.
  * On non-home routes, hash links go to `/#section`.
  */
 export default function SiteNav({ className = '' }) {
@@ -59,6 +59,12 @@ export default function SiteNav({ className = '' }) {
                 Stats
               </Link>
             ) : null}
+            <a
+              href="https://linturodesigns.com"
+              className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 border border-hairline text-xs sm:text-sm uppercase tracking-[0.18em] text-paper hover:border-paper transition-colors"
+            >
+              Shop
+            </a>
             <Link
               to="/live"
               className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 border border-hairline text-xs sm:text-sm uppercase tracking-[0.18em] text-paper hover:border-paper transition-colors"
