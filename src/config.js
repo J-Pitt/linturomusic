@@ -104,6 +104,8 @@ export const config = {
     FRACTALS_POSTER: import.meta.env.VITE_VIDEO_FRACTALS_POSTER || 'https://linturomusic.s3.us-west-2.amazonaws.com/fractals.jpg',
     BROOKLYN_DUBS: import.meta.env.VITE_VIDEO_BROOKLYN_DUBS || 'https://linturomusic.s3.us-west-2.amazonaws.com/brooklyn-dubs-2.mp4',
     BROOKLYN_DUBS_POSTER: import.meta.env.VITE_VIDEO_BROOKLYN_DUBS_POSTER || 'https://linturomusic.s3.us-west-2.amazonaws.com/brooklyn-dubs-2.jpg',
+    BRICK_ROOM: import.meta.env.VITE_VIDEO_BRICK_ROOM || 'https://linturomusic.s3.us-west-2.amazonaws.com/brick-room.mp4',
+    BRICK_ROOM_POSTER: import.meta.env.VITE_VIDEO_BRICK_ROOM_POSTER || 'https://linturomusic.s3.us-west-2.amazonaws.com/brick-room.jpg',
   },
   
   // App metadata

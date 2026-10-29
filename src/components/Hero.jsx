@@ -54,6 +54,15 @@ const RECENT_MIXES = [
 
 const FEATURED_VIDEOS = [
   {
+    id: 'brickRoom',
+    /** Shareable hash: linturomusic.com/#brick-room */
+    slug: 'brick-room',
+    title: 'Brick Room',
+    subtitle: 'DJ set · 30 min',
+    src: config.VIDEO_FILES.BRICK_ROOM,
+    poster: config.VIDEO_FILES.BRICK_ROOM_POSTER,
+  },
+  {
     id: 'brooklynDubs',
     /** Shareable hash: linturomusic.com/#brooklyn-dubs */
     slug: 'brooklyn-dubs',
