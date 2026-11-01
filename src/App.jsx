@@ -8,6 +8,7 @@ import Clips from './components/Clips'
 import Dub from './components/Dub'
 import Mixes from './components/Mixes'
 import Zoe from './components/Zoe'
+import Promo from './components/Promo'
 import Beatport from './components/Beatport'
 import FriendsGate from './components/FriendsGate'
 import Live from './components/Live'
@@ -22,6 +23,22 @@ import { mergeTrapVideos, trapVideoFromHash } from './lib/trapVideos'
 import './App.css'
 
 const BeatsPage = lazy(() => import('./beats/BeatsPage'))
+
+const PROMO_HASHES = new Set(['live-oct-mix', 'brickroom', 'brick-room'])
+
+function PromoHashRedirect() {
+  const { hash, pathname } = useLocation()
+  const navigate = useNavigate()
+
+  useEffect(() => {
+    if (pathname !== '/') return
+    const raw = hash.replace(/^#/, '').trim().toLowerCase()
+    if (!PROMO_HASHES.has(raw)) return
+    navigate('/promo', { replace: true })
+  }, [hash, pathname, navigate])
+
+  return null
+}
 
 const LEGACY_DUB_HASHES = {
   'deep-dark-dub': 'deep-dark-dub',
@@ -88,6 +105,7 @@ function AppShell() {
 
   return (
     <div className="App">
+      <PromoHashRedirect />
       <LegacyDubHash />
       <TrapHashRedirect />
       <main>
@@ -125,6 +143,7 @@ function AppShell() {
           <Route path="/dub" element={<Dub />} />
           <Route path="/sets" element={<Mixes />} />
           <Route path="/zoe" element={<Zoe />} />
+          <Route path="/promo" element={<Promo />} />
           <Route
             path="/beatport"
             element={
