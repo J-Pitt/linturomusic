@@ -9,6 +9,7 @@ import Dub from './components/Dub'
 import Mixes from './components/Mixes'
 import Zoe from './components/Zoe'
 import Promo from './components/Promo'
+import { config } from './config'
 import Beatport from './components/Beatport'
 import FriendsGate from './components/FriendsGate'
 import Live from './components/Live'
@@ -144,6 +145,18 @@ function AppShell() {
           <Route path="/sets" element={<Mixes />} />
           <Route path="/zoe" element={<Zoe />} />
           <Route path="/promo" element={<Promo />} />
+          <Route
+            path="/halloween-sunset"
+            element={
+              <Promo
+                eyebrow="Live set"
+                title="Halloween Sunset"
+                subtitle="DJ set · 30 min"
+                src={config.VIDEO_FILES.HALLOWEEN_SUNSET}
+                poster={config.VIDEO_FILES.HALLOWEEN_SUNSET_POSTER}
+              />
+            }
+          />
           <Route
             path="/beatport"
             element={

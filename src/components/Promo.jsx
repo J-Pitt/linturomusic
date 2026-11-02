@@ -10,7 +10,13 @@ import { config } from '../config'
 import VolumeControl from './VolumeControl'
 import SiteNav from './SiteNav'
 
-const Promo = () => {
+const Promo = ({
+  eyebrow = 'Promo',
+  title = 'Live Oct Mix',
+  subtitle = 'DJ set · 30 min',
+  src = config.VIDEO_FILES.BRICK_ROOM,
+  poster = config.VIDEO_FILES.BRICK_ROOM_POSTER,
+}) => {
   const navigate = useNavigate()
   const stageRef = useRef(null)
   const videoRef = useRef(null)
@@ -104,9 +110,9 @@ const Promo = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
         >
-          <p className="text-xs uppercase tracking-[0.28em] text-mute mb-3">Promo</p>
-          <h1 className="text-2xl sm:text-3xl font-medium text-paper mb-2">Live Oct Mix</h1>
-          <p className="text-mute mb-8">DJ set · 30 min</p>
+          <p className="text-xs uppercase tracking-[0.28em] text-mute mb-3">{eyebrow}</p>
+          <h1 className="text-2xl sm:text-3xl font-medium text-paper mb-2">{title}</h1>
+          <p className="text-mute mb-8">{subtitle}</p>
 
           <div className="border border-hairline overflow-hidden">
             <div
@@ -121,14 +127,14 @@ const Promo = () => {
                 controls
                 playsInline
                 preload="metadata"
-                poster={config.VIDEO_FILES.BRICK_ROOM_POSTER}
+                poster={poster}
                 className="w-full h-full object-contain"
                 onLoadedMetadata={(e) => {
                   e.currentTarget.volume = volume
                   e.currentTarget.muted = muted || volume === 0
                 }}
               >
-                <source src={config.VIDEO_FILES.BRICK_ROOM} type="video/mp4" />
+                <source src={src} type="video/mp4" />
                 Your browser does not support the video tag.
               </video>
               <div className="absolute bottom-3 left-3 z-20 rounded bg-black/60 px-2 py-1.5 border border-white/15">
