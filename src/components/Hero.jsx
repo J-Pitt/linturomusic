@@ -54,6 +54,15 @@ const RECENT_MIXES = [
 
 const FEATURED_VIDEOS = [
   {
+    id: 'clock113',
+    /** Shareable hash: linturomusic.com/#113-clock */
+    slug: '113-clock',
+    title: '113 Clock',
+    subtitle: 'DJ set · 30 min',
+    src: config.VIDEO_FILES.CLOCK_113,
+    poster: config.VIDEO_FILES.CLOCK_113_POSTER,
+  },
+  {
     id: 'brooklynDubs',
     /** Shareable hash: linturomusic.com/#brooklyn-dubs */
     slug: 'brooklyn-dubs',
