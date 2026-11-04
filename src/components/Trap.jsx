@@ -13,15 +13,10 @@ import { fetchPublishedLiveVideos } from '../lib/liveRecord'
 import { mergeTrapVideos, trapVideoFromHash } from '../lib/trapVideos'
 import VolumeControl from './VolumeControl'
 import SiteNav from './SiteNav'
+import RecordedVideo from './RecordedVideo'
 
 /** Flip to true when play numbers are worth showing again. Logging still runs either way. */
 const SHOW_PLAY_COUNTS = false
-
-function sourceType(src) {
-  if (/\.webm(\?|$)/i.test(src || '')) return 'video/webm'
-  if (/\.mov(\?|$)/i.test(src || '')) return 'video/quicktime'
-  return 'video/mp4'
-}
 
 const Trap = () => {
   const navigate = useNavigate()
@@ -257,13 +252,11 @@ const Trap = () => {
                     isFullscreen ? 'flex h-full w-full items-center justify-center' : 'aspect-video'
                   }`}
                 >
-                  <video
+                  <RecordedVideo
                     key={video.id}
                     id={`player-${video.slug}`}
                     ref={videoRef}
-                    controls
-                    playsInline
-                    preload="metadata"
+                    src={video.src}
                     poster={video.poster}
                     className="w-full h-full object-contain bg-black"
                     onLoadedMetadata={(e) => applyMediaVolume(e.currentTarget, volume, muted)}
@@ -284,9 +277,7 @@ const Trap = () => {
                     onEnded={() => {
                       playCounted.current[video.id] = false
                     }}
-                  >
-                    <source src={video.src} type={sourceType(video.src)} />
-                  </video>
+                  />
                   <button
                     type="button"
                     onClick={toggleFullscreen}

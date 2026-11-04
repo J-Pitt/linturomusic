@@ -57,18 +57,20 @@ const RECENT_MIXES = [
 const FEATURED_VIDEOS = [
   {
     id: 'elevenFour',
-    /** Shareable hash: linturomusic.com/#11-4 */
-    slug: '11-4',
-    title: '11-4',
+    /** Shareable hash: linturomusic.com/#getting-lost (#11-4 still resolves) */
+    slug: 'getting-lost',
+    aliases: ['11-4'],
+    title: 'getting lost',
     subtitle: 'Visual mix · 63 min',
     src: config.VIDEO_FILES.ELEVEN_FOUR,
     poster: config.VIDEO_FILES.ELEVEN_FOUR_POSTER,
   },
   {
     id: 'clock113',
-    /** Shareable hash: linturomusic.com/#113-clock */
-    slug: '113-clock',
-    title: '113 Clock',
+    /** Shareable hash: linturomusic.com/#time (#113-clock still resolves) */
+    slug: 'time',
+    aliases: ['113-clock'],
+    title: 'Time',
     subtitle: 'DJ set · 30 min',
     src: config.VIDEO_FILES.CLOCK_113,
     poster: config.VIDEO_FILES.CLOCK_113_POSTER,
@@ -226,6 +228,7 @@ function featuredFromHash(hash, list = FEATURED_VIDEOS) {
       (v) =>
         v.slug === raw ||
         v.id.toLowerCase() === raw ||
+        v.aliases?.includes(raw) ||
         v.title.toLowerCase().replace(/\s+/g, '-') === raw
     ) || null
   )

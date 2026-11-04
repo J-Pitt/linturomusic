@@ -1,4 +1,5 @@
 import { LIVE_API_URL, LIVE_PRESENCE_URL, LIVE_VIDEOS_MANIFEST_URL } from './liveConfig'
+import { stampWebmBlob } from './mediaTimeline'
 
 function pickRecorderMime() {
   const candidates = [
@@ -42,14 +43,21 @@ export function createLiveRecorder(stream, opts = {}) {
       recorder.start(1000)
     },
     async stop() {
+      let blob
       if (recorder.state === 'inactive') {
-        return new Blob(chunks, { type: mimeType })
+        blob = new Blob(chunks, { type: mimeType })
+      } else {
+        await new Promise((resolve) => {
+          recorder.addEventListener('stop', resolve, { once: true })
+          recorder.stop()
+        })
+        blob = new Blob(chunks, { type: mimeType })
       }
-      await new Promise((resolve) => {
-        recorder.addEventListener('stop', resolve, { once: true })
-        recorder.stop()
-      })
-      return new Blob(chunks, { type: mimeType })
+      try {
+        return await stampWebmBlob(blob)
+      } catch {
+        return blob
+      }
     },
     get state() {
       return recorder.state

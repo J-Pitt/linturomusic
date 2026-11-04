@@ -174,7 +174,14 @@ function AppShell() {
             }
           />
           <Route path="/live" element={<Live />} />
-          <Route path="/trap" element={<Trap />} />
+          <Route
+            path="/trap"
+            element={
+              <FriendsGate title="Trap">
+                <Trap />
+              </FriendsGate>
+            }
+          />
           <Route path="/login" element={<Login />} />
           <Route path="/stats" element={<Stats />} />
         </Routes>
