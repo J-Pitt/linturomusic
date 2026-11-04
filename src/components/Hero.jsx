@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion'
 import {
   ArrowDownIcon,
+  ArrowDownTrayIcon,
   HeartIcon,
   PauseIcon,
   PlayIcon,
@@ -15,6 +16,7 @@ import { fetchPublishedLiveVideos } from '../lib/liveRecord'
 import { isTrapPageVideo } from '../lib/trapVideos'
 import VolumeControl from './VolumeControl'
 import SiteNav from './SiteNav'
+import RecordedVideo from './RecordedVideo'
 
 const LONG_ROAD_END_SEC = 3662
 const YOUTUBE_PSYCHEDELIC_ID = 'STh_PJk7mpQ'
@@ -53,6 +55,15 @@ const RECENT_MIXES = [
 ]
 
 const FEATURED_VIDEOS = [
+  {
+    id: 'elevenFour',
+    /** Shareable hash: linturomusic.com/#11-4 */
+    slug: '11-4',
+    title: '11-4',
+    subtitle: 'Visual mix · 63 min',
+    src: config.VIDEO_FILES.ELEVEN_FOUR,
+    poster: config.VIDEO_FILES.ELEVEN_FOUR_POSTER,
+  },
   {
     id: 'clock113',
     /** Shareable hash: linturomusic.com/#113-clock */
@@ -935,15 +946,13 @@ const Hero = () => {
               ) : (
                 <>
                   <div className={isSmileGlitch ? 'smile-fx w-full h-full' : 'w-full h-full'}>
-                    <video
+                    <RecordedVideo
                       key={featuredVideo.id}
                       id={`player-${featuredVideo.slug}`}
                       ref={videoRef}
-                      controls
-                      playsInline
-                      loop={Boolean(featuredVideo.loop)}
-                      preload="metadata"
+                      src={featuredVideo.src}
                       poster={featuredVideo.poster}
+                      loop={Boolean(featuredVideo.loop)}
                       className="w-full h-full object-contain bg-black"
                       onLoadedMetadata={(e) => applyMediaVolume(e.currentTarget, volume, muted)}
                       onPlay={() => {
@@ -969,9 +978,7 @@ const Hero = () => {
                       onEnded={() => {
                         videoPlayCounted.current[featuredVideo.id] = false
                       }}
-                    >
-                      <source src={featuredVideo.src} type="video/mp4" />
-                    </video>
+                    />
                   </div>
                   <button
                     type="button"
@@ -994,6 +1001,16 @@ const Hero = () => {
                   {featuredVideo.title}
                 </p>
                 <p className="text-mute text-sm mt-0.5">{featuredVideo.subtitle}</p>
+                {featuredVideo.download ? (
+                  <a
+                    href={featuredVideo.download}
+                    download={featuredVideo.downloadName || ''}
+                    className="inline-flex items-center gap-1.5 mt-2 text-sm text-mute hover:text-paper transition-colors"
+                  >
+                    <ArrowDownTrayIcon className="w-4 h-4" />
+                    Download
+                  </a>
+                ) : null}
               </div>
               <div className="flex items-center gap-3 sm:gap-4 shrink-0">
                 <VolumeControl

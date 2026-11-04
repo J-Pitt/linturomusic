@@ -106,6 +106,8 @@ export const config = {
     BROOKLYN_DUBS_POSTER: import.meta.env.VITE_VIDEO_BROOKLYN_DUBS_POSTER || 'https://linturomusic.s3.us-west-2.amazonaws.com/brooklyn-dubs-2.jpg',
     BRICK_ROOM: import.meta.env.VITE_VIDEO_BRICK_ROOM || 'https://linturomusic.s3.us-west-2.amazonaws.com/brick-room-2.mp4',
     BRICK_ROOM_POSTER: import.meta.env.VITE_VIDEO_BRICK_ROOM_POSTER || 'https://linturomusic.s3.us-west-2.amazonaws.com/brick-room-2.jpg',
+    ELEVEN_FOUR: import.meta.env.VITE_VIDEO_ELEVEN_FOUR || 'https://linturomusic.s3.us-west-2.amazonaws.com/11-4.mp4',
+    ELEVEN_FOUR_POSTER: import.meta.env.VITE_VIDEO_ELEVEN_FOUR_POSTER || 'https://linturomusic.s3.us-west-2.amazonaws.com/11-4.jpg',
     CLOCK_113: import.meta.env.VITE_VIDEO_CLOCK_113 || 'https://linturomusic.s3.us-west-2.amazonaws.com/113-clock.mp4',
     CLOCK_113_POSTER: import.meta.env.VITE_VIDEO_CLOCK_113_POSTER || 'https://linturomusic.s3.us-west-2.amazonaws.com/113-clock.jpg',
     HALLOWEEN_SUNSET: import.meta.env.VITE_VIDEO_HALLOWEEN_SUNSET || 'https://linturomusic.s3.us-west-2.amazonaws.com/halloween-sunset.mp4',
