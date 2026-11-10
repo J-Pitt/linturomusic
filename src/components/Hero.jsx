@@ -56,6 +56,15 @@ const RECENT_MIXES = [
 
 const FEATURED_VIDEOS = [
   {
+    id: 'allNightLong',
+    /** Shareable hash: linturomusic.com/#all-night-long */
+    slug: 'all-night-long',
+    title: 'All night long',
+    subtitle: 'Visual mix · 61 min',
+    src: config.VIDEO_FILES.ALL_NIGHT_LONG,
+    poster: config.VIDEO_FILES.ALL_NIGHT_LONG_POSTER,
+  },
+  {
     id: 'elevenFour',
     /** Shareable hash: linturomusic.com/#getting-lost (#11-4 still resolves) */
     slug: 'getting-lost',
