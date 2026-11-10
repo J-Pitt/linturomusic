@@ -112,8 +112,6 @@ export const config = {
     ELEVEN_FOUR_POSTER: import.meta.env.VITE_VIDEO_ELEVEN_FOUR_POSTER || 'https://linturomusic.s3.us-west-2.amazonaws.com/11-4.jpg',
     CLOCK_113: import.meta.env.VITE_VIDEO_CLOCK_113 || 'https://linturomusic.s3.us-west-2.amazonaws.com/113-clock.mp4',
     CLOCK_113_POSTER: import.meta.env.VITE_VIDEO_CLOCK_113_POSTER || 'https://linturomusic.s3.us-west-2.amazonaws.com/113-clock.jpg',
-    HALLOWEEN_SUNSET: import.meta.env.VITE_VIDEO_HALLOWEEN_SUNSET || 'https://linturomusic.s3.us-west-2.amazonaws.com/halloween-sunset.mp4',
-    HALLOWEEN_SUNSET_POSTER: import.meta.env.VITE_VIDEO_HALLOWEEN_SUNSET_POSTER || 'https://linturomusic.s3.us-west-2.amazonaws.com/halloween-sunset.jpg',
   },
   
   // App metadata
