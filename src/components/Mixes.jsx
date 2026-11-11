@@ -8,6 +8,7 @@ import SiteNav from './SiteNav'
 import VolumeControl from './VolumeControl'
 
 const MIXES = [
+  { id: 'loveItOrHateIt', title: 'Love it or hate it', url: config.AUDIO_FILES.LOVE_IT_OR_HATE_IT },
   { id: 'infinity', title: 'Infinity', url: config.AUDIO_FILES.INFINITY },
   { id: 'letsGetDown', title: "Let's Get Down", url: config.AUDIO_FILES.LETS_GET_DOWN },
   { id: 'echoes', title: 'Echoes', url: config.AUDIO_FILES.ECHOES },

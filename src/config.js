@@ -14,6 +14,7 @@ export const config = {
     THE_DEEPEST_HOUSE: import.meta.env.VITE_AUDIO_THE_DEEPEST_HOUSE || 'https://linturomusic.s3.us-west-2.amazonaws.com/theDeepestHouse.WAV',
     RECHARGE: import.meta.env.VITE_AUDIO_RECHARGE || 'https://linturomusic.s3.us-west-2.amazonaws.com/recharge.WAV',
     REFLECTIONS: import.meta.env.VITE_AUDIO_REFLECTIONS || 'https://linturomusic.s3.us-west-2.amazonaws.com/reflections.WAV',
+    LOVE_IT_OR_HATE_IT: import.meta.env.VITE_AUDIO_LOVE_IT_OR_HATE_IT || 'https://linturomusic.s3.us-west-2.amazonaws.com/loveItOrHateIt.WAV',
     PROG_HOUSE_SUBMISSION: import.meta.env.VITE_AUDIO_PROG_HOUSE_SUBMISSION || 'https://linturomusic.s3.us-west-2.amazonaws.com/progHouseSubmission.WAV',
     LONG_ROAD: import.meta.env.VITE_AUDIO_LONG_ROAD || 'https://linturomusic.s3.us-west-2.amazonaws.com/longroad-master.mp3',
     REC059: import.meta.env.VITE_AUDIO_REC059 || 'https://linturomusic.s3.us-west-2.amazonaws.com/rec059-master.mp3',

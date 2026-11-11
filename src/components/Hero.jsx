@@ -43,6 +43,7 @@ function loadYouTubeApi() {
 }
 
 const RECENT_MIXES = [
+  { id: 'loveItOrHateIt', title: 'Love it or hate it', url: config.AUDIO_FILES.LOVE_IT_OR_HATE_IT },
   { id: 'progHouseSubmission', title: 'Progressive house submission mix', url: config.AUDIO_FILES.PROG_HOUSE_SUBMISSION },
   { id: 'shadows', title: 'Shadows', url: config.AUDIO_FILES.SHADOWS },
   { id: 'downAgain', title: 'Down Again', url: config.AUDIO_FILES.DOWN_AGAIN },
