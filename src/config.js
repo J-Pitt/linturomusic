@@ -107,6 +107,8 @@ export const config = {
     BROOKLYN_DUBS_POSTER: import.meta.env.VITE_VIDEO_BROOKLYN_DUBS_POSTER || 'https://linturomusic.s3.us-west-2.amazonaws.com/brooklyn-dubs-2.jpg',
     BRICK_ROOM: import.meta.env.VITE_VIDEO_BRICK_ROOM || 'https://linturomusic.s3.us-west-2.amazonaws.com/brick-room-2.mp4',
     BRICK_ROOM_POSTER: import.meta.env.VITE_VIDEO_BRICK_ROOM_POSTER || 'https://linturomusic.s3.us-west-2.amazonaws.com/brick-room-2.jpg',
+    DOPE_MIN: import.meta.env.VITE_VIDEO_DOPE_MIN || 'https://linturomusic.s3.us-west-2.amazonaws.com/dope-min.mp4',
+    DOPE_MIN_POSTER: import.meta.env.VITE_VIDEO_DOPE_MIN_POSTER || 'https://linturomusic.s3.us-west-2.amazonaws.com/dope-min.jpg',
     ALL_NIGHT_LONG: import.meta.env.VITE_VIDEO_ALL_NIGHT_LONG || 'https://linturomusic.s3.us-west-2.amazonaws.com/all-night-long.mp4',
     ALL_NIGHT_LONG_POSTER: import.meta.env.VITE_VIDEO_ALL_NIGHT_LONG_POSTER || 'https://linturomusic.s3.us-west-2.amazonaws.com/all-night-long.jpg',
     ELEVEN_FOUR: import.meta.env.VITE_VIDEO_ELEVEN_FOUR || 'https://linturomusic.s3.us-west-2.amazonaws.com/11-4.mp4',

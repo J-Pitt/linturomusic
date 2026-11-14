@@ -57,6 +57,15 @@ const RECENT_MIXES = [
 
 const FEATURED_VIDEOS = [
   {
+    id: 'dopeMin',
+    /** Shareable hash: linturomusic.com/#dope-min */
+    slug: 'dope-min',
+    title: 'Dope Min',
+    subtitle: 'Visual mix · 61 min',
+    src: config.VIDEO_FILES.DOPE_MIN,
+    poster: config.VIDEO_FILES.DOPE_MIN_POSTER,
+  },
+  {
     id: 'allNightLong',
     /** Shareable hash: linturomusic.com/#all-night-long */
     slug: 'all-night-long',
