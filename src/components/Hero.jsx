@@ -58,9 +58,10 @@ const RECENT_MIXES = [
 const FEATURED_VIDEOS = [
   {
     id: 'dopeMin',
-    /** Shareable hash: linturomusic.com/#dope-min */
-    slug: 'dope-min',
-    title: 'Dope Min',
+    /** Shareable hash: linturomusic.com/#further-into-the-house (#dope-min still resolves) */
+    slug: 'further-into-the-house',
+    aliases: ['dope-min'],
+    title: 'Further into the House',
     subtitle: 'Visual mix · 61 min',
     src: config.VIDEO_FILES.DOPE_MIN,
     poster: config.VIDEO_FILES.DOPE_MIN_POSTER,
