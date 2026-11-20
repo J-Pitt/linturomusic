@@ -57,6 +57,15 @@ const RECENT_MIXES = [
 
 const FEATURED_VIDEOS = [
   {
+    id: 'progressiveHouse',
+    /** Shareable hash: linturomusic.com/#progressive-house-for-the-soul */
+    slug: 'progressive-house-for-the-soul',
+    title: 'Progressive house for the soul',
+    subtitle: 'Visual mix · 18 min',
+    src: config.VIDEO_FILES.SICK_MIX,
+    poster: config.VIDEO_FILES.SICK_MIX_POSTER,
+  },
+  {
     id: 'dopeMin',
     /** Shareable hash: linturomusic.com/#further-into-the-house (#dope-min still resolves) */
     slug: 'further-into-the-house',
