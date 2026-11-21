@@ -57,9 +57,10 @@ const RECENT_MIXES = [
 
 const FEATURED_VIDEOS = [
   {
-    id: 'fullHourMinimalTech',
-    /** Shareable hash: linturomusic.com/#full-hour-minimal-tech */
-    slug: 'full-hour-minimal-tech',
+    id: 'theWeirdness',
+    /** Shareable hash: linturomusic.com/#the-weirdness (#full-hour-minimal-tech still resolves) */
+    slug: 'the-weirdness',
+    aliases: ['full-hour-minimal-tech'],
     title: 'The weirdness',
     subtitle: 'Visual mix · 62 min',
     src: config.VIDEO_FILES.FULL_HOUR_MINIMAL_TECH,
