@@ -57,6 +57,15 @@ const RECENT_MIXES = [
 
 const FEATURED_VIDEOS = [
   {
+    id: 'fullHourMinimalTech',
+    /** Shareable hash: linturomusic.com/#full-hour-minimal-tech */
+    slug: 'full-hour-minimal-tech',
+    title: 'Full hour minimal tech',
+    subtitle: 'Visual mix · 62 min',
+    src: config.VIDEO_FILES.FULL_HOUR_MINIMAL_TECH,
+    poster: config.VIDEO_FILES.FULL_HOUR_MINIMAL_TECH_POSTER,
+  },
+  {
     id: 'progressiveHouse',
     /** Shareable hash: linturomusic.com/#progressive-house-for-the-soul */
     slug: 'progressive-house-for-the-soul',
