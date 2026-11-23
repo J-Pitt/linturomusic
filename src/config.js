@@ -107,6 +107,8 @@ export const config = {
     BROOKLYN_DUBS_POSTER: import.meta.env.VITE_VIDEO_BROOKLYN_DUBS_POSTER || 'https://linturomusic.s3.us-west-2.amazonaws.com/brooklyn-dubs-2.jpg',
     BRICK_ROOM: import.meta.env.VITE_VIDEO_BRICK_ROOM || 'https://linturomusic.s3.us-west-2.amazonaws.com/brick-room-2.mp4',
     BRICK_ROOM_POSTER: import.meta.env.VITE_VIDEO_BRICK_ROOM_POSTER || 'https://linturomusic.s3.us-west-2.amazonaws.com/brick-room-2.jpg',
+    DOWNTEMPO: import.meta.env.VITE_VIDEO_DOWNTEMPO || 'https://linturomusic.s3.us-west-2.amazonaws.com/downtempo.mp4',
+    DOWNTEMPO_POSTER: import.meta.env.VITE_VIDEO_DOWNTEMPO_POSTER || 'https://linturomusic.s3.us-west-2.amazonaws.com/downtempo.jpg',
     FULL_HOUR_MINIMAL_TECH: import.meta.env.VITE_VIDEO_FULL_HOUR_MINIMAL_TECH || 'https://linturomusic.s3.us-west-2.amazonaws.com/full-hour-minimal-tech.mp4?v=declip',
     FULL_HOUR_MINIMAL_TECH_POSTER: import.meta.env.VITE_VIDEO_FULL_HOUR_MINIMAL_TECH_POSTER || 'https://linturomusic.s3.us-west-2.amazonaws.com/full-hour-minimal-tech.jpg',
     SICK_MIX: import.meta.env.VITE_VIDEO_SICK_MIX || 'https://linturomusic.s3.us-west-2.amazonaws.com/sick-mix.mp4',

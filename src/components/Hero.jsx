@@ -57,6 +57,15 @@ const RECENT_MIXES = [
 
 const FEATURED_VIDEOS = [
   {
+    id: 'downtempo',
+    /** Shareable hash: linturomusic.com/#downtempo */
+    slug: 'downtempo',
+    title: 'Downtempo',
+    subtitle: 'Visual mix · 61 min',
+    src: config.VIDEO_FILES.DOWNTEMPO,
+    poster: config.VIDEO_FILES.DOWNTEMPO_POSTER,
+  },
+  {
     id: 'theWeirdness',
     /** Shareable hash: linturomusic.com/#the-weirdness (#full-hour-minimal-tech still resolves) */
     slug: 'the-weirdness',
