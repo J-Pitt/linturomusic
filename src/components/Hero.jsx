@@ -57,6 +57,15 @@ const RECENT_MIXES = [
 
 const FEATURED_VIDEOS = [
   {
+    id: 'alwaysMoving',
+    /** Shareable hash: linturomusic.com/#always-moving */
+    slug: 'always-moving',
+    title: 'Always moving',
+    subtitle: 'Visual mix · 61 min',
+    src: config.VIDEO_FILES.ALWAYS_MOVING,
+    poster: config.VIDEO_FILES.ALWAYS_MOVING_POSTER,
+  },
+  {
     id: 'downtempo',
     /** Shareable hash: linturomusic.com/#downtempo */
     slug: 'downtempo',
@@ -1111,6 +1120,17 @@ const Hero = () => {
               </div>
             </div>
           </div>
+          <p className="mt-4 text-xs text-mute">
+            Videos sourced from{' '}
+            <a
+              href="https://pixabay.com"
+              target="_blank"
+              rel="noreferrer"
+              className="hover:text-paper transition-colors"
+            >
+              pixabay.com
+            </a>.
+          </p>
         </div>
       </section>
 
