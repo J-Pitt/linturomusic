@@ -42,9 +42,12 @@ export default function SiteNav({ className = '' }) {
             ) : null}
             <a
               href="https://linturodesigns.com"
-              className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 border border-hairline text-xs sm:text-sm uppercase tracking-[0.18em] text-paper hover:border-paper transition-colors"
+              className="inline-flex flex-col items-center justify-center px-2.5 sm:px-3 py-1.5 border border-hairline text-xs sm:text-sm uppercase tracking-[0.18em] text-paper hover:border-paper transition-colors"
             >
               Shop
+              <span className="mt-0.5 text-[9px] sm:text-[10px] normal-case tracking-normal text-mute">
+                coming soon
+              </span>
             </a>
             <Link
               to="/live"
